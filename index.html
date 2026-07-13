@@ -210,6 +210,15 @@
       overscroll-behavior: contain;
       scrollbar-width: thin;
     }
+    @media (max-width: 1023px) {
+      /* Let the page—not two nested panels—own vertical scrolling on mobile. */
+      .custom-set-side-scroll,
+      .custom-set-products-scroll {
+        max-height: none;
+        overflow: visible;
+        overscroll-behavior: auto;
+      }
+    }
     .reveal-up { opacity: 0; transform: translateY(18px); animation: revealUp .55s ease forwards; }
     @keyframes revealUp { to { opacity: 1; transform: translateY(0); } }
     .custom-set-visual {
@@ -1463,7 +1472,7 @@ async function fetchWishlist() {
   });
 
   const data = await res.json();
-  wishlistIds = (data.wishlist || []).map(String);
+  wishlistIds = (data.wishlist || []).map(item => typeof item === 'object' ? item : { productId: String(item), size: '', image: '', price: 0, name: '' });
   wishlistLoaded = true;
 }
 
@@ -2515,8 +2524,8 @@ const products = [
   {
     id: 54,
     name: "Fresh Horizon",
-    image: "fresh Eros.png",
-    images: ["fresh Eros.png", "freshha1.jpg", "freshha2.jpg", "infoa.jpg"],
+    image: "fresh eros.png",
+    images: ["fresh eros.png", "freshha1.jpg", "freshha2.jpg", "infoa.jpg"],
     description: "A long-lasting attar version delivering sweet woody warmth with fresh aromatic highlights.",
     type: "Attar",
     inspiredBy: "Versace Eros",
@@ -4089,9 +4098,9 @@ const attarFacets = {
     { value: 30,  unit: 'ml', priceMultiplier: 1 }, // 0.47 / 0.12
     { value: 50,  unit: 'ml', priceMultiplier: 1.37593985 }, // 0.62 / 0.12
     { value: 100, unit: 'ml', priceMultiplier: 2.253132832 },  // 1 / 0.12
-    { value: 30, unit: 'ml Gift', priceMultiplier: 1.050125313 },
-    { value: 50, unit: 'ml Gift', priceMultiplier: 1.426065163 },
-    { value: 100, unit: 'ml Gift', priceMultiplier: 2.303258145 }  // 1 / 0.12
+    { value: 30, unit: 'ml Gift', priceMultiplier: 1.2 },
+    { value: 50, unit: 'ml Gift', priceMultiplier: 1.5 },
+    { value: 100, unit: 'ml Gift', priceMultiplier: 2.5 }  // 1 / 0.12
 
   ];
 }
@@ -4147,19 +4156,46 @@ function renderSizeButtons(product) {
     btn.textContent = `${s.value}${s.unit}`;
 
     btn.onclick = () => {
-      selectedSize = `${s.value}${s.unit}`;
-currentPrice = Math.ceil(currentProduct.price * s.priceMultiplier);
-updatePriceDisplay(currentPrice);
-      currentImageIndex = getPerfumeVariantIndex(selectedSize);
-      updateGalleryImage();
 
+  // Store selected size consistently
+  selectedSize = `${s.value}${s.unit}`;
 
-      document.querySelectorAll('.size-btn').forEach(b =>
-        b.classList.remove('bg-black', 'text-yellow-500', 'border-black')
-      );
+  // Update price
+  currentPrice = Math.ceil(
+    currentProduct.price * s.priceMultiplier
+  );
 
-      btn.classList.add('bg-black', 'text-yellow-500', 'border-black');
-    };
+  updatePriceDisplay(currentPrice);
+
+  // Update correct variant image
+  currentImageIndex = getPerfumeVariantIndex(selectedSize);
+
+  updateGalleryImage();
+
+  // Reset all size buttons
+  document.querySelectorAll('.size-btn').forEach(b =>
+    b.classList.remove(
+      'bg-black',
+      'text-yellow-500',
+      'border-black'
+    )
+  );
+
+  // Highlight current size button
+  btn.classList.add(
+    'bg-black',
+    'text-yellow-500',
+    'border-black'
+  );
+
+  // IMPORTANT:
+  // Update heart for exact product + selected size
+  if (currentProduct) {
+    syncWishlistHeart(
+      String(currentProduct.id || currentProduct._id)
+    );
+  }
+};
 
     sizeButtons.appendChild(btn);
 
@@ -5135,8 +5171,8 @@ function openModal(product) {
   /* =======================
      PRICE & SIZE INIT
   ======================= */
-  selectedSize = 100;
-  currentPrice = product.price;
+  selectedSize = '';
+currentPrice = product.price;
 
   // ðŸ”¥ FIX 1: Set price in UI
   document.getElementById("modal-price").textContent = `₹${currentPrice}`;
@@ -5205,28 +5241,96 @@ function updateWishlistIcon(productId) {
 
   const pid = Number(productId);
 
-  if (wishlistIds.includes(pid)) {
+  if (wishlistIds.some(item => String(item.productId) === String(pid) && String(item.size || '') === `${selectedSize} ml`)) {
     icon.className = "fas fa-heart text-red-500";
   } else {
     icon.className = "far fa-heart";
   }
 }
 
+// =====================================================
+// HEART ICON SYNC — PRODUCT + CURRENT SELECTED SIZE
+// =====================================================
 
-function syncWishlistHeart(productId) {
-  const icon = document.getElementById("wishlist-icon");
+
+function syncWishlistHeart(productId = null) {
+  const icon = document.getElementById('wishlist-icon');
+
   if (!icon) return;
 
-  const pid = String(productId);
+  const pid = String(
+    productId ||
+    currentProduct?.id ||
+    currentProduct?._id ||
+    ''
+  );
 
-  if (wishlistIds.includes(pid)) {
-    icon.className = "fas fa-heart text-red-500";
+  const size = normalizeWishlistSize(selectedSize);
+
+  const isSaved = isWishlistItemSaved(pid, size);
+
+  if (isSaved) {
+    icon.classList.remove('far');
+    icon.classList.add('fas', 'text-red-500');
   } else {
-    icon.className = "far fa-heart";
+    icon.classList.remove('fas', 'text-red-500');
+    icon.classList.add('far');
   }
 }
 
 
+// =====================================================
+// OPEN WISHLIST PRODUCT WITH EXACT SAVED SIZE
+// =====================================================
+
+function openWishlistProduct(productId, savedSize) {
+  const product = findProductByAnyId(productId);
+
+  if (!product) return;
+
+  const normalizedSavedSize = normalizeWishlistSize(savedSize);
+
+  // Open normal product modal first
+  openModal(product);
+
+  // renderSizeButtons() currently auto-clicks the first size
+  // after 50 ms, so wait until that finishes before restoring
+  // the wishlist size.
+  setTimeout(() => {
+
+    const sizeButtons = document.querySelectorAll(
+      '#size-buttons .size-btn'
+    );
+
+    let matchedButton = null;
+
+    sizeButtons.forEach(btn => {
+      const buttonSize = normalizeWishlistSize(btn.textContent);
+
+      if (buttonSize === normalizedSavedSize) {
+        matchedButton = btn;
+      }
+    });
+
+    if (matchedButton) {
+      matchedButton.click();
+    } else {
+      // Fallback in case no matching button exists
+      selectedSize = normalizedSavedSize;
+
+      currentImageIndex = getPerfumeVariantIndex(
+        getWishlistVariantKey(normalizedSavedSize)
+      );
+
+      updateGalleryImage();
+
+      syncWishlistHeart(
+        String(product.id || product._id)
+      );
+    }
+
+  }, 100);
+}
 
 
 
@@ -7331,9 +7435,9 @@ function orderStage(status) {
 }
 
 function orderFlowHtml(order) {
-  if (String(order.status || '').toUpperCase() === 'CANCELLED') return `<div class="mb-5 rounded border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">Order Cancelled</div>`;
+  if (['CANCELLED', 'REJECTED'].includes(String(order.status || '').toUpperCase())) return `<div class="mb-5 rounded border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">${String(order.status).toUpperCase() === 'REJECTED' ? `Order Rejected${order.rejectionReason ? `: ${escapeHtml(order.rejectionReason)}` : ''}` : 'Order Cancelled'}</div>`;
   const stage = orderStage(order.status);
-  const steps = ['Payment Done', 'Order Placed', 'Processing', 'Dispatched', 'Delivered'];
+  const steps = [order.paymentMethod === 'Cash on Delivery' ? 'Cash on Delivery' : 'Payment Done', 'Order Placed', 'Processing', 'Dispatched', 'Delivered'];
   return `<div class="mb-5 overflow-x-auto"><div class="flex min-w-[540px] items-center">${steps.map((step, index) => `<div class="flex flex-1 items-center last:flex-none"><div class="text-center"><div class="mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${index + 1 <= stage ? 'bg-yellow-500 text-black' : 'bg-gray-200 text-gray-500'}">${index + 1 <= stage ? '✓' : index + 1}</div><div class="mt-1 whitespace-nowrap text-[10px] font-bold ${index + 1 <= stage ? 'text-gray-800' : 'text-gray-400'}">${step}</div></div>${index < steps.length - 1 ? `<div class="mx-2 h-1 flex-1 ${index + 1 < stage ? 'bg-yellow-500' : 'bg-gray-200'}"></div>` : ''}</div>`).join('')}</div></div>`;
 }
 
@@ -8005,38 +8109,237 @@ async function toggleWishlist() {
   if (!authToken || !currentProduct) return;
 
   const pid = String(currentProduct.id || currentProduct._id);
-  const isSaved = wishlistIds.includes(pid);
 
-  const endpoint = isSaved ? "remove" : "add";
+  const size = normalizeWishlistSize(selectedSize);
 
-  const res = await fetch(
-    `${BACKEND_BASE_URL}/api/auth/wishlist/${endpoint}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ productId: pid })
+  const variantKey = getWishlistVariantKey(size);
+
+  const variantImage =
+    getVariantImage(currentProduct, variantKey) ||
+    currentProduct.image ||
+    '';
+
+  const isSaved = isWishlistItemSaved(pid, size);
+
+  const endpoint = isSaved ? 'remove' : 'add';
+
+  try {
+    const res = await fetch(
+      `${BACKEND_BASE_URL}/api/auth/wishlist/${endpoint}`,
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+
+        body: JSON.stringify({
+          productId: pid,
+          size: size,
+          name: currentProduct.name,
+          price: currentPrice,
+          image: variantImage
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      console.error('Wishlist update failed:', data);
+      return;
     }
-  );
 
-  const data = await res.json();
-  if (!data.success) return;
+    // Update local wishlist immediately
+    if (isSaved) {
 
-  // update local memory
-  if (isSaved) {
-    wishlistIds = wishlistIds.filter(id => id !== pid);
-  } else {
-    wishlistIds.push(pid);
+      wishlistIds = wishlistIds.filter(item =>
+        !(
+          String(item.productId || '') === pid &&
+          normalizeWishlistSize(item.size) === size
+        )
+      );
+
+    } else {
+
+      wishlistIds.push({
+        productId: pid,
+        size: size,
+        name: currentProduct.name,
+        price: currentPrice,
+        image: variantImage
+      });
+    }
+
+    // Update heart immediately for exact selected size
+    syncWishlistHeart(pid);
+
+    // Update wishlist grid if currently visible
+    renderWishlist();
+
+  } catch (err) {
+    console.error('Wishlist update error:', err);
   }
-
-  syncWishlistHeart(pid);
 }
 
 
 
+function normalizeWishlistSize(size) {
+  if (size === null || size === undefined) return '';
 
+  const raw = String(size).trim();
+
+  if (!raw) return '';
+
+  const normalized = raw
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Preserve gift distinction
+  if (/gift/i.test(normalized)) {
+    const match = normalized.match(/[\d.]+/);
+
+    if (match) {
+      return `${match[0]} ml Gift`;
+    }
+
+    return normalized;
+  }
+
+  // Normal perfume size
+  const match = normalized.match(/[\d.]+/);
+
+  if (match) {
+    return `${match[0]} ml`;
+  }
+
+  return normalized;
+}
+
+function getWishlistVariantKey(size) {
+  if (size === null || size === undefined) return '';
+
+  return String(size)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
+}
+
+
+function getWishlistVariantImage(product, savedSize) {
+  if (!product) return '';
+
+  const normalized = String(savedSize || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
+
+  let imageIndex = 0;
+
+  // IMPORTANT:
+  // Check gift variants FIRST because "100mlgift"
+  // also contains "100ml".
+  if (normalized.includes('100ml') && normalized.includes('gift')) {
+    imageIndex = 8; // 100 ml premium gift
+  }
+  else if (normalized.includes('50ml') && normalized.includes('gift')) {
+    imageIndex = 7; // 50 ml premium gift
+  }
+  else if (normalized.includes('30ml') && normalized.includes('gift')) {
+    imageIndex = 6; // 30 ml premium gift
+  }
+  else if (normalized.includes('100ml')) {
+    imageIndex = 5; // Normal 100 ml perfume
+  }
+  else if (normalized.includes('50ml')) {
+    imageIndex = 4; // Normal 50 ml perfume
+  }
+  else if (normalized.includes('30ml')) {
+    imageIndex = 3; // Normal 30 ml perfume
+  }
+  else if (normalized.includes('20ml')) {
+    imageIndex = 2; // Normal 20 ml perfume
+  }
+  else if (normalized.includes('8ml')) {
+    imageIndex = 1; // Normal 8 ml perfume
+  }
+
+  return (
+    product.images?.[imageIndex] ||
+    product.image ||
+    product.images?.[0] ||
+    ''
+  );
+}
+// =====================================================
+// FETCH WISHLIST FROM BACKEND
+// =====================================================
+
+async function fetchWishlist() {
+  if (!authToken) {
+    wishlistIds = [];
+    wishlistLoaded = true;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_BASE_URL}/api/auth/wishlist`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    });
+
+    const data = await res.json();
+
+    wishlistIds = (data.wishlist || []).map(item => {
+
+      // Backward compatibility for old wishlist entries
+      if (typeof item !== 'object' || item === null) {
+        return {
+          productId: String(item),
+          size: '',
+          image: '',
+          price: 0,
+          name: ''
+        };
+      }
+
+      return {
+        ...item,
+        productId: String(item.productId || ''),
+        size: normalizeWishlistSize(item.size),
+        image: item.image || '',
+        price: Number(item.price || 0),
+        name: item.name || ''
+      };
+    });
+
+    wishlistLoaded = true;
+
+  } catch (err) {
+    console.error('Could not fetch wishlist:', err);
+
+    wishlistIds = [];
+    wishlistLoaded = true;
+  }
+}
+
+
+
+// =====================================================
+// CHECK WHETHER EXACT PRODUCT + SIZE IS WISHLISTED
+// =====================================================
+
+function isWishlistItemSaved(productId, size) {
+  const pid = String(productId || '');
+  const normalizedSize = normalizeWishlistSize(size);
+
+  return wishlistIds.some(item =>
+    String(item.productId || '') === pid &&
+    normalizeWishlistSize(item.size) === normalizedSize
+  );
+}
 
 
 
@@ -8081,48 +8384,95 @@ function loadWishlist() {
   });
 }
 
-
-
-
-
 function renderWishlist() {
-  const container = document.getElementById("wishlist-container");
+  const container = document.getElementById('wishlist-container');
+
   if (!container) return;
 
-  container.innerHTML = "";
+  container.innerHTML = '';
 
   if (!wishlistLoaded || !wishlistIds.length) {
     container.innerHTML = `
       <p class="text-gray-500 text-sm col-span-full">
         Your wishlist is empty.
-      </p>`;
+      </p>
+    `;
     return;
   }
 
   wishlistIds.forEach(wid => {
-    const product = findProductByAnyId(wid);
+    const product = findProductByAnyId(wid.productId);
 
     if (!product) return;
 
+    // Preserve exact selected variant:
+    // "100 ml" and "100 ml Gift" remain different.
+    const savedSize = normalizeWishlistSize(wid.size);
+
+    // Get exact image according to your product.images mapping.
+    const exactVariantImage = getWishlistVariantImage(
+      product,
+      savedSize
+    );
+
+    const wishlistImage =
+      exactVariantImage ||
+      wid.image ||
+      product.image ||
+      '';
+
+    const wishlistName =
+      wid.name ||
+      product.name;
+
+    const wishlistPrice =
+      Number(wid.price) ||
+      product.price;
+
+    const safeProductId = String(
+      wid.productId ||
+      product.id ||
+      product._id ||
+      ''
+    );
+
     container.innerHTML += `
-      <div class="product-card cursor-pointer border p-3 hover:shadow-lg"
-           onclick='openModal(${JSON.stringify(product).replace(/"/g, "&quot;")})'>
+      <div
+        class="product-card cursor-pointer border p-3 hover:shadow-lg"
+        onclick="openWishlistProduct(
+          '${escapeHtml(safeProductId)}',
+          '${escapeHtml(savedSize)}'
+        )"
+      >
 
-        <img src="${product.image}"
-             class="w-full h-40 object-contain mb-3">
+        <img
+          src="${escapeHtml(wishlistImage)}"
+          onerror="
+            this.onerror=null;
+            this.src='${escapeHtml(
+              wid.image || product.image || ''
+            )}';
+          "
+          class="w-full h-40 object-contain mb-3"
+          alt="${escapeHtml(wishlistName)}"
+        >
 
-        <h4 class="font-bold text-sm">${product.name}</h4>
+        <h4 class="font-bold text-sm">
+          ${escapeHtml(wishlistName)}
+        </h4>
+
+        <p class="text-xs text-gray-500 mt-1">
+          ${escapeHtml(savedSize)}
+        </p>
 
         <p class="text-yellow-600 font-semibold mt-1">
-          ₹${product.price}
+          ₹${Number(wishlistPrice).toLocaleString('en-IN')}
         </p>
 
       </div>
     `;
   });
 }
-
-
 
 
 function openModalById(id) {

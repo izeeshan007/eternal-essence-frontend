@@ -295,7 +295,7 @@
         <div class="overflow-auto">
           <table class="w-full text-left">
             <thead class="bg-gray-100 text-xs uppercase text-gray-600">
-              <tr><th class="p-3">Image</th><th class="p-3">Name</th><th class="p-3">Category</th><th class="p-3">Price</th><th class="p-3">Status</th><th class="p-3">Actions</th></tr>
+              <tr><th class="p-3">Image</th><th class="p-3">Name</th><th class="p-3">Category</th><th class="p-3">Price</th><th class="p-3">Stock</th><th class="p-3">Status</th><th class="p-3">Actions</th></tr>
             </thead>
             <tbody id="products-tbody" class="divide-y"></tbody>
           </table>
@@ -361,10 +361,29 @@ let dateFilter = { startDate: null, endDate: null };
 let editingProductId = null;
 let adminProducts = [];
 let hardcodedProducts = [];
+let inventoryByProductId = new Map();
 let selectedOrder = null;
 let salesChart = null;
 let statusChart = null;
 let bundleRules = [];
+let knownOrderIds = new Set();
+let orderNotificationsReady = false;
+let orderNotificationPoller = null;
+
+function notifyNewOrders(nextOrders) {
+  const nextIds = new Set(nextOrders.map(order => String(order._id || order.orderId)));
+  if (orderNotificationsReady) {
+    const newOrders = nextOrders.filter(order => !knownOrderIds.has(String(order._id || order.orderId)));
+    if (newOrders.length) {
+      const message = `${newOrders.length} new order${newOrders.length > 1 ? 's' : ''} received.`;
+      document.title = `(${newOrders.length}) New order — Eternal Essence Admin`;
+      if ('Notification' in window && Notification.permission === 'granted') new Notification('Eternal Essence', { body: message });
+      else alert(message);
+    }
+  }
+  knownOrderIds = nextIds;
+  orderNotificationsReady = true;
+}
 
 function setAuthUI() {
   if (adminToken) {
@@ -455,7 +474,9 @@ btnLogout.addEventListener('click', logoutAdmin);
 function logoutAdmin(){ localStorage.removeItem(ADMIN_TOKEN_KEY); adminToken = null; setAuthUI(); }
 
 async function initData() {
-  await loadHardcodedProducts(); await loadDashboard(); await loadOrders(); await loadUsers(); await loadAdminProducts(); await loadCoupons(); await loadBundleRules();
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  await loadHardcodedProducts(); await syncAndLoadInventory(); await loadDashboard(); await loadOrders(); await loadUsers(); await loadAdminProducts(); await loadCoupons(); await loadBundleRules();
+  if (!orderNotificationPoller) orderNotificationPoller = setInterval(() => { if (adminToken) loadOrders(); }, 30000);
 }
 
 async function loadDashboard() {
@@ -691,6 +712,7 @@ async function loadOrders() {
     const { ok, body } = await adminFetch(`/api/admin/orders?${qs.toString()}`);
     if (!ok) throw new Error(body.error || 'Could not load orders');
     orders = body.orders || [];
+    notifyNewOrders(orders);
     filtered = [...orders];
     page = 1;
     renderOrdersPage();
@@ -760,7 +782,7 @@ function renderOrdersPage() {
 }
 
 function adminStatusLabel(status) {
-  return ({ PENDING_PAYMENT: 'Payment Pending', PAYMENT_FAILED: 'Payment Failed', ORDER_PLACED: 'Order Placed', PROCESSING: 'Processing', DISPATCHED: 'Dispatched', DELIVERED: 'Delivered', CANCELLED: 'Cancelled', PAID: 'Order Placed', Processing: 'Processing', Shipped: 'Dispatched', Delivered: 'Delivered', Cancelled: 'Cancelled' })[status] || status || 'Payment Pending';
+  return ({ PENDING_PAYMENT: 'Payment Pending', PAYMENT_FAILED: 'Payment Failed', ORDER_PLACED: 'Order Placed', PROCESSING: 'Processing', DISPATCHED: 'Dispatched', DELIVERED: 'Delivered', CANCELLED: 'Cancelled', REJECTED: 'Rejected', PAID: 'Order Placed', Processing: 'Processing', Shipped: 'Dispatched', Delivered: 'Delivered', Cancelled: 'Cancelled' })[status] || status || 'Payment Pending';
 }
 
 function adminNormalizedStatus(status) {
@@ -781,8 +803,8 @@ function openOrderModal(id) {
   document.getElementById('modal-order-sub').textContent = new Date(selectedOrder.createdAt || Date.now()).toLocaleString('en-IN');
 
   const currentStatus = adminNormalizedStatus(selectedOrder.status);
-  const statusChoices = currentStatus === 'ORDER_PLACED' ? ['ORDER_PLACED', 'PROCESSING', 'CANCELLED']
-    : currentStatus === 'PROCESSING' ? ['PROCESSING', 'DISPATCHED', 'CANCELLED']
+  const statusChoices = currentStatus === 'ORDER_PLACED' ? ['ORDER_PLACED', 'PROCESSING', 'CANCELLED', 'REJECTED']
+    : currentStatus === 'PROCESSING' ? ['PROCESSING', 'DISPATCHED', 'CANCELLED', 'REJECTED']
     : currentStatus === 'DISPATCHED' ? ['DISPATCHED', 'DELIVERED']
     : [currentStatus || 'PENDING_PAYMENT'];
   const cardItem = (selectedOrder.items || []).find(item => item.itemType === 'perfume_card');
@@ -807,6 +829,7 @@ function openOrderModal(id) {
         ${statusChoices.map(s => `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${adminStatusLabel(s)}</option>`).join('')}
       </select>
       ${currentStatus === 'ORDER_PLACED' ? `<button onclick="acceptOrder('${selectedOrder._id || selectedOrder.orderId}')" class="mt-3 w-full rounded bg-yellow-500 p-2 text-sm font-bold text-black">Accept Order</button>` : ''}
+      ${['ORDER_PLACED', 'PROCESSING'].includes(currentStatus) ? `<div class="mt-3 grid grid-cols-2 gap-2"><button onclick="cancelAdminOrder('${selectedOrder._id || selectedOrder.orderId}')" class="rounded bg-red-600 p-2 text-sm font-bold text-white">Cancel Order</button><button onclick="rejectOrder('${selectedOrder._id || selectedOrder.orderId}')" class="rounded border border-red-600 p-2 text-sm font-bold text-red-700">Reject Order</button></div>` : ''}
       <label class="block mt-3 font-bold">Delivery Partner</label>
       <input id="modal-delivery-partner" value="${escapeHtml(selectedOrder.deliveryPartner || '')}" placeholder="Shadowfax, Delhivery, etc." class="w-full p-2 border rounded mt-1">
       <label class="block mt-3 font-bold">AWB</label>
@@ -861,6 +884,21 @@ async function acceptOrder(id) {
   await loadDashboard();
 }
 
+async function cancelAdminOrder(id) {
+  if (!confirm('Cancel this order?')) return;
+  const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'CANCELLED' }) });
+  if (!ok) return alert(body.error || 'Could not cancel order');
+  closeOrderModal(); await loadOrders(); await loadDashboard();
+}
+
+async function rejectOrder(id) {
+  const rejectionReason = prompt('Reason for rejection (for example: Out of stock):');
+  if (!rejectionReason?.trim()) return;
+  const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'REJECTED', rejectionReason }) });
+  if (!ok) return alert(body.error || 'Could not reject order');
+  closeOrderModal(); await loadOrders(); await loadDashboard();
+}
+
 async function replyToSupport(orderId, requestId) {
   const input = document.getElementById(`support-reply-${requestId}`);
   const reply = input?.value.trim();
@@ -879,25 +917,36 @@ async function loadAdminProducts() {
     const { ok, body } = await adminFetch('/api/admin/products');
     if (!ok) throw new Error(body.error || 'Could not load products');
     adminProducts = body.products || [];
-    document.getElementById('products-tbody').innerHTML = adminProducts.map(p => `
+    renderInventoryProducts();
+  } catch (err) {
+    document.getElementById('products-tbody').innerHTML = `<tr><td colspan="7" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderInventoryProducts() {
+  const seen = new Set();
+  const catalog = [...hardcodedProducts, ...adminProducts.map(product => ({ ...product, id: product._id, type: product.category, source: 'backend' }))]
+    .filter(product => { const id = String(product.id || product._id); if (seen.has(id)) return false; seen.add(id); return true; });
+  document.getElementById('products-tbody').innerHTML = catalog.map(p => {
+    const productId = String(p.id || p._id);
+    const inventory = inventoryByProductId.get(productId);
+    const stock = Number(inventory?.stock || 0);
+    return `
       <tr class="hover:bg-gray-50 border-b border-gray-100">
         <td class="p-3"><img src="${productImage(p)}" class="w-12 h-12 object-cover rounded border" onerror="this.style.display='none'"></td>
         <td class="p-3">
           <div class="font-semibold text-sm">${escapeHtml(p.name)}</div>
           <div class="tiny text-gray-500">${escapeHtml(p.inspiredBy || '')}</div>
         </td>
-        <td class="p-3 tiny">${escapeHtml(p.category || '')}</td>
+        <td class="p-3 tiny">${escapeHtml(p.category || p.type || '')}</td>
         <td class="p-3 font-bold">${formatINR(p.price)}</td>
-        <td class="p-3 tiny">${p.isActive ? 'Active' : 'Hidden'}</td>
+        <td class="p-3"><div class="flex items-center gap-2"><input id="stock-${productId}" type="number" min="0" value="${stock}" class="w-20 p-1 border rounded tiny"><button onclick="saveInventoryStock('${productId}')" class="px-2 py-1 border rounded tiny">Save</button></div></td>
+        <td class="p-3 tiny">${stock > 0 ? (p.isActive === false ? 'Hidden' : 'In Stock') : 'Out of Stock'}</td>
         <td class="p-3 space-x-2">
-          <button onclick="toggleProductStatus('${p._id}', ${p.isActive ? 'false' : 'true'})" class="px-2 py-1 border rounded tiny">${p.isActive ? 'Hide' : 'Show'}</button>
-          <button onclick="deleteProduct('${p._id}')" class="px-2 py-1 text-red-600 border rounded tiny">Delete</button>
+          ${p._id ? `<button onclick="toggleProductStatus('${p._id}', ${p.isActive ? 'false' : 'true'})" class="px-2 py-1 border rounded tiny">${p.isActive ? 'Hide' : 'Show'}</button><button onclick="deleteProduct('${p._id}')" class="px-2 py-1 text-red-600 border rounded tiny">Delete</button>` : '<span class="tiny text-gray-500">Frontend catalogue</span>'}
         </td>
-      </tr>
-    `).join('') || `<tr><td colspan="6" class="p-4 text-gray-500">No admin products yet.</td></tr>`;
-  } catch (err) {
-    document.getElementById('products-tbody').innerHTML = `<tr><td colspan="6" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
-  }
+      </tr>`;
+  }).join('') || `<tr><td colspan="7" class="p-4 text-gray-500">No products found.</td></tr>`;
 }
 
 function productImage(product) {
@@ -927,6 +976,31 @@ async function loadHardcodedProducts() {
     console.warn('Could not load hardcoded products for gift picker', err);
     hardcodedProducts = [];
   }
+}
+
+async function syncAndLoadInventory() {
+  const products = hardcodedProducts.map(product => ({
+    productId: String(product.id),
+    name: product.name,
+    category: product.category || product.type || 'Perfume',
+    image: product.images?.[0] || product.image || ''
+  }));
+  try {
+    if (products.length) await adminFetch('/api/admin/inventory/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products }) });
+    const { ok, body } = await adminFetch('/api/admin/inventory');
+    if (!ok) throw new Error(body.error || 'Could not load inventory');
+    inventoryByProductId = new Map((body.inventory || []).map(item => [String(item.productId), item]));
+  } catch (err) {
+    console.warn('Inventory unavailable', err);
+  }
+}
+
+async function saveInventoryStock(productId) {
+  const stock = Number(document.getElementById(`stock-${productId}`)?.value);
+  const { ok, body } = await adminFetch(`/api/admin/inventory/${encodeURIComponent(productId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stock }) });
+  if (!ok) return alert(body.error || 'Could not save stock');
+  inventoryByProductId.set(String(productId), body.item);
+  renderInventoryProducts();
 }
 
 function getGiftProducts() {
