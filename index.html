@@ -412,7 +412,17 @@
     .review-star:hover {
       transform: translateY(-2px) scale(1.05);
     }
-  </style>
+  
+/* ===== ETERNAL ESSENCE FRAGRANCE QUIZ ===== */
+.ee-quiz-card{background:linear-gradient(145deg,#0b0b0b,#191919);border:1px solid rgba(255,215,0,.32);box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.ee-quiz-option{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.045);transition:.22s ease;min-height:92px}
+.ee-quiz-option:hover,.ee-quiz-option.selected{border-color:#FFD700;background:rgba(255,215,0,.11);transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,215,0,.08)}
+.ee-quiz-progress{height:4px;background:#2b2b2b;overflow:hidden;border-radius:999px}.ee-quiz-progress>div{height:100%;background:#FFD700;transition:width .35s ease}
+.ee-result-card{background:linear-gradient(145deg,#fff,#fffaf0);border:1px solid #eee4c8;transition:.25s ease}.ee-result-card:hover{transform:translateY(-4px);border-color:#FFD700;box-shadow:0 18px 40px rgba(34,25,8,.13)}
+.ee-match-ring{background:conic-gradient(#FFD700 var(--match),#ececec 0);border-radius:50%;width:68px;height:68px;display:grid;place-items:center}.ee-match-ring:after{content:'';width:54px;height:54px;background:white;border-radius:50%;position:absolute}.ee-match-ring span{position:relative;z-index:1;font-weight:900;font-size:12px;color:#111}
+@media(max-width:640px){.ee-quiz-option{min-height:78px}.ee-match-ring{width:58px;height:58px}.ee-match-ring:after{width:46px;height:46px}}
+
+</style>
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <script>
@@ -579,6 +589,20 @@
   </div>
 </header>
 
+
+
+
+<!-- Floating Signature Scent Finder -->
+<div id="scent-finder-float" class="fixed right-4 bottom-20 z-40 group">
+  <button onclick="openScentQuiz()" aria-label="Find your signature scent"
+    class="relative h-14 w-14 rounded-full bg-black text-yellow-500 border border-yellow-500 shadow-2xl flex items-center justify-center hover:bg-yellow-500 hover:text-black transition">
+    <i class="fas fa-wand-magic-sparkles text-xl"></i>
+    <span class="absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap bg-black text-white border border-yellow-500/50 rounded-lg px-4 py-3 text-left shadow-2xl opacity-0 translate-x-3 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+      <strong class="block text-yellow-500 text-sm">Confused in selection?</strong>
+      <small class="text-gray-300">Find your signature scent in about 60 seconds</small>
+    </span>
+  </button>
+</div>
 
 <section id="filter-bar" class="py-3 md:py-6 bg-white border-b border-gray-200">
   <div class="container mx-auto px-4 space-y-4">
@@ -994,10 +1018,9 @@
 
               <div class="mb-4">
                 <label class="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Shipping Address</label>
-                <button id="use-saved-address-btn" type="button" onclick="fillCheckoutFromProfile()" class="hidden mb-3 text-xs font-bold uppercase tracking-widest border border-yellow-500 text-yellow-700 px-3 py-2 hover:bg-yellow-500 hover:text-black transition">
-                  Use saved address
+                <button id="use-saved-address-btn" type="button" onclick="openAddressSelectModal()" class="hidden mb-3 text-xs font-bold uppercase tracking-widest border border-yellow-500 text-yellow-700 px-3 py-2 hover:bg-yellow-500 hover:text-black transition">
+                  Change address
                 </button>
-                <select id="saved-address-select" onchange="fillCheckoutFromSavedAddress(this.value)" class="hidden w-full mb-3 p-2 border border-gray-300 focus:border-yellow-500 outline-none text-sm"></select>
                 <input id="ship-name" type="text" placeholder="Full Name" class="w-full mb-2 p-2 border border-gray-300 focus:border-yellow-500 outline-none text-sm">
                 <input id="ship-phone" type="tel" placeholder="Phone Number" class="w-full mb-2 p-2 border border-gray-300 focus:border-yellow-500 outline-none text-sm">
                 <textarea id="ship-address" rows="2" placeholder="House / Flat, Street, Area" class="w-full mb-2 p-2 border border-gray-300 focus:border-yellow-500 outline-none text-sm"></textarea>
@@ -1011,13 +1034,12 @@
               <div class="mb-4">
                 <label class="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Payment Method</label>
                 <div class="space-y-2 text-sm text-gray-700">
-                  <label id="online-payment-row" class="flex items-center gap-2"><input type="radio" name="payment-method" value="Razorpay Online Payment" class="accent-yellow-500" checked><span>Online Payment (Razorpay)</span></label>
-                  <label id="cod-payment-row" class="hidden items-center gap-2"><input type="radio" name="payment-method" value="Cash on Delivery" class="accent-yellow-500"><span>Cash on Delivery - Mumbai only (+₹19)</span></label>
+                  <label id="online-payment-row" class="flex items-center gap-2"><input type="radio" name="payment-method" value="Razorpay Online Payment" class="accent-yellow-500" checked><span>Online Payment</span></label>
+                  <label id="cod-payment-row" class="hidden items-center gap-2"><input type="radio" name="payment-method" value="Cash on Delivery" class="accent-yellow-500"><span>Cash on Delivery</span></label>
                 </div>
               </div>
 
               <button id="checkout-btn" onclick="handleCheckout()" class="w-full bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition">Proceed to Checkout</button>
-              <p class="mt-2 text-[10px] text-gray-500 text-center">Payments via Razorpay</p>
             </div>
           </div>
         </div>
@@ -1025,7 +1047,7 @@
     </div>
 
     <div id="page-orders" class="hidden fade-in">
-      <div class="bg-gray-100 py-10 border-b border-gray-200"><div class="container mx-auto px-6"><h1 class="text-3xl brand-font font-bold">My Orders</h1><p class="text-sm text-gray-500 mt-2">Login with your Eternal Essence account to view your orders from any device.</p><p class="text-xs text-red-600 mt-2 font-semibold">Order cancellation is available only before dispatch/shipping.</p></div></div>
+      <div class="bg-gray-100 py-10 border-b border-gray-200"><div class="container mx-auto px-6"><h1 class="text-3xl brand-font font-bold">My Orders</h1><p class="text-sm text-gray-500 mt-2">Login with your Eternal Essence account to view your orders from any device.</p><p class="text-xs text-red-600 mt-2 font-semibold"></p></div></div>
       <div class="container mx-auto px-6 py-10">
         <div id="orders-login-required" class="text-center py-16 hidden">
           <i class="fas fa-user-lock text-6xl text-gray-300 mb-4"></i>
@@ -1082,6 +1104,12 @@
       <option value="How do I cancel my order?">How do I cancel my order?</option>
       <option value="My payment failed. How do I retry?">My payment failed. How do I retry?</option>
       <option value="I received a damaged or incorrect item.">I received a damaged or incorrect item.</option>
+      <option value="I want to change my delivery address.">I want to change my delivery address.</option>
+      <option value="I want to change a product or fragrance in my order.">I want to change a product or fragrance in my order.</option>
+      <option value="My order shows delivered but I have not received it.">My order shows delivered but I have not received it.</option>
+      <option value="I have a question about refund status.">I have a question about refund status.</option>
+      <option value="The product is leaking or packaging is damaged.">The product is leaking or packaging is damaged.</option>
+      <option value="I need help choosing a fragrance.">I need help choosing a fragrance.</option>
     </select>
     <div id="support-quick-answer" class="hidden mb-3 text-xs bg-yellow-50 border border-yellow-200 rounded p-3"></div>
     <textarea id="support-query-text" rows="5" class="w-full border border-gray-300 rounded p-3 outline-none focus:border-yellow-500" placeholder="Write your order query..."></textarea>
@@ -1094,6 +1122,94 @@
       <button onclick="closeSupportModal()" class="px-4 py-2 border rounded text-sm font-bold">Cancel</button>
       <button onclick="submitSupportQuery()" class="px-5 py-2 bg-black text-yellow-500 rounded text-sm font-bold hover:bg-yellow-500 hover:text-black">Submit Query</button>
     </div>
+  </div>
+</div>
+
+
+<div id="reject-order-modal" class="fixed inset-0 bg-black/70 hidden z-[70] flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg w-full max-w-lg p-6 border-t-4 border-red-500 shadow-2xl">
+    <div class="flex justify-between items-start gap-4 mb-4">
+      <div><p class="text-red-600 text-xs font-bold uppercase tracking-[.2em]">Order decision</p><h3 class="text-2xl brand-font font-bold">Reject Order</h3></div>
+      <button onclick="closeRejectOrderModal()" class="text-gray-400 hover:text-red-500 text-xl">✕</button>
+    </div>
+    <input id="reject-order-id" type="hidden">
+    <label class="block text-sm font-bold mb-1">Choose a reason</label>
+    <select id="reject-reason-preset" onchange="applyRejectReasonPreset()" class="w-full border rounded p-3 mb-3 outline-none focus:border-red-500">
+      <option value="">Select a preset reason</option>
+      <option>Payment could not be verified.</option>
+      <option>Selected product is currently out of stock.</option>
+      <option>Delivery is not serviceable at the provided pincode.</option>
+      <option>Customer requested cancellation.</option>
+      <option>Duplicate order was placed.</option>
+      <option>Shipping address or contact details are incomplete.</option>
+      <option>Order could not be fulfilled within the requested timeline.</option>
+      <option>Pricing or inventory changed before confirmation.</option>
+      <option>Suspected fraudulent or invalid order.</option>
+      <option>Other — write a custom reason below.</option>
+    </select>
+    <textarea id="reject-reason-text" rows="5" class="w-full border rounded p-3 outline-none focus:border-red-500" placeholder="Write the rejection reason shown to the customer..."></textarea>
+    <p id="reject-order-msg" class="text-xs mt-2"></p>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closeRejectOrderModal()" class="px-4 py-2 border rounded text-sm font-bold">Cancel</button>
+      <button onclick="confirmRejectOrder()" class="px-5 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700">Reject Order</button>
+    </div>
+  </div>
+</div>
+
+<div id="delivery-estimate-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg w-full max-w-sm p-6 text-center">
+    <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
+      <i class="fas fa-truck"></i>
+    </div>
+    <h3 class="text-xl brand-font font-bold mb-2">Order Confirmed</h3>
+    <p id="delivery-estimate-text" class="text-sm text-gray-600 leading-relaxed"></p>
+    <button onclick="closeDeliveryEstimateModal()" class="mt-5 w-full bg-black text-white py-3 text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition">View Orders</button>
+  </div>
+</div>
+
+<div id="address-select-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg w-full max-w-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl brand-font font-bold">Select Address</h3>
+      <button onclick="closeAddressSelectModal()" class="text-gray-400 hover:text-red-500 text-xl">✕</button>
+    </div>
+    <div id="checkout-address-options" class="space-y-3"></div>
+  </div>
+</div>
+
+<div id="edit-profile-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl brand-font font-bold">Edit Profile</h3>
+      <button onclick="closeEditProfileModal()" class="text-gray-400 hover:text-red-500 text-xl">✕</button>
+    </div>
+    <div class="space-y-3">
+      <input id="modal-profile-name" placeholder="Full name" class="w-full p-3 border" />
+      <input id="modal-profile-phone" placeholder="Phone" class="w-full p-3 border" />
+      <input id="modal-profile-email" class="w-full p-3 border bg-gray-100 text-gray-500" readonly />
+      <button onclick="saveProfileDetails()" class="w-full bg-black text-white py-3 font-bold uppercase tracking-widest">Save Details</button>
+      <button onclick="openPasswordFromProfile()" class="w-full border border-yellow-500 text-yellow-700 py-3 font-bold uppercase tracking-widest">Change Password</button>
+      <p id="modal-profile-msg" class="text-xs"></p>
+    </div>
+  </div>
+</div>
+
+
+<div id="profile-address-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto border-t-4 border-yellow-500 shadow-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-yellow-700 text-xs font-bold uppercase tracking-[0.25em] mb-1">Saved address</p>
+        <h3 id="profile-address-modal-title" class="text-xl brand-font font-bold">Add New Address</h3>
+      </div>
+      <button onclick="closeAddressForm()" class="text-gray-400 hover:text-red-500 text-xl">✕</button>
+    </div>
+    <div id="profile-address-modal-fields" class="space-y-3"></div>
+    <div class="flex justify-end gap-2 mt-5">
+      <button onclick="closeAddressForm()" class="px-4 py-2 border rounded text-sm font-bold">Cancel</button>
+      <button onclick="saveProfileAddress()" class="px-5 py-2 bg-black text-yellow-500 rounded text-sm font-bold hover:bg-yellow-500 hover:text-black">Save Address</button>
+    </div>
+    <p id="profile-address-modal-msg" class="text-xs mt-2"></p>
   </div>
 </div>
 
@@ -1226,45 +1342,40 @@
             <p class="text-sm text-gray-600"><strong>Email:</strong> <span id="profile-email-text">—</span></p>
             <p class="text-sm text-gray-600"><strong>Phone:</strong> <span id="profile-phone-text">—</span></p>
             <div class="mt-4 space-y-2">
-              <button onclick="openEditProfile()" class="w-full bg-black text-white py-2 text-sm font-bold uppercase">Edit Profile</button>
-              <button onclick="openChangePassword()" class="w-full border border-gray-300 py-2 text-sm font-bold uppercase">Change Password</button>
+              <button onclick="openEditProfileModal()" class="w-full bg-black text-white py-2 text-sm font-bold uppercase">Edit Profile</button>
+              <!-- <button onclick="openEditProfileModal()" class="w-full border border-gray-300 py-2 text-sm font-bold uppercase">Change Password</button> -->
               <button onclick="switchPage('orders')" class="w-full bg-yellow-500 py-2 text-sm font-bold uppercase">My Orders</button>
             </div>
           </div>
 
           <div class="bg-white p-6 shadow-md md:col-span-2">
-            <div id="profile-edit-section">
-              <h3 class="font-bold mb-4">Edit Profile</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input id="profile-name" placeholder="Full name" class="p-2 border" />
-                <input id="profile-phone" placeholder="Phone" class="p-2 border" />
-                <input id="profile-address-label" placeholder="Address label (Home, Work, Office)" class="p-2 border col-span-2" />
-                <input id="profile-address-line" placeholder="Address line" class="p-2 border col-span-2" />
-                <input id="profile-city" placeholder="City" class="p-2 border" />
-                <input id="profile-pincode" placeholder="Pincode" class="p-2 border" />
-                <input id="profile-state" placeholder="State" class="p-2 border" />
+            <div id="profile-address-section">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h3 class="font-bold">Saved Addresses</h3>
+                <button onclick="openAddressForm()" class="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">Add Address</button>
               </div>
-              <div class="flex gap-2 mt-3">
-                <button onclick="saveProfile()" class="bg-black text-white px-4 py-2 font-bold">Save</button>
-                <button onclick="saveProfileAddress()" class="bg-yellow-500 text-black px-4 py-2 font-bold">Save Address</button>
-                <button onclick="cancelEditProfile()" class="border px-4 py-2">Cancel</button>
-                <span id="profile-save-msg" class="text-sm ml-2"></span>
+              <div id="profile-address-form" class="hidden border rounded p-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select id="profile-address-label" class="p-2 border">
+                    <option value="Home">Home</option>
+                    <option value="Office">Office</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <input id="profile-address-phone" placeholder="Contact number" class="p-2 border" />
+                  <input id="profile-address-name" placeholder="Receiver name" class="p-2 border" />
+                  <input id="profile-pincode" placeholder="Pincode" class="p-2 border" />
+                  <input id="profile-address-line" placeholder="Address line" class="p-2 border md:col-span-2" />
+                  <input id="profile-city" placeholder="City" class="p-2 border" />
+                  <input id="profile-state" placeholder="State" class="p-2 border" />
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                  <button onclick="saveProfileAddress()" class="bg-yellow-500 text-black px-4 py-2 font-bold">Save Address</button>
+                  <button onclick="closeAddressForm()" class="border px-4 py-2">Cancel</button>
+                  <span id="profile-save-msg" class="text-sm ml-2"></span>
+                </div>
               </div>
               <div id="profile-address-list" class="mt-5 space-y-2"></div>
             </div>
-
-            <div id="change-password-section" class="hidden">
-              <h3 class="font-bold mb-4">Change Password</h3>
-              <input id="cp-old-password" type="password" placeholder="Current password" class="w-full p-2 border mb-2" />
-              <input id="cp-new-password" type="password" placeholder="New password" class="w-full p-2 border mb-2" />
-              <input id="cp-new-password2" type="password" placeholder="Confirm new password" class="w-full p-2 border mb-2" />
-              <div class="flex gap-2">
-                <button onclick="changePassword()" class="bg-yellow-500 text-black px-4 py-2 font-bold">Change Password</button>
-                <button onclick="cancelChangePassword()" class="border px-4 py-2">Cancel</button>
-                <span id="cp-msg" class="text-sm ml-2"></span>
-              </div>
-            </div>
-
             <hr class="my-6" />
 
             <h3 class="font-bold mb-4">Wishlist</h3>
@@ -4850,6 +4961,7 @@ function openFloatingFilters() {
     let appliedCoupon = null;
     const COD_CHARGE = 19;
     let editingCartIndex = null;
+    let ordersRenderSeq = 0;
 
     let currentProduct = null;
     let selectedSize = 100;
@@ -4942,7 +5054,7 @@ function openFloatingFilters() {
         if (welcome) { welcome.classList.remove('hidden'); if (welcomeEmail) welcomeEmail.textContent = currentUser.email || ''; }
         if (navUserIcon) { navUserIcon.classList.remove('text-gray-300'); navUserIcon.classList.add('text-yellow-400'); }
         if (checkoutEmail) { checkoutEmail.value = currentUser.email || ''; checkoutEmail.readOnly = true; }
-        if (savedAddressBtn) savedAddressBtn.classList.toggle('hidden', !currentUser.address?.addressLine);
+        renderSavedAddressControls();
 
         // hide signup/login UI
         if (signupCard) signupCard.classList.add('hidden');
@@ -4985,7 +5097,7 @@ document.body.style.overflow = "auto";
   updateActiveNav(pageId);
   window.scrollTo(0,0);
 
-  if (pageId === 'cart') renderCart();
+  if (pageId === 'cart') { renderSavedAddressControls(); renderCart(); }
   if (pageId === 'orders') renderOrders();
   if (pageId === 'profile') populateProfile();
   if (pageId === 'custom-set') renderBundleBuilder();
@@ -6115,7 +6227,40 @@ document.getElementById("mobile-menu").addEventListener("click", function(e){
       }
     }
 
-    function handleLogout(){ clearAuth(); const lm = document.getElementById('login-message'); if (lm) { lm.textContent = 'You have been logged out.'; lm.className='text-xs mt-2 text-gray-600'; } switchPage('profile'); }
+    function handleLogout(){
+  stopOrdersPoller?.();
+  clearAuth();
+  currentUser = null;
+  authToken = '';
+  try {
+    localStorage.removeItem('ee_auth_token');
+    localStorage.removeItem('ee_current_user');
+    sessionStorage.removeItem('ee_auth_token');
+    sessionStorage.removeItem('ee_current_user');
+  } catch(e) {}
+
+  // Clear every visible account/profile field so stale personal data never remains on screen.
+  ['profile-name-text','profile-email-text','profile-phone-text'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '—';
+  });
+  const addressList = document.getElementById('profile-address-list');
+  if (addressList) addressList.innerHTML = '<p class="text-xs text-gray-500">Login to view saved addresses.</p>';
+  const profileForm = document.getElementById('profile-address-form');
+  if (profileForm) profileForm.classList.add('hidden');
+
+  // Reset account/profile panels according to the existing auth UI.
+  if (typeof updateAuthUI === 'function') updateAuthUI();
+  if (typeof renderOrders === 'function') renderOrders();
+
+  const lm = document.getElementById('login-message');
+  if (lm) {
+    lm.textContent = 'You have been logged out.';
+    lm.className = 'text-xs mt-2 text-gray-600';
+  }
+
+  history.replaceState({}, '', '#account');
+  switchPage('account');
+}
 
 /* ===== Forgot password workflow ===== */
 function openForgotModal() {
@@ -6283,6 +6428,7 @@ document.getElementById('fp-verify-reset').onclick = async function() {
 
 
     async function renderOrders() {
+  const renderId = ++ordersRenderSeq;
   const loginReq = document.getElementById('orders-login-required'),
         emptyMsg = document.getElementById('orders-empty-msg'),
         errorMsg = document.getElementById('orders-error-msg'),
@@ -6306,6 +6452,7 @@ document.getElementById('fp-verify-reset').onclick = async function() {
 
   try {
     const fetchedOrders = await fetchMyOrders();
+    if (renderId !== ordersRenderSeq) return;
     const seenOrders = new Set();
     const orders = fetchedOrders.filter(order => {
       const key = String(order._id || order.orderId || order.razorpay_order_id || JSON.stringify(order));
@@ -6328,6 +6475,7 @@ document.getElementById('fp-verify-reset').onclick = async function() {
         new Date(a.createdAt || a.date || 0)
     );
 
+    const fragment = document.createDocumentFragment();
     orders.forEach(order => {
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-100 hover:bg-gray-50 cursor-pointer';
@@ -6369,10 +6517,8 @@ document.getElementById('fp-verify-reset').onclick = async function() {
         </td>
       `;
 
-      /* âœ… ROW CLICK → OPEN ORDER MODAL */
       tr.addEventListener('click', () => openOrderDetails(order));
 
-      /* ðŸ›‘ STOP ROW CLICK WHEN BUTTONS ARE CLICKED */
       if (canRetry) {
         tr.querySelector('.retry-btn').addEventListener('click', e => {
           e.stopPropagation();
@@ -6387,10 +6533,14 @@ document.getElementById('fp-verify-reset').onclick = async function() {
         });
       }
 
-      tbody.appendChild(tr);
+      fragment.appendChild(tr);
     });
+    if (renderId !== ordersRenderSeq) return;
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
 
   } catch (err) {
+    if (renderId !== ordersRenderSeq) return;
     console.error('Orders load error', err);
     loadingEl.classList.add('hidden');
     errorMsg.textContent = err.message || 'Could not load orders.';
@@ -6531,18 +6681,15 @@ document.getElementById('fp-verify-reset').onclick = async function() {
 
       try {
         btn.disabled = true; btn.textContent = 'Processing...';
-        // COD
         if (paymentMethod === 'Cash on Delivery') {
           if (cartHasPerfumeCard()) throw new Error('COD is not available for custom perfume cards.');
           if (!isMumbaiCheckoutCity()) throw new Error('COD is available only for Mumbai delivery addresses.');
           const res = await fetch(`${BACKEND_BASE_URL}/api/orders/cod`, { method:'POST', headers, body: JSON.stringify(payload) });
           const d = await res.json().catch(()=>({}));
           if (!res.ok || !d.success) throw new Error(d.error || 'Could not place COD order.');
-          alert(`Your COD order ${d.orderId || ''} has been placed. We will contact you shortly.`);
-          cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); return;
+          cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(d.deliveryEstimate); return;
         }
 
-        // Online payment: create razorpay order on backend
         const res = await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`, { method:'POST', headers, body: JSON.stringify(payload) });
         const d = await res.json().catch(()=>({}));
         if (!res.ok || !d.success || !d.razorpayOrderId) throw new Error(d.error || 'Could not start online payment.');
@@ -6566,8 +6713,7 @@ document.getElementById('fp-verify-reset').onclick = async function() {
               })});
               const verifyData = await verifyRes.json().catch(()=>({}));
               if (!verifyRes.ok || !verifyData.success) throw new Error(verifyData.error || 'Payment verification failed.');
-              alert(`Payment successful! Your order ${verifyData.orderId || ''} is confirmed.`);
-              cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders();
+              cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(verifyData.deliveryEstimate);
             } catch (err) {
               console.error('Verification error', err); alert(err.message || 'Payment captured but verification failed. Contact support.');
             }
@@ -6651,10 +6797,9 @@ document.getElementById('fp-verify-reset').onclick = async function() {
       const addresses = getSavedAddresses();
       const savedAddressBtn = document.getElementById('use-saved-address-btn');
       if (savedAddressBtn) savedAddressBtn.classList.toggle('hidden', !addresses.length);
-      const select = document.getElementById('saved-address-select');
-      if (select) {
-        select.classList.toggle('hidden', addresses.length <= 1);
-        select.innerHTML = addresses.map((addr, index) => `<option value="${index}" ${addr.isDefault ? 'selected' : ''}>${escapeHtml(addr.label || `Address ${index + 1}`)}${addr.isDefault ? ' (Default)' : ''} - ${escapeHtml(addr.city || '')}</option>`).join('');
+      const addressEmpty = !document.getElementById('ship-address')?.value?.trim();
+      if (addresses.length && addressEmpty) {
+        fillCheckoutFromProfile();
       }
     }
 
@@ -6663,59 +6808,101 @@ document.getElementById('fp-verify-reset').onclick = async function() {
       document.getElementById('profile-name-text').textContent = currentUser.name || '—';
       document.getElementById('profile-email-text').textContent = currentUser.email || '—';
       document.getElementById('profile-phone-text').textContent = currentUser.phone || '—';
-      document.getElementById('profile-name').value = currentUser.name || '';
-      document.getElementById('profile-phone').value = currentUser.phone || '';
-      document.getElementById('profile-address-label').value = currentUser.address?.label || 'Home';
-      document.getElementById('profile-address-line').value = currentUser.addressLine || currentUser.address?.addressLine || '';
-      document.getElementById('profile-city').value = currentUser.city || currentUser.address?.city || '';
-      document.getElementById('profile-pincode').value = currentUser.pincode || currentUser.address?.pincode || '';
-      document.getElementById('profile-state').value = currentUser.state || currentUser.address?.state || '';
       renderSavedAddressControls();
       renderProfileAddressList();
     }
 
-    function openEditProfile(){ document.getElementById('profile-edit-section').classList.remove('hidden'); document.getElementById('change-password-section').classList.add('hidden'); }
-    function cancelEditProfile(){ document.getElementById('profile-edit-section').classList.remove('hidden'); document.getElementById('change-password-section').classList.add('hidden'); }
-    function openChangePassword(){ document.getElementById('profile-edit-section').classList.add('hidden'); document.getElementById('change-password-section').classList.remove('hidden'); }
+    function openEditProfileModal(){
+      if (!currentUser) return switchPage('account');
+      document.getElementById('modal-profile-name').value = currentUser.name || '';
+      document.getElementById('modal-profile-phone').value = currentUser.phone || '';
+      document.getElementById('modal-profile-email').value = currentUser.email || '';
+      document.getElementById('modal-profile-msg').textContent = '';
+      document.getElementById('edit-profile-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
 
-    async function saveProfile(){
-      const name = document.getElementById('profile-name').value.trim();
-      const phone = document.getElementById('profile-phone').value.trim();
-      const label = document.getElementById('profile-address-label').value.trim() || 'Home';
-      const addressLine = document.getElementById('profile-address-line').value.trim();
-      const city = document.getElementById('profile-city').value.trim();
-      const pincode = document.getElementById('profile-pincode').value.trim();
-      const state = document.getElementById('profile-state').value.trim();
-      const msg = document.getElementById('profile-save-msg');
-      const existingAddresses = getSavedAddresses();
-      const addresses = addressLine ? [{ label, name, phone, addressLine, city, pincode, state, isDefault: true }, ...existingAddresses.filter(addr => !addr.isDefault && addr.addressLine !== addressLine)] : existingAddresses;
+    function closeEditProfileModal(){
+      document.getElementById('edit-profile-modal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+
+    function openPasswordFromProfile() {
+      closeEditProfileModal();
+      document.getElementById('fp-email').value = currentUser?.email || '';
+      openForgotModal();
+    }
+
+    async function saveProfileDetails(){
+      const name = document.getElementById('modal-profile-name').value.trim();
+      const phone = document.getElementById('modal-profile-phone').value.trim();
+      const msg = document.getElementById('modal-profile-msg');
       try {
         msg.textContent = 'Saving...';
-        if (authToken) {
-          const res = await fetch(`${BACKEND_BASE_URL}/api/auth/me`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ name, phone, address: { name, phone, addressLine, city, pincode, state }, addresses })
-          });
-          const d = await res.json().catch(()=>({}));
-          if (!res.ok || !d.success) throw new Error(d.error || 'Could not save');
-          currentUser = d.user || currentUser;
-          saveAuthToStorage(); populateProfile();
-          msg.textContent = 'Saved';
-        } else {
-          msg.textContent = 'Not logged in'; msg.className='text-xs text-red-600';
-        }
+        const res = await fetch(`${BACKEND_BASE_URL}/api/auth/me`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ name, phone, address: currentUser.address || {}, addresses: getSavedAddresses() })
+        });
+        const d = await res.json().catch(()=>({}));
+        if (!res.ok || !d.success) throw new Error(d.error || 'Could not save');
+        currentUser = d.user || currentUser;
+        saveAuthToStorage();
+        populateProfile();
+        msg.textContent = 'Saved';
+        msg.className = 'text-xs text-green-700';
+        setTimeout(closeEditProfileModal, 500);
       } catch (err) {
-        console.error('saveProfile', err); msg.textContent = err.message || 'Save failed'; msg.className='text-xs text-red-600';
+        msg.textContent = err.message || 'Save failed';
+        msg.className = 'text-xs text-red-600';
       }
     }
 
+    function openAddressForm(addressIndex = null) {
+      if (!currentUser) { switchPage('account'); return; }
+      const address = addressIndex === null ? {} : getSavedAddresses()[Number(addressIndex)] || {};
+      const form = document.getElementById('profile-address-form');
+      const modal = document.getElementById('profile-address-modal');
+      const host = document.getElementById('profile-address-modal-fields');
+      if (!form || !modal || !host) return;
+
+      form.dataset.editIndex = addressIndex === null ? '' : String(addressIndex);
+      document.getElementById('profile-address-modal-title').textContent = addressIndex === null ? 'Add New Address' : 'Edit Address';
+
+      // Reuse the existing form controls, but show them inside a dedicated modal.
+      host.appendChild(form);
+      form.classList.remove('hidden');
+      document.getElementById('profile-address-label').value = address.label || 'Home';
+      document.getElementById('profile-address-name').value = address.name || currentUser?.name || '';
+      document.getElementById('profile-address-phone').value = address.phone || currentUser?.phone || '';
+      document.getElementById('profile-address-line').value = address.addressLine || '';
+      document.getElementById('profile-city').value = address.city || '';
+      document.getElementById('profile-pincode').value = address.pincode || '';
+      document.getElementById('profile-state').value = address.state || '';
+      const msg = document.getElementById('profile-save-msg');
+      if (msg) msg.textContent = '';
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddressForm() {
+      const modal = document.getElementById('profile-address-modal');
+      const form = document.getElementById('profile-address-form');
+      if (modal) modal.classList.add('hidden');
+      if (form) form.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    async function saveProfile(){
+      return saveProfileDetails();
+    }
+
     async function saveProfileAddress() {
-      const name = document.getElementById('profile-name').value.trim();
-      const phone = document.getElementById('profile-phone').value.trim();
+      const editIndexRaw = document.getElementById('profile-address-form')?.dataset?.editIndex || '';
       const address = {
-        label: document.getElementById('profile-address-label').value.trim() || 'Address',
-        name,
-        phone,
+        label: document.getElementById('profile-address-label').value || 'Home',
+        name: document.getElementById('profile-address-name').value.trim() || currentUser?.name || '',
+        phone: document.getElementById('profile-address-phone').value.trim() || currentUser?.phone || '',
         addressLine: document.getElementById('profile-address-line').value.trim(),
         city: document.getElementById('profile-city').value.trim(),
         pincode: document.getElementById('profile-pincode').value.trim(),
@@ -6727,8 +6914,11 @@ document.getElementById('fp-verify-reset').onclick = async function() {
         document.getElementById('profile-save-msg').className = 'text-xs text-red-600';
         return;
       }
-      const addresses = [...getSavedAddresses().filter(addr => addr.addressLine !== address.addressLine), address];
+      const addresses = getSavedAddresses();
+      if (editIndexRaw !== '') addresses[Number(editIndexRaw)] = { ...addresses[Number(editIndexRaw)], ...address };
+      else addresses.push(address);
       await saveAddressList(addresses);
+      closeAddressForm();
     }
 
     async function saveAddressList(addresses) {
@@ -6741,8 +6931,8 @@ document.getElementById('fp-verify-reset').onclick = async function() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
           body: JSON.stringify({
-            name: document.getElementById('profile-name').value.trim(),
-            phone: document.getElementById('profile-phone').value.trim(),
+            name: currentUser?.name || '',
+            phone: currentUser?.phone || '',
             address: selectedDefault,
             addresses
           })
@@ -6771,6 +6961,7 @@ document.getElementById('fp-verify-reset').onclick = async function() {
             <div class="text-gray-600">${escapeHtml([addr.addressLine, addr.city, addr.pincode, addr.state].filter(Boolean).join(', '))}</div>
           </div>
           <div class="flex gap-2">
+            <button onclick="openAddressForm(${index})" class="text-xs border px-2 py-1 rounded">Edit</button>
             <button onclick="setDefaultAddress(${index})" class="text-xs border px-2 py-1 rounded">Default</button>
             <button onclick="removeSavedAddress(${index})" class="text-xs border border-red-200 text-red-600 px-2 py-1 rounded">Remove</button>
           </div>
@@ -6789,8 +6980,49 @@ document.getElementById('fp-verify-reset').onclick = async function() {
       saveAddressList(addresses);
     }
 
-    function changePassword(){ alert('Change password endpoint not implemented in this demo.'); }
-    function cancelChangePassword(){ document.getElementById('change-password-section').classList.add('hidden'); document.getElementById('profile-edit-section').classList.remove('hidden'); }
+    function openAddressSelectModal() {
+      const addresses = getSavedAddresses();
+      const box = document.getElementById('checkout-address-options');
+      if (!addresses.length) return;
+      box.innerHTML = addresses.map((addr, index) => `
+        <button onclick="selectCheckoutAddress(${index})" class="w-full text-left border rounded p-3 hover:border-yellow-500 ${addr.isDefault ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200'}">
+          <div class="flex items-center justify-between gap-3">
+            <strong>${escapeHtml(addr.label || `Address ${index + 1}`)}</strong>
+            ${addr.isDefault ? '<span class="text-[10px] text-green-700 font-bold">Default</span>' : ''}
+          </div>
+          <div class="text-xs text-gray-600 mt-1">${escapeHtml(addr.name || '')} ${addr.phone ? `- ${escapeHtml(addr.phone)}` : ''}</div>
+          <div class="text-sm text-gray-700 mt-1">${escapeHtml([addr.addressLine, addr.city, addr.pincode, addr.state].filter(Boolean).join(', '))}</div>
+        </button>
+      `).join('');
+      document.getElementById('address-select-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddressSelectModal() {
+      document.getElementById('address-select-modal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+
+    function selectCheckoutAddress(index) {
+      fillCheckoutFromSavedAddress(index);
+      closeAddressSelectModal();
+    }
+
+    function showDeliveryEstimateModal(deliveryEstimate) {
+      const msg = deliveryEstimate?.message || 'Your order has been confirmed. You will receive updates by email.';
+      document.getElementById('delivery-estimate-text').textContent = msg;
+      document.getElementById('delivery-estimate-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDeliveryEstimateModal() {
+      document.getElementById('delivery-estimate-modal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      switchPage('orders');
+    }
+
+    function changePassword(){ openEditProfileModal(); }
+    function cancelChangePassword(){ closeEditProfileModal(); }
 
     // =============== PINCODE (city/state) ================
     async function fetchPincodeDetails(pin, context='checkout') {
@@ -8539,5 +8771,89 @@ loadAuthFromStorage();
   <div class="text-sm text-white mt-2 font-bold" id="attar-preview-price"></div>
 </div>
   
+
+<div id="scent-quiz-modal" class="fixed inset-0 z-[10000] hidden bg-black/90 backdrop-blur-sm overflow-y-auto">
+  <div class="min-h-screen flex items-center justify-center p-3 md:p-6">
+    <div class="ee-quiz-card text-white w-full max-w-5xl rounded-2xl overflow-hidden relative">
+      <button onclick="closeScentQuiz()" class="absolute right-4 top-4 z-20 w-10 h-10 rounded-full border border-white/20 text-gray-300 hover:text-yellow-500 hover:border-yellow-500 transition">✕</button>
+      <div id="scent-quiz-body" class="p-5 md:p-10"></div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const SCENT_QUIZ_QUESTIONS=[
+ {id:'gender',title:'Who are you choosing this fragrance for?',sub:'This is a preference, not a strict limitation.',options:[['Male','For Him','fa-mars'],['Female','For Her','fa-venus'],['Unisex','Unisex / No Preference','fa-people-arrows']]},
+ {id:'age',title:'What is the age range?',sub:'Age helps us tune the style from playful and modern to deep and sophisticated.',options:[['under18','Under 18','fa-seedling'],['18-25','18–25','fa-bolt'],['26-35','26–35','fa-star'],['36-50','36–50','fa-gem'],['50plus','50+','fa-crown']]},
+ {id:'mood',title:'How do you want your fragrance to make you feel?',sub:'Choose the emotion you want your scent to express.',options:[['fresh','Fresh & Refreshed','fa-water'],['confident','Confident & Commanding','fa-crown'],['romantic','Romantic & Attractive','fa-heart'],['calm','Calm & Peaceful','fa-leaf'],['mysterious','Mysterious & Dark','fa-moon'],['luxurious','Luxurious & Royal','fa-gem'],['energetic','Energetic & Sporty','fa-bolt'],['cozy','Cozy & Comforting','fa-mug-hot']]},
+ {id:'occasion',title:'Where will you wear it most?',sub:'The right scent should fit the moments that matter to you.',options:[['everyday','Everyday / Casual','fa-sun'],['office','Office / Professional','fa-briefcase'],['date','Date / Romantic Evening','fa-heart'],['party','Party / Night Out','fa-champagne-glasses'],['special','Special Occasion','fa-star'],['traditional','Traditional / Religious','fa-mosque']]},
+ {id:'scent',title:'Which scent world attracts you most?',sub:'No need to know perfume terminology—pick what sounds most enjoyable.',options:[['fresh','Fresh / Aquatic','fa-water'],['citrus','Citrus / Zesty','fa-lemon'],['sweet','Sweet / Vanilla','fa-cookie-bite'],['floral','Floral / Elegant','fa-fan'],['woody','Woody / Earthy','fa-tree'],['spicy','Spicy / Warm','fa-fire'],['oud','Oud / Oriental','fa-moon'],['musk','Musk / Clean','fa-cloud']]},
+ {id:'intensity',title:'How strong should your fragrance feel?',sub:'From an intimate skin scent to a powerful statement.',options:[['subtle','Subtle & Close','fa-feather'],['balanced','Balanced','fa-scale-balanced'],['strong','Strong & Noticeable','fa-fire-flame-curved'],['beast','Very Powerful','fa-dragon']]},
+ {id:'time',title:'When will you mostly wear it?',sub:'Some fragrances shine in daylight; others come alive after dark.',options:[['Day','Day','fa-sun'],['Night','Night','fa-moon'],['Day/Night','Both Day & Night','fa-circle-half-stroke']]},
+ {id:'season',title:'What weather will you wear it in most?',sub:'Climate changes how a fragrance projects and develops.',options:[['hot','Hot / Summer','fa-temperature-high'],['cool','Cool / Winter','fa-snowflake'],['rainy','Rainy / Monsoon','fa-cloud-rain'],['all','All Year','fa-earth-asia']]},
+ {id:'type',title:'What kind of fragrance would you prefer?',sub:'Choose perfume, concentrated attar, or let us consider both.',options:[['Perfume','Perfume Spray','fa-spray-can-sparkles'],['Attar','Attar / Perfume Oil','fa-droplet'],['Either','Either — Show My Best Matches','fa-wand-magic-sparkles']]}
+];
+let scentQuizState={step:0,answers:{}};
+function openScentQuiz(){scentQuizState={step:0,answers:{}};document.getElementById('scent-quiz-modal').classList.remove('hidden');document.body.style.overflow='hidden';renderScentQuiz();}
+function closeScentQuiz(){document.getElementById('scent-quiz-modal').classList.add('hidden');document.body.style.overflow='';}
+function renderScentQuiz(){const q=SCENT_QUIZ_QUESTIONS[scentQuizState.step],body=document.getElementById('scent-quiz-body');body.innerHTML=`<div class="mb-8 pr-12"><div class="flex justify-between text-xs uppercase tracking-[.2em] text-gray-400 mb-3"><span>Find Your Signature Scent</span><span>${scentQuizState.step+1} of ${SCENT_QUIZ_QUESTIONS.length}</span></div><div class="ee-quiz-progress"><div style="width:${((scentQuizState.step+1)/SCENT_QUIZ_QUESTIONS.length)*100}%"></div></div></div><div class="text-center max-w-3xl mx-auto mb-8"><p class="text-yellow-500 text-xs uppercase tracking-[.3em] font-bold mb-3">Question ${scentQuizState.step+1}</p><h2 class="brand-font text-2xl md:text-4xl font-bold mb-3">${q.title}</h2><p class="text-gray-400">${q.sub}</p></div><div class="grid grid-cols-2 md:grid-cols-${q.options.length>6?4:q.options.length>3?3:3} gap-3 md:gap-4 max-w-4xl mx-auto">${q.options.map(o=>`<button onclick="answerScentQuiz('${q.id}','${o[0].replace(/'/g,"\\'")}')" class="ee-quiz-option rounded-xl p-4 text-center ${scentQuizState.answers[q.id]===o[0]?'selected':''}"><i class="fas ${o[2]} text-yellow-500 text-xl mb-3 block"></i><span class="text-sm md:text-base font-bold">${o[1]}</span></button>`).join('')}</div>${scentQuizState.step>0?`<div class="text-center mt-7"><button onclick="previousScentQuestion()" class="text-gray-400 hover:text-yellow-500 text-sm uppercase tracking-widest"><i class="fas fa-arrow-left mr-2"></i>Back</button></div>`:''}`;}
+function answerScentQuiz(id,value){scentQuizState.answers[id]=value;if(scentQuizState.step<SCENT_QUIZ_QUESTIONS.length-1){scentQuizState.step++;renderScentQuiz();}else renderScentAnalysis();}
+function previousScentQuestion(){if(scentQuizState.step>0){scentQuizState.step--;renderScentQuiz();}}
+function scentText(p){return [p.name,p.type,p.gender,p.season,p.time,p.family,Array.isArray(p.accords)?p.accords.join(' '):p.accords,p.top,p.mid,p.base,p.description].filter(Boolean).join(' ').toLowerCase();}
+const SQ_MAP={fresh:['fresh','aquatic','marine','ozonic','green','aromatic','mint','water'],citrus:['citrus','lemon','bergamot','orange','grapefruit','mandarin','lime'],sweet:['sweet','vanilla','gourmand','chocolate','caramel','honey','tonka','coffee','praline'],floral:['floral','rose','jasmine','peony','gardenia','tuberose','lavender','violet','iris'],woody:['woody','wood','cedar','sandalwood','vetiver','oakmoss','patchouli'],spicy:['spicy','spice','pepper','cinnamon','cardamom','clove','ginger'],oud:['oud','agarwood','oriental','amber','saffron','incense','resin'],musk:['musk','musky','powdery','clean','white musk','soapy']};
+const MOOD_MAP={fresh:['fresh','aquatic','marine','citrus','green','mint'],confident:['woody','leather','amber','spicy','tobacco','smoky'],romantic:['floral','vanilla','sweet','amber','fruity','rose','jasmine'],calm:['musk','powdery','floral','herbal','sandalwood','lavender'],mysterious:['oud','smoky','leather','tobacco','patchouli','incense'],luxurious:['oud','saffron','amber','woody','oriental','leather'],energetic:['citrus','aquatic','marine','fresh spicy','aromatic','ginger'],cozy:['vanilla','gourmand','chocolate','coffee','honey','tonka','caramel']};
+function hasAny(text,words){return words.some(w=>text.includes(w));}
+function calculateScentMatch(p,a){let score=0,max=0,reasons=[];const t=scentText(p),gender=String(p.gender||'').toLowerCase(),type=String(p.type||p.category||'').toLowerCase(),season=String(p.season||'').toLowerCase(),time=String(p.time||'').toLowerCase();
+ max+=15;if(a.gender==='Unisex'||gender.includes(a.gender.toLowerCase())||gender.includes('unisex')){score+=15;reasons.push('fits your gender preference');}else score+=3;
+ max+=5;let mature=hasAny(t,['oud','leather','tobacco','incense','smoky','earthy','animalic']);if(['under18','18-25'].includes(a.age)){score+=mature?2:5;}else if(['36-50','50plus'].includes(a.age)){score+=mature?5:3;}else score+=5;
+ max+=20;let moodHits=(MOOD_MAP[a.mood]||[]).filter(w=>t.includes(w)).length;score+=Math.min(20,moodHits*5);if(moodHits){reasons.push(`matches your ${a.mood} mood`);}
+ max+=15;const occ={everyday:['fresh','citrus','aquatic','clean','aromatic'],office:['fresh','woody','clean','musk','citrus'],date:['sweet','vanilla','floral','amber','musk'],party:['strong','oud','amber','spicy','leather','sweet'],special:['luxury','oud','saffron','amber','floral','oriental'],traditional:['attar','oud','musk','sandalwood','rose','incense']}[a.occasion]||[];let oh=occ.filter(w=>t.includes(w)).length;score+=Math.min(15,oh*4);if(oh)reasons.push('suited to your chosen occasion');
+ max+=25;let sh=(SQ_MAP[a.scent]||[]).filter(w=>t.includes(w)).length;score+=Math.min(25,sh*6);if(sh)reasons.push(`features ${a.scent} character`);
+ max+=5;const heavy=hasAny(t,['oud','leather','tobacco','amber','smoky','intense','strong','incense']);if(a.intensity==='subtle')score+=heavy?1:5;else if(a.intensity==='balanced')score+=4;else if(a.intensity==='strong')score+=heavy?5:3;else score+=heavy?5:2;
+ max+=5;if(a.time==='Day/Night'||time.includes('day/night')||time.includes(a.time.toLowerCase()))score+=5;else score+=1;
+ max+=5;if(a.season==='all'||season.includes('all'))score+=5;else if(a.season==='hot'&&hasAny(season+' '+t,['summer','spring','fresh','aquatic','citrus']))score+=5;else if(a.season==='cool'&&hasAny(season+' '+t,['winter','autumn','oud','amber','vanilla','spicy']))score+=5;else if(a.season==='rainy'&&hasAny(t,['woody','green','earthy','fresh','vetiver','musk']))score+=5;else score+=1;
+ max+=5;if(a.type==='Either'||type.includes(a.type.toLowerCase()))score+=5;
+ let pct=Math.round((score/max)*100);return {product:p,score,pct:Math.min(99,Math.max(35,pct)),reasons:[...new Set(reasons)].slice(0,3)};}
+function getScentPersonality(a){const names={fresh:'Fresh Explorer',confident:'Confident Commander',romantic:'Romantic Charmer',calm:'Serene Minimalist',mysterious:'Mysterious Enigma',luxurious:'Royal Connoisseur',energetic:'Energetic Adventurer',cozy:'Cozy Dreamer'};return `The ${names[a.mood]||'Signature Seeker'}`;}
+function getQuizEligibleProducts(){return (typeof products!=='undefined'?products:[]).filter(p=>{const typ=String(p.type||p.category||'').toLowerCase();return typ.includes('perfume')||typ.includes('attar');});}
+function renderScentAnalysis(){const body=document.getElementById('scent-quiz-body');body.innerHTML=`<div class="py-20 text-center"><div class="w-20 h-20 mx-auto rounded-full border-2 border-yellow-500 flex items-center justify-center mb-6"><i class="fas fa-wand-magic-sparkles text-yellow-500 text-3xl animate-pulse"></i></div><h2 class="brand-font text-3xl md:text-5xl font-bold mb-3">Discovering Your Signature...</h2><p class="text-gray-400">Analysing your preferences across our fragrance collection.</p></div>`;setTimeout(renderScentResults,700);}
+function renderScentResults(){const a=scentQuizState.answers;let ranked=getQuizEligibleProducts().map(p=>calculateScentMatch(p,a)).sort((x,y)=>y.score-x.score);if(a.type!=='Either'){const exact=ranked.filter(r=>String(r.product.type||r.product.category||'').toLowerCase().includes(a.type.toLowerCase()));if(exact.length>=5)ranked=exact;}const top=ranked.slice(0,5),body=document.getElementById('scent-quiz-body');body.innerHTML=`<div class="text-center mb-9 pr-10"><p class="text-yellow-500 text-xs uppercase tracking-[.35em] font-bold mb-3">Your fragrance personality</p><h2 class="brand-font text-3xl md:text-5xl font-bold mb-3">${getScentPersonality(a)}</h2><p class="text-gray-400 max-w-2xl mx-auto">Based on your mood, lifestyle and scent preferences, these are your strongest Eternal Essence matches.</p></div><div class="space-y-4">${top.map((r,i)=>`<div class="ee-result-card text-black rounded-xl p-3 md:p-5 flex gap-4 items-center"><div class="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shrink-0"><img src="${r.product.image||''}" alt="${r.product.name}" class="w-full h-full object-cover" onerror="this.style.display='none'"></div><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-black uppercase tracking-widest text-yellow-700">#${i+1} ${i===0?'Best Match':'Recommendation'}</span></div><h3 class="brand-font text-lg md:text-2xl font-bold truncate">${r.product.name}</h3><p class="text-xs md:text-sm text-gray-500 mt-1 line-clamp-2">${r.reasons.length?r.reasons.join(' • '):'Selected from your fragrance preferences'}</p><div class="flex flex-wrap gap-1 mt-2">${(Array.isArray(r.product.accords)?r.product.accords.slice(0,3):[]).map(x=>`<span class="text-[10px] bg-black text-yellow-500 px-2 py-1 rounded-full">${x}</span>`).join('')}</div><button onclick="closeScentQuiz();openProduct(${JSON.stringify(r.product.id||r.product._id)})" class="mt-3 text-xs font-bold uppercase tracking-widest border-b-2 border-yellow-500 hover:text-yellow-700">View Fragrance</button></div><div class="ee-match-ring relative shrink-0" style="--match:${r.pct}%"><span>${r.pct}%</span></div></div>`).join('')}</div><div class="flex flex-col sm:flex-row justify-center gap-3 mt-8"><button onclick="openScentQuiz()" class="border border-yellow-500 text-yellow-500 px-6 py-3 font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition">Retake Quiz</button><button onclick="closeScentQuiz();document.getElementById('collection-section')?.scrollIntoView({behavior:'smooth'})" class="bg-yellow-500 text-black px-6 py-3 font-bold uppercase tracking-widest hover:bg-white transition">Explore Collection</button></div>`;}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('scent-quiz-modal')?.classList.contains('hidden'))closeScentQuiz();});
+</script>
+
+<script>
+/* ===== 2026 UX UPGRADES: rejection modal ===== */
+function openRejectOrderModal(orderId){
+  document.getElementById('reject-order-id').value = orderId || '';
+  document.getElementById('reject-reason-preset').value = '';
+  document.getElementById('reject-reason-text').value = '';
+  document.getElementById('reject-order-msg').textContent = '';
+  document.getElementById('reject-order-modal').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function closeRejectOrderModal(){
+  document.getElementById('reject-order-modal')?.classList.add('hidden');
+  document.body.style.overflow='';
+}
+function applyRejectReasonPreset(){
+  const preset=document.getElementById('reject-reason-preset')?.value||'';
+  if(preset && !preset.startsWith('Other')) document.getElementById('reject-reason-text').value=preset;
+}
+async function confirmRejectOrder(){
+  const orderId=document.getElementById('reject-order-id')?.value;
+  const reason=document.getElementById('reject-reason-text')?.value.trim();
+  const msg=document.getElementById('reject-order-msg');
+  if(!reason){ msg.textContent='Please select or write a rejection reason.'; msg.className='text-xs mt-2 text-red-600'; return; }
+  // Supports an existing admin rejection handler without forcing a duplicate API contract.
+  if(typeof window.performRejectOrder === 'function'){
+    await window.performRejectOrder(orderId, reason);
+    closeRejectOrderModal();
+    return;
+  }
+  msg.textContent='The customer page is ready. Connect performRejectOrder(orderId, reason) in your admin page to its existing rejection API.';
+  msg.className='text-xs mt-2 text-amber-700';
+}
+</script>
 </body>
 </html>

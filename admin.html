@@ -200,13 +200,25 @@
 
       <h2 class="text-xl font-bold text-gray-800 mt-8">📦 Orders Management</h2>
       <div class="card p-4">
-        <div class="flex items-center justify-between mb-3 gap-4">
-          <div class="flex items-center gap-3">
-            <input id="q-search" placeholder="Search by orderId, email, name" class="p-2 border rounded w-80 outline-none focus:border-yellow-500" />
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-3 gap-3">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
+            <div class="relative flex-1 max-w-xl">
+              <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+              <input id="q-search" placeholder="Search order ID, customer, email, phone, payment or AWB..." class="p-2 pl-9 pr-9 border rounded w-full outline-none focus:border-yellow-500" autocomplete="off" />
+              <button id="clear-order-search" type="button" title="Clear search" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
             <select id="status-filter" class="p-2 border rounded outline-none focus:border-yellow-500">
               <option value="">All statuses</option>
-              <option>PENDING_PAYMENT</option><option>PAYMENT_FAILED</option><option>PAID</option><option>Processing</option><option>Shipped</option><option>Delivered</option><option>Cancelled</option>
+              <option value="PENDING_PAYMENT">Payment Pending</option>
+              <option value="PAYMENT_FAILED">Payment Failed</option>
+              <option value="ORDER_PLACED">Order Placed</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="DISPATCHED">Dispatched</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="REJECTED">Rejected</option>
             </select>
+            <button id="reset-order-filters" type="button" class="px-3 py-2 border rounded text-sm font-semibold hover:bg-gray-100">Reset</button>
           </div>
           <div class="flex items-center gap-2">
             <div class="text-xs text-gray-500 tiny">Rows</div>
@@ -220,7 +232,7 @@
             <thead class="bg-gray-100 text-xs uppercase text-gray-600">
               <tr>
                 <th class="p-3">Order ID</th><th class="p-3">Date</th><th class="p-3">Customer</th>
-                <th class="p-3">Total</th><th class="p-3">Payment</th><th class="p-3">Status</th><th class="p-3">Actions</th>
+                <th class="p-3">Total</th><th class="p-3">Payment</th><th class="p-3">Status</th><th class="p-3 text-right">Details</th>
               </tr>
             </thead>
             <tbody id="orders-tbody" class="divide-y"></tbody>
@@ -311,8 +323,44 @@
         <button onclick="closeOrderModal()" class="text-gray-600 hover:text-red-500"><i class="fas fa-times text-2xl"></i></button>
       </div>
       <div id="modal-body" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 tiny"></div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button id="modal-save-btn" class="px-3 py-2 bg-green-600 text-white rounded">Save Status</button>
+
+    </div>
+  </div>
+
+
+  <div id="reject-order-modal" class="fixed inset-0 bg-black/70 hidden z-[70] flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 border-t-4 border-red-600">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-xs uppercase tracking-[.2em] font-bold text-red-600">Order decision</div>
+          <h3 class="text-2xl font-bold mt-1">Reject Order</h3>
+          <p id="reject-order-reference" class="tiny text-gray-500 mt-1"></p>
+        </div>
+        <button onclick="closeRejectOrderModal()" class="text-gray-500 hover:text-red-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+      <input id="reject-order-id" type="hidden">
+      <label class="block mt-5 mb-1 text-sm font-bold">Quick reason</label>
+      <select id="reject-reason-preset" class="w-full p-3 border rounded outline-none focus:border-red-500">
+        <option value="">Select a preset reason...</option>
+        <option value="The selected product is currently out of stock.">Product is out of stock</option>
+        <option value="We could not verify the payment for this order.">Payment could not be verified</option>
+        <option value="Delivery is currently unavailable for the provided pincode.">Pincode is not serviceable</option>
+        <option value="The shipping address or contact details are incomplete or invalid.">Incomplete or invalid address/contact details</option>
+        <option value="This appears to be a duplicate order.">Duplicate order</option>
+        <option value="The customer requested cancellation of this order.">Customer requested cancellation</option>
+        <option value="We are unable to fulfil this order within the required timeline.">Unable to fulfil within required timeline</option>
+        <option value="The selected product or variant is temporarily unavailable.">Selected product/variant unavailable</option>
+        <option value="The order could not be accepted due to an inventory or pricing mismatch.">Inventory or pricing mismatch</option>
+        <option value="The order could not be verified and has been rejected for security reasons.">Security verification issue</option>
+        <option value="__custom__">Other — write a custom reason</option>
+      </select>
+      <label class="block mt-4 mb-1 text-sm font-bold">Reason shown to customer</label>
+      <textarea id="reject-reason-text" rows="5" maxlength="500" class="w-full p-3 border rounded outline-none focus:border-red-500" placeholder="Select a quick reason above or write a clear custom reason..."></textarea>
+      <div class="flex justify-between mt-1 tiny text-gray-500"><span>Please keep the reason clear and customer-friendly.</span><span id="reject-reason-count">0/500</span></div>
+      <p id="reject-order-msg" class="tiny mt-2"></p>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeRejectOrderModal()" class="px-4 py-2 border rounded font-semibold">Cancel</button>
+        <button id="confirm-reject-order-btn" onclick="confirmRejectOrder()" class="px-5 py-2 bg-red-600 text-white rounded font-semibold hover:bg-red-700">Reject Order</button>
       </div>
     </div>
   </div>
@@ -713,9 +761,7 @@ async function loadOrders() {
     if (!ok) throw new Error(body.error || 'Could not load orders');
     orders = body.orders || [];
     notifyNewOrders(orders);
-    filtered = [...orders];
-    page = 1;
-    renderOrdersPage();
+    applyOrderFilters();
     renderCardOrdersTable();
   } catch (err) {
     ordersTbody.innerHTML = `<tr><td colspan="7" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
@@ -753,14 +799,50 @@ async function loadUsers() {
   }
 }
 
+function applyOrderFilters() {
+  const q = (document.getElementById('q-search')?.value || '').trim().toLowerCase();
+  const status = document.getElementById('status-filter')?.value || '';
+
+  filtered = orders.filter(order => {
+    const normalizedStatus = adminNormalizedStatus(order.status);
+    const searchable = [
+      order.orderId, order._id, order.name, order.buyerEmail, order.phone,
+      order.paymentMethod, order.awb, order.deliveryPartner, order.shippingAddress,
+      ...(order.items || []).map(item => `${item.name || ''} ${item.size || ''}`)
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    const matchesSearch = !q || searchable.includes(q);
+    const matchesStatus = !status || normalizedStatus === status;
+    return matchesSearch && matchesStatus;
+  });
+
+  page = 1;
+  renderOrdersPage();
+}
+
+function resetOrderFilters() {
+  const search = document.getElementById('q-search');
+  const status = document.getElementById('status-filter');
+  if (search) search.value = '';
+  if (status) status.value = '';
+  applyOrderFilters();
+}
+
 function renderOrdersPage() {
   rowsPerPage = Number(document.getElementById('rows-per-page')?.value || rowsPerPage);
   const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
+  page = Math.min(Math.max(1, page), totalPages);
   const start = (page - 1) * rowsPerPage;
   const pageRows = filtered.slice(start, start + rowsPerPage);
 
-  ordersTbody.innerHTML = pageRows.map(order => `
-    <tr class="hover:bg-gray-50 border-b border-gray-100">
+  ordersTbody.innerHTML = pageRows.map(order => {
+    const id = String(order._id || order.orderId);
+    return `
+    <tr tabindex="0" role="button" aria-label="Open order ${escapeHtml(order.orderId || order._id)}"
+        onclick="openOrderModal('${escapeHtml(id)}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderModal('${escapeHtml(id)}')}"
+        class="cursor-pointer hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none border-b border-gray-100 transition">
       <td class="p-3 font-semibold monospace tiny">${escapeHtml(order.orderId || order._id)}</td>
       <td class="p-3 tiny">${new Date(order.createdAt || Date.now()).toLocaleString('en-IN')}</td>
       <td class="p-3">
@@ -770,15 +852,20 @@ function renderOrdersPage() {
       <td class="p-3 font-bold">${formatINR(order.total)}</td>
       <td class="p-3 tiny">${escapeHtml(order.paymentMethod || '')}</td>
       <td class="p-3"><span class="px-2 py-1 rounded-full bg-gray-100 tiny font-semibold">${escapeHtml(adminStatusLabel(order.status))}</span></td>
-      <td class="p-3">
-        <button onclick="openOrderModal('${order._id || order.orderId}')" class="px-3 py-1 bg-black text-white rounded tiny hover:text-yellow-500">View</button>
-      </td>
-    </tr>
-  `).join('') || `<tr><td colspan="7" class="p-4 text-gray-500">No orders found.</td></tr>`;
+      <td class="p-3 text-right text-gray-400"><i class="fas fa-chevron-right"></i></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" class="p-8 text-center text-gray-500"><i class="fas fa-search text-2xl mb-2 block text-gray-300"></i>No orders match the current search or filter.</td></tr>`;
 
   document.getElementById('page-from').textContent = total ? start + 1 : 0;
   document.getElementById('page-to').textContent = Math.min(start + rowsPerPage, total);
   document.getElementById('page-total').textContent = total;
+
+  const prev = document.getElementById('prev-page');
+  const next = document.getElementById('next-page');
+  if (prev) prev.disabled = page <= 1;
+  if (next) next.disabled = page >= totalPages;
+  if (prev) prev.classList.toggle('opacity-40', prev.disabled);
+  if (next) next.classList.toggle('opacity-40', next.disabled);
 }
 
 function adminStatusLabel(status) {
@@ -822,12 +909,8 @@ function openOrderModal(id) {
       <div>Subtotal: ${formatINR(selectedOrder.subtotal)}</div>
       <div>Discount: ${formatINR(selectedOrder.discount)}</div>
       <div>Shipping: ${formatINR(selectedOrder.shipping)}</div>
-      <div class="font-bold">Total: ${formatINR(selectedOrder.total)}</div>
+      <div class="font-bold">Total: ${formatINR(selectedOrder.total)}</div><div class="mt-3"><span class="text-xs text-gray-500">Current status</span><div><span class="inline-flex mt-1 px-2 py-1 rounded-full bg-gray-100 tiny font-semibold">${escapeHtml(adminStatusLabel(currentStatus))}</span></div></div>
       ${selectedOrder.freeGift ? `<div class="mt-2 text-yellow-700">Free gift: ${escapeHtml(selectedOrder.freeGift.name || '')} ${escapeHtml(selectedOrder.freeGift.size || '')}</div>` : ''}
-      <label class="block mt-4 font-bold">Order status</label>
-      <select id="modal-status" class="w-full p-2 border rounded mt-1">
-        ${statusChoices.map(s => `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${adminStatusLabel(s)}</option>`).join('')}
-      </select>
       ${currentStatus === 'ORDER_PLACED' ? `<button onclick="acceptOrder('${selectedOrder._id || selectedOrder.orderId}')" class="mt-3 w-full rounded bg-yellow-500 p-2 text-sm font-bold text-black">Accept Order</button>` : ''}
       ${['ORDER_PLACED', 'PROCESSING'].includes(currentStatus) ? `<div class="mt-3 grid grid-cols-2 gap-2"><button onclick="cancelAdminOrder('${selectedOrder._id || selectedOrder.orderId}')" class="rounded bg-red-600 p-2 text-sm font-bold text-white">Cancel Order</button><button onclick="rejectOrder('${selectedOrder._id || selectedOrder.orderId}')" class="rounded border border-red-600 p-2 text-sm font-bold text-red-700">Reject Order</button></div>` : ''}
       <label class="block mt-3 font-bold">Delivery Partner</label>
@@ -849,7 +932,7 @@ function openOrderModal(id) {
         </div>
       </div>
     </div>` : ''}
-    ${(selectedOrder.supportRequests || []).length ? `<div class="md:col-span-2 border rounded p-4 bg-blue-50"><div class="font-bold mb-2">Support Queries</div>${selectedOrder.supportRequests.map(r => `<div class="mb-3 rounded border border-blue-100 bg-white p-3 tiny"><div>${escapeHtml(r.message || '')} <span class="text-gray-500">(${escapeHtml(r.status || 'Open')})</span></div>${r.imageData ? `<a href="${escapeHtml(r.imageData)}" target="_blank" class="mt-2 inline-block"><img src="${escapeHtml(r.imageData)}" alt="Customer attachment" class="h-28 w-28 rounded border object-cover"><div class="mt-1 text-blue-700 underline">${escapeHtml(r.imageName || 'View attachment')}</div></a>` : ''}${r.reply ? `<div class="mt-2 rounded bg-green-50 p-2"><strong>Your reply:</strong> ${escapeHtml(r.reply)}</div>` : `<textarea id="support-reply-${r._id}" rows="2" class="mt-2 w-full rounded border p-2" placeholder="Write a reply to the customer..."></textarea><button onclick="replyToSupport('${selectedOrder._id || selectedOrder.orderId}', '${r._id}')" class="mt-2 rounded bg-black px-3 py-1 text-white">Send Reply</button>`}</div>`).join('')}</div>` : ''}
+    ${(selectedOrder.supportRequests || []).length ? `<div class="md:col-span-2 border rounded p-4 bg-blue-50"><div class="font-bold mb-2">Support Queries</div>${selectedOrder.supportRequests.map(r => `<div class="mb-3 rounded border border-blue-100 bg-white p-3 tiny"><div>${escapeHtml(r.message || '')} <span class="text-gray-500">(${escapeHtml(r.status || 'Open')})</span></div>${r.imageData ? `<a href="${escapeHtml(r.imageData)}" target="_blank" class="mt-2 inline-block"><img src="${escapeHtml(r.imageData)}" alt="Customer attachment" class="h-28 w-28 rounded border object-cover"><div class="mt-1 text-blue-700 underline">${escapeHtml(r.imageName || 'View attachment')}</div></a>` : ''}${r.reply ? `<div class="mt-2 rounded bg-green-50 p-2"><strong>Your reply:</strong> ${escapeHtml(r.reply)}</div>` : `<div class="mt-3"><label class="block font-semibold mb-1">Quick reply suggestion</label><select onchange="applySupportReplyPreset('${r._id}', this.value)" class="w-full rounded border p-2 bg-white"><option value="">Choose a suggested reply...</option>${getSupportReplyPresets(r.message).map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}<option value="__custom__">Other — write a custom reply</option></select><textarea id="support-reply-${r._id}" rows="3" class="mt-2 w-full rounded border p-2" placeholder="Select a suggestion above or write a custom reply..."></textarea><button onclick="replyToSupport('${selectedOrder._id || selectedOrder.orderId}', '${r._id}')" class="mt-2 rounded bg-black px-3 py-2 text-white hover:text-yellow-500">Send Reply</button></div>`}</div>`).join('')}</div>` : ''}
     <div class="md:col-span-2">
       <div class="font-bold mb-2">Items</div>
       ${(selectedOrder.items || []).map(item => `
@@ -891,12 +974,101 @@ async function cancelAdminOrder(id) {
   closeOrderModal(); await loadOrders(); await loadDashboard();
 }
 
-async function rejectOrder(id) {
-  const rejectionReason = prompt('Reason for rejection (for example: Out of stock):');
-  if (!rejectionReason?.trim()) return;
-  const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'REJECTED', rejectionReason }) });
-  if (!ok) return alert(body.error || 'Could not reject order');
-  closeOrderModal(); await loadOrders(); await loadDashboard();
+function rejectOrder(id) {
+  const order = orders.find(o => String(o._id) === String(id) || String(o.orderId) === String(id));
+  document.getElementById('reject-order-id').value = id;
+  document.getElementById('reject-order-reference').textContent = order ? `Order ${order.orderId || order._id} • ${order.name || order.buyerEmail || 'Customer'}` : `Order ${id}`;
+  document.getElementById('reject-reason-preset').value = '';
+  document.getElementById('reject-reason-text').value = '';
+  document.getElementById('reject-reason-count').textContent = '0/500';
+  document.getElementById('reject-order-msg').textContent = '';
+  document.getElementById('reject-order-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRejectOrderModal() {
+  document.getElementById('reject-order-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+async function confirmRejectOrder() {
+  const id = document.getElementById('reject-order-id').value;
+  const rejectionReason = document.getElementById('reject-reason-text').value.trim();
+  const msg = document.getElementById('reject-order-msg');
+  const btn = document.getElementById('confirm-reject-order-btn');
+
+  if (!rejectionReason) {
+    msg.textContent = 'Please select or write a rejection reason.';
+    msg.className = 'tiny mt-2 text-red-600';
+    return;
+  }
+
+  try {
+    btn.disabled = true;
+    btn.textContent = 'Rejecting...';
+    const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'REJECTED', rejectionReason })
+    });
+    if (!ok) throw new Error(body.error || 'Could not reject order');
+
+    closeRejectOrderModal();
+    closeOrderModal();
+    await loadOrders();
+    await loadDashboard();
+  } catch (err) {
+    msg.textContent = err.message || 'Could not reject order';
+    msg.className = 'tiny mt-2 text-red-600';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Reject Order';
+  }
+}
+
+function getSupportReplyPresets(message = '') {
+  const q = String(message).toLowerCase();
+  const common = [
+    'Thank you for contacting Eternal Essence. We have received your query and are checking it now.',
+    'Thank you for the details. Our team is reviewing your request and will update you shortly.',
+    'We apologize for the inconvenience. We are checking this on priority and will assist you as soon as possible.'
+  ];
+  if (/track|where|status|delivery|arrive|shipped|dispatch/.test(q)) return [
+    'Your order is being checked. We will share the latest delivery or tracking update with you shortly.',
+    'Your order has been dispatched. Please use the tracking details shared with your order to follow its journey.',
+    ...common
+  ];
+  if (/damage|broken|leak|wrong|incorrect/.test(q)) return [
+    'We are sorry about the issue with your order. Please share clear photos of the product and packaging so we can verify it and assist you.',
+    'Thank you for sharing the details. We are reviewing the damaged or incorrect item and will update you with the next resolution step shortly.',
+    ...common
+  ];
+  if (/refund|money|payment|paid|failed/.test(q)) return [
+    'We are checking the payment or refund status for your order and will update you shortly.',
+    'If an amount was debited for a failed payment, the reversal timeline depends on your bank or payment provider. We will also verify the transaction from our side.',
+    ...common
+  ];
+  if (/address|phone|contact|change/.test(q)) return [
+    'We have received your request to update the order details. If the order has not yet been dispatched, we will check whether the change can still be made.',
+    'Please share the complete corrected details. We will update them if the order has not entered the shipping process.',
+    ...common
+  ];
+  if (/cancel/.test(q)) return [
+    'We have received your cancellation request and are checking whether the order is still eligible for cancellation.',
+    'Your cancellation request is being reviewed. We will confirm the outcome shortly.',
+    ...common
+  ];
+  return common;
+}
+
+function applySupportReplyPreset(requestId, value) {
+  const input = document.getElementById(`support-reply-${requestId}`);
+  if (!input) return;
+  if (!value || value === '__custom__') {
+    if (value === '__custom__') input.focus();
+    return;
+  }
+  input.value = value;
 }
 
 async function replyToSupport(orderId, requestId) {
@@ -1206,7 +1378,54 @@ document.getElementById('modal-save-btn').addEventListener('click', async () => 
   await loadDashboard();
 });
 
-(function init() { setAuthUI(); if (adminToken) initData(); })();
+(function init() { 
+function setupOrderManagementControls() {
+  const search = document.getElementById('q-search');
+  const status = document.getElementById('status-filter');
+  const rows = document.getElementById('rows-per-page');
+  const clear = document.getElementById('clear-order-search');
+  const reset = document.getElementById('reset-order-filters');
+
+  let searchTimer;
+  search?.addEventListener('input', () => {
+    clear?.classList.toggle('hidden', !search.value);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyOrderFilters, 180);
+  });
+  status?.addEventListener('change', applyOrderFilters);
+  rows?.addEventListener('change', () => { page = 1; renderOrdersPage(); });
+  clear?.addEventListener('click', () => {
+    search.value = '';
+    clear.classList.add('hidden');
+    search.focus();
+    applyOrderFilters();
+  });
+  reset?.addEventListener('click', resetOrderFilters);
+
+  document.getElementById('prev-page')?.addEventListener('click', () => {
+    if (page > 1) { page--; renderOrdersPage(); }
+  });
+  document.getElementById('next-page')?.addEventListener('click', () => {
+    if (page * rowsPerPage < filtered.length) { page++; renderOrdersPage(); }
+  });
+
+  document.getElementById('reject-reason-preset')?.addEventListener('change', e => {
+    const textarea = document.getElementById('reject-reason-text');
+    if (e.target.value === '__custom__') {
+      textarea.value = '';
+      textarea.focus();
+    } else if (e.target.value) {
+      textarea.value = e.target.value;
+    }
+    document.getElementById('reject-reason-count').textContent = `${textarea.value.length}/500`;
+  });
+  document.getElementById('reject-reason-text')?.addEventListener('input', e => {
+    document.getElementById('reject-reason-count').textContent = `${e.target.value.length}/500`;
+  });
+}
+
+setupOrderManagementControls();
+setAuthUI(); if (adminToken) initData(); })();
 </script>
 </body>
 </html>
