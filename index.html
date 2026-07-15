@@ -3,7 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Eternal Essence | Luxury Fragrances</title>
+  <title>Eternal Essence Fragrances | Premium Perfumes, Attars & Inspired Luxury Scents Online</title>
+  <meta name="description" content="Shop Eternal Essence premium perfumes, attars, custom perfume sets and luxury inspired fragrances online in India, including fresh, oud, aquatic, floral, vanilla and designer-inspired scent profiles." />
+  <meta name="keywords" content="Eternal Essence, perfume online India, best perfume online, attar online, inspired perfume, designer inspired fragrance, Dior Sauvage inspired, Eternal Sauvage, Creed Aventus inspired, Bleu de Chanel inspired, oud perfume, vanilla perfume, luxury perfume India" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <link rel="canonical" href="https://eternal-essence-backend.onrender.com/" />
+  <meta property="og:title" content="Eternal Essence Fragrances" />
+  <meta property="og:description" content="Premium perfumes, attars, custom sets and luxury inspired fragrance profiles online in India." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eternal-essence-backend.onrender.com/EE.png" />
+  <meta name="twitter:card" content="summary_large_image" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Great+Vibes&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -615,7 +624,7 @@
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-      <input id="search-input" oninput="applyFilters()" type="text" placeholder="Search perfumes..." class="p-2 border rounded-md outline-none focus:border-yellow-500 text-sm col-span-2 md:col-span-1" />
+      <input id="search-input" name="ee-fragrance-search" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="applyFilters()" type="search" placeholder="Search perfumes..." class="p-2 border rounded-md outline-none focus:border-yellow-500 text-sm col-span-2 md:col-span-1" />
 
       <select id="gender-filter" onchange="applyFilters()" class="p-2 border rounded-md outline-none focus:border-yellow-500 text-sm">
         <option value="">All Genders</option>
@@ -6227,28 +6236,31 @@ document.getElementById("mobile-menu").addEventListener("click", function(e){
       }
     }
 
-    function handleLogout(){
+function handleLogout(){
   stopOrdersPoller?.();
   clearAuth();
   currentUser = null;
   authToken = '';
   try {
-    localStorage.removeItem('ee_auth_token');
-    localStorage.removeItem('ee_current_user');
-    sessionStorage.removeItem('ee_auth_token');
-    sessionStorage.removeItem('ee_current_user');
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_USER_KEY);
   } catch(e) {}
 
-  // Clear every visible account/profile field so stale personal data never remains on screen.
   ['profile-name-text','profile-email-text','profile-phone-text'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = '—';
+  });
+  ['checkout-email','ship-name','ship-phone','ship-address','ship-city','ship-pincode','ship-state'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.value = ''; el.readOnly = false; }
   });
   const addressList = document.getElementById('profile-address-list');
   if (addressList) addressList.innerHTML = '<p class="text-xs text-gray-500">Login to view saved addresses.</p>';
   const profileForm = document.getElementById('profile-address-form');
   if (profileForm) profileForm.classList.add('hidden');
+  const ordersList = document.getElementById('orders-list');
+  if (ordersList) ordersList.innerHTML = '';
 
-  // Reset account/profile panels according to the existing auth UI.
   if (typeof updateAuthUI === 'function') updateAuthUI();
   if (typeof renderOrders === 'function') renderOrders();
 

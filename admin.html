@@ -448,14 +448,84 @@ function setAuthUI() {
   }
 }
 
-function adminFetch(path, opts = {}) {
-  opts.headers = opts.headers || {};
-  if (adminToken) opts.headers['Authorization'] = `Bearer ${adminToken}`;
-  return fetch(BACKEND_BASE_URL + path, opts).then(async res => {
-    if (res.status === 401) { logoutAdmin(); throw new Error('unauthorized'); }
-    const json = await res.json().catch(()=>({}));
+let adminSessionInvalidated = false;
+let adminPageInitializing = false;
+let adminInitialLoadDone = false;
+let adminReconnectTimer = null;
+
+async function adminFetch(path, opts = {}) {
+  const headers = new Headers(opts.headers || {});
+  if (adminToken) headers.set('Authorization', `Bearer ${adminToken}`);
+
+  try {
+    const res = await fetch(BACKEND_BASE_URL + path, { ...opts, headers });
+    const json = await res.json().catch(() => ({}));
+
+    if (res.status === 401) {
+      const msg = String(json.error || '').toLowerCase();
+      const realAuthFailure =
+        msg.includes('invalid token') ||
+        msg.includes('expired') ||
+        msg.includes('missing token') ||
+        msg.includes('jwt');
+
+      if (realAuthFailure) invalidateAdminSession(json.error || 'Admin session expired.');
+    }
+
     return { ok: res.ok, status: res.status, body: json };
-  });
+  } catch (err) {
+    if (/Failed to fetch|NetworkError|Load failed/i.test(String(err.message || err))) {
+      throw new Error('Backend is waking up or unreachable. Please try again in a few seconds.');
+    }
+    throw err;
+  }
+}
+
+function invalidateAdminSession(message) {
+  if (adminSessionInvalidated) return;
+  adminSessionInvalidated = true;
+
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  adminToken = null;
+
+  if (orderNotificationPoller) {
+    clearInterval(orderNotificationPoller);
+    orderNotificationPoller = null;
+  }
+  if (adminReconnectTimer) {
+    clearTimeout(adminReconnectTimer);
+    adminReconnectTimer = null;
+  }
+
+  adminPageInitializing = false;
+  setAuthUI();
+
+  if (loginMsg) {
+    loginMsg.textContent = message || 'Please sign in again.';
+    loginMsg.style.color = 'red';
+  }
+}
+
+async function validateAdminSession() {
+  if (!adminToken) {
+    setAuthUI();
+    return false;
+  }
+
+  try {
+    const { ok, status, body } = await adminFetch('/api/admin/session');
+    if (ok) {
+      adminSessionInvalidated = false;
+      return true;
+    }
+    if (status === 401) return false;
+
+    console.warn('Could not validate admin session:', body.error || `HTTP ${status}`);
+    return null;
+  } catch (err) {
+    console.warn('Admin session check temporarily failed:', err.message);
+    return null;
+  }
 }
 
 function formatINR(n){ return '₹' + Number(n||0).toLocaleString('en-IN'); }
@@ -512,19 +582,113 @@ btnLogin.addEventListener('click', async ()=> {
     const res = await fetch(`${BACKEND_BASE_URL}/api/admin/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
     const d = await res.json();
     if (!res.ok || !d.success) throw new Error(d.error || 'Login failed');
-    adminToken = d.token; localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
-    loginMsg.textContent = ''; setAuthUI(); initData();
+    adminToken = d.token;
+    localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+    adminSessionInvalidated = false;
+    adminPageInitializing = false;
+    adminInitialLoadDone = false;
+    loginMsg.textContent = '';
+    loginMsg.style.color = '';
+    setAuthUI();
+    await initData();
   } catch (err) { loginMsg.textContent = err.message; loginMsg.style.color = 'red'; } 
   finally { btnLogin.disabled = false; }
 });
 
 btnLogout.addEventListener('click', logoutAdmin);
-function logoutAdmin(){ localStorage.removeItem(ADMIN_TOKEN_KEY); adminToken = null; setAuthUI(); }
+function logoutAdmin() {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  adminToken = null;
+  adminSessionInvalidated = false;
+  adminPageInitializing = false;
+  adminInitialLoadDone = false;
+  if (orderNotificationPoller) {
+    clearInterval(orderNotificationPoller);
+    orderNotificationPoller = null;
+  }
+  if (adminReconnectTimer) {
+    clearTimeout(adminReconnectTimer);
+    adminReconnectTimer = null;
+  }
+  setAuthUI();
+}
 
 async function initData() {
-  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-  await loadHardcodedProducts(); await syncAndLoadInventory(); await loadDashboard(); await loadOrders(); await loadUsers(); await loadAdminProducts(); await loadCoupons(); await loadBundleRules();
-  if (!orderNotificationPoller) orderNotificationPoller = setInterval(() => { if (adminToken) loadOrders(); }, 30000);
+  if (!adminToken) return;
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    setTimeout(() => Notification.requestPermission().catch(() => {}), 1500);
+  }
+
+  setAdminLoading(true);
+  try {
+    await Promise.allSettled([loadDashboard(), loadOrders()]);
+    adminInitialLoadDone = true;
+    setAdminLoading(false);
+
+    Promise.allSettled([loadUsers(), loadCoupons(), loadBundleRules()])
+      .catch(err => console.warn('Secondary admin data load failed:', err));
+
+    loadHardcodedProducts()
+      .then(() => Promise.allSettled([syncAndLoadInventory(), loadAdminProducts()]))
+      .catch(err => console.warn('Catalogue background load failed:', err));
+  } catch (err) {
+    console.error('Admin initialization error:', err);
+  } finally {
+    setAdminLoading(false);
+  }
+
+  if (!orderNotificationPoller) {
+    orderNotificationPoller = setInterval(() => {
+      if (adminToken) loadOrders();
+    }, 30000);
+  }
+}
+
+async function initializeAdminPage() {
+  if (adminPageInitializing) return;
+
+  setAuthUI();
+  if (!adminToken) return;
+
+  adminPageInitializing = true;
+  setAdminLoading(true);
+
+  try {
+    const sessionValid = await validateAdminSession();
+
+    if (sessionValid === true) {
+      if (adminReconnectTimer) {
+        clearTimeout(adminReconnectTimer);
+        adminReconnectTimer = null;
+      }
+      await initData();
+      return;
+    }
+
+    if (sessionValid === null) {
+      if (adminStatus) adminStatus.textContent = 'Connecting to server...';
+
+      if (!adminReconnectTimer) {
+        adminReconnectTimer = setTimeout(() => {
+          adminReconnectTimer = null;
+          initializeAdminPage();
+        }, 3000);
+      }
+      return;
+    }
+
+    setAdminLoading(false);
+  } finally {
+    adminPageInitializing = false;
+  }
+}
+
+initializeAdminPage();
+
+function setAdminLoading(isLoading) {
+  const label = document.getElementById('admin-status');
+  if (label && adminToken) label.textContent = isLoading ? 'Loading dashboard...' : 'Authenticated';
 }
 
 async function loadDashboard() {
@@ -748,10 +912,6 @@ async function deleteBundleRule(id) {
 
 async function loadOrders() {
   const qs = new URLSearchParams();
-  const q = document.getElementById('q-search')?.value.trim();
-  const status = document.getElementById('status-filter')?.value;
-  if (q) qs.append('q', q);
-  if (status) qs.append('status', status);
   if (dateFilter.startDate) qs.append('startDate', dateFilter.startDate);
   if (dateFilter.endDate) qs.append('endDate', dateFilter.endDate);
   qs.append('limit', '200');
@@ -759,6 +919,7 @@ async function loadOrders() {
   try {
     const { ok, body } = await adminFetch(`/api/admin/orders?${qs.toString()}`);
     if (!ok) throw new Error(body.error || 'Could not load orders');
+
     orders = body.orders || [];
     notifyNewOrders(orders);
     applyOrderFilters();
@@ -884,75 +1045,794 @@ function cleanAdminAddress(order) {
 }
 
 function openOrderModal(id) {
-  selectedOrder = orders.find(o => String(o._id) === String(id) || String(o.orderId) === String(id));
-  if (!selectedOrder) return;
-  document.getElementById('modal-order-title').textContent = `Order ${selectedOrder.orderId || selectedOrder._id}`;
-  document.getElementById('modal-order-sub').textContent = new Date(selectedOrder.createdAt || Date.now()).toLocaleString('en-IN');
+  selectedOrder = orders.find(
+    o =>
+      String(o._id) === String(id) ||
+      String(o.orderId) === String(id)
+  );
 
-  const currentStatus = adminNormalizedStatus(selectedOrder.status);
-  const statusChoices = currentStatus === 'ORDER_PLACED' ? ['ORDER_PLACED', 'PROCESSING', 'CANCELLED', 'REJECTED']
-    : currentStatus === 'PROCESSING' ? ['PROCESSING', 'DISPATCHED', 'CANCELLED', 'REJECTED']
-    : currentStatus === 'DISPATCHED' ? ['DISPATCHED', 'DELIVERED']
-    : [currentStatus || 'PENDING_PAYMENT'];
-  const cardItem = (selectedOrder.items || []).find(item => item.itemType === 'perfume_card');
-  const cardMeta = cardItem?.cardMeta || selectedOrder.cardMeta;
-  document.getElementById('modal-body').innerHTML = `
-    <div>
-      <div class="font-bold mb-2">Customer</div>
-      <div>${escapeHtml(selectedOrder.name || '')}</div>
-      <div>${escapeHtml(selectedOrder.buyerEmail || '')}</div>
-      <div>${escapeHtml(selectedOrder.phone || '')}</div>
-      <div class="mt-2 whitespace-pre-line">${escapeHtml(cleanAdminAddress(selectedOrder))}</div>
-    </div>
-    <div>
-      <div class="font-bold mb-2">Payment</div>
-      <div>Subtotal: ${formatINR(selectedOrder.subtotal)}</div>
-      <div>Discount: ${formatINR(selectedOrder.discount)}</div>
-      <div>Shipping: ${formatINR(selectedOrder.shipping)}</div>
-      <div class="font-bold">Total: ${formatINR(selectedOrder.total)}</div><div class="mt-3"><span class="text-xs text-gray-500">Current status</span><div><span class="inline-flex mt-1 px-2 py-1 rounded-full bg-gray-100 tiny font-semibold">${escapeHtml(adminStatusLabel(currentStatus))}</span></div></div>
-      ${selectedOrder.freeGift ? `<div class="mt-2 text-yellow-700">Free gift: ${escapeHtml(selectedOrder.freeGift.name || '')} ${escapeHtml(selectedOrder.freeGift.size || '')}</div>` : ''}
-      ${currentStatus === 'ORDER_PLACED' ? `<button onclick="acceptOrder('${selectedOrder._id || selectedOrder.orderId}')" class="mt-3 w-full rounded bg-yellow-500 p-2 text-sm font-bold text-black">Accept Order</button>` : ''}
-      ${['ORDER_PLACED', 'PROCESSING'].includes(currentStatus) ? `<div class="mt-3 grid grid-cols-2 gap-2"><button onclick="cancelAdminOrder('${selectedOrder._id || selectedOrder.orderId}')" class="rounded bg-red-600 p-2 text-sm font-bold text-white">Cancel Order</button><button onclick="rejectOrder('${selectedOrder._id || selectedOrder.orderId}')" class="rounded border border-red-600 p-2 text-sm font-bold text-red-700">Reject Order</button></div>` : ''}
-      <label class="block mt-3 font-bold">Delivery Partner</label>
-      <input id="modal-delivery-partner" value="${escapeHtml(selectedOrder.deliveryPartner || '')}" placeholder="Shadowfax, Delhivery, etc." class="w-full p-2 border rounded mt-1">
-      <label class="block mt-3 font-bold">AWB</label>
-      <input id="modal-awb" value="${escapeHtml(selectedOrder.awb || '')}" class="w-full p-2 border rounded mt-1">
-    </div>
-    ${cardMeta ? `<div class="md:col-span-2 border rounded p-4 bg-yellow-50">
-      <div class="font-bold mb-3">Custom Perfume Card Preview</div>
-      <div class="grid md:grid-cols-[220px_1fr] gap-4 items-start">
-        ${renderAdminCardPreview(cardMeta)}
-        <div class="tiny space-y-1">
-          <div><strong>Occasion:</strong> ${escapeHtml(cardMeta.occasionLabel || '')}</div>
-          <div><strong>Product:</strong> ${escapeHtml(cardMeta.productLabel || '')}</div>
-          <div><strong>Names:</strong> ${escapeHtml(cardMeta.personName || cardMeta.brideName || '')} ${cardMeta.groomName ? '& ' + escapeHtml(cardMeta.groomName) : ''}</div>
-          <div><strong>Date:</strong> ${escapeHtml(cardMeta.eventDate || '')}</div>
-          <div><strong>Location:</strong> ${escapeHtml(cardMeta.location || '')}</div>
-          <div><strong>Message:</strong> ${escapeHtml(cardMeta.message || '')}</div>
-        </div>
-      </div>
-    </div>` : ''}
-    ${(selectedOrder.supportRequests || []).length ? `<div class="md:col-span-2 border rounded p-4 bg-blue-50"><div class="font-bold mb-2">Support Queries</div>${selectedOrder.supportRequests.map(r => `<div class="mb-3 rounded border border-blue-100 bg-white p-3 tiny"><div>${escapeHtml(r.message || '')} <span class="text-gray-500">(${escapeHtml(r.status || 'Open')})</span></div>${r.imageData ? `<a href="${escapeHtml(r.imageData)}" target="_blank" class="mt-2 inline-block"><img src="${escapeHtml(r.imageData)}" alt="Customer attachment" class="h-28 w-28 rounded border object-cover"><div class="mt-1 text-blue-700 underline">${escapeHtml(r.imageName || 'View attachment')}</div></a>` : ''}${r.reply ? `<div class="mt-2 rounded bg-green-50 p-2"><strong>Your reply:</strong> ${escapeHtml(r.reply)}</div>` : `<div class="mt-3"><label class="block font-semibold mb-1">Quick reply suggestion</label><select onchange="applySupportReplyPreset('${r._id}', this.value)" class="w-full rounded border p-2 bg-white"><option value="">Choose a suggested reply...</option>${getSupportReplyPresets(r.message).map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}<option value="__custom__">Other — write a custom reply</option></select><textarea id="support-reply-${r._id}" rows="3" class="mt-2 w-full rounded border p-2" placeholder="Select a suggestion above or write a custom reply..."></textarea><button onclick="replyToSupport('${selectedOrder._id || selectedOrder.orderId}', '${r._id}')" class="mt-2 rounded bg-black px-3 py-2 text-white hover:text-yellow-500">Send Reply</button></div>`}</div>`).join('')}</div>` : ''}
-    <div class="md:col-span-2">
-      <div class="font-bold mb-2">Items</div>
-      ${(selectedOrder.items || []).map(item => `
-        <div class="border-b py-2">
-          <div class="flex justify-between">
-            <span>${escapeHtml(item.name)} <span class="text-gray-500">(${escapeHtml(item.size || '')})</span></span>
-            <strong>${formatINR(item.price)}</strong>
+  if (!selectedOrder) return;
+
+  const orderId =
+    selectedOrder._id || selectedOrder.orderId;
+
+  const currentStatus =
+    adminNormalizedStatus(selectedOrder.status);
+
+  document.getElementById('modal-order-title').textContent =
+    `Order ${selectedOrder.orderId || selectedOrder._id}`;
+
+  document.getElementById('modal-order-sub').textContent =
+    `${selectedOrder.buyerEmail || ''} • ${
+      selectedOrder.phone || ''
+    }`;
+
+  const itemsHtml = (selectedOrder.items || [])
+    .map(
+      item => `
+        <div class="border rounded-lg p-3 bg-gray-50">
+          <div class="font-semibold">
+            ${escapeHtml(item.name || 'Product')}
           </div>
-          ${item.itemType === 'bundle' && item.bundleMeta ? `
-            <div class="mt-2 ml-3 text-gray-600">
-              ${(item.bundleMeta.items || []).map(p => `<div>- ${escapeHtml(p.name)} (${escapeHtml(p.size || '')}) - ${formatINR(p.price)}</div>`).join('')}
-              ${item.bundleMeta.saving ? `<div class="text-green-700 mt-1">Set saving: ${formatINR(item.bundleMeta.saving)}</div>` : ''}
-              ${item.bundleMeta.freeGift ? `<div class="text-yellow-700 mt-1">Free gift: ${escapeHtml(item.bundleMeta.freeGift.name || '')} ${escapeHtml(item.bundleMeta.freeGift.size || '')}</div>` : ''}
-            </div>
-          ` : ''}
+
+          <div class="text-gray-500 mt-1">
+            ${escapeHtml(item.size || '')}
+            ${item.qty ? ` × ${escapeHtml(item.qty)}` : ''}
+          </div>
+
+          ${
+            item.price !== undefined
+              ? `
+                <div class="font-bold mt-1">
+                  ${formatINR(item.price)}
+                </div>
+              `
+              : ''
+          }
         </div>
-      `).join('')}
+      `
+    )
+    .join('');
+
+  const supportHtml = (selectedOrder.supportRequests || [])
+    .map(r => `
+      <div class="border rounded-lg p-3 mt-3 bg-gray-50">
+
+        <div class="flex justify-between gap-3">
+          <strong>Customer query</strong>
+
+          <span class="text-gray-400 tiny">
+            ${
+              r.createdAt
+                ? new Date(r.createdAt).toLocaleString('en-IN')
+                : ''
+            }
+          </span>
+        </div>
+
+        <div class="mt-2">
+          ${escapeHtml(r.message || '')}
+        </div>
+
+        ${
+          r.reply
+            ? `
+              <div class="mt-3 rounded bg-green-50 p-3">
+                <strong>Your reply:</strong>
+                ${escapeHtml(r.reply)}
+              </div>
+            `
+            : `
+              <div class="mt-3">
+
+                <label class="block font-semibold mb-1">
+                  Quick reply suggestion
+                </label>
+
+                <select
+                  onchange="applySupportReplyPreset(
+                    '${r._id}',
+                    this.value
+                  )"
+                  class="w-full rounded border p-2 bg-white"
+                >
+                  <option value="">
+                    Choose a suggested reply...
+                  </option>
+
+                  ${getSupportReplyPresets(r.message)
+                    .map(
+                      p => `
+                        <option value="${escapeHtml(p)}">
+                          ${escapeHtml(p)}
+                        </option>
+                      `
+                    )
+                    .join('')}
+
+                  <option value="__custom__">
+                    Other — write a custom reply
+                  </option>
+                </select>
+
+                <textarea
+                  id="support-reply-${r._id}"
+                  rows="3"
+                  class="mt-2 w-full rounded border p-2"
+                  placeholder="Select a suggestion above or write a custom reply..."
+                ></textarea>
+
+                <button
+                  onclick="replyToSupport(
+                    '${orderId}',
+                    '${r._id}'
+                  )"
+                  class="mt-2 rounded bg-black px-3 py-2 text-white hover:text-yellow-500"
+                >
+                  Send Reply
+                </button>
+
+              </div>
+            `
+        }
+
+      </div>
+    `)
+    .join('');
+
+  const statusOptions = [
+    {
+      value: 'ORDER_PLACED',
+      label: 'Order Placed'
+    },
+    {
+      value: 'PROCESSING',
+      label: 'Processing'
+    },
+    {
+      value: 'DISPATCHED',
+      label: 'Dispatched'
+    },
+    {
+      value: 'DELIVERED',
+      label: 'Delivered'
+    },
+    {
+      value: 'CANCELLED',
+      label: 'Cancelled'
+    },
+    {
+      value: 'REJECTED',
+      label: 'Rejected'
+    }
+  ];
+
+  document.getElementById('modal-body').innerHTML = `
+
+    <!-- CUSTOMER DETAILS -->
+
+    <div class="space-y-4">
+
+      <div class="border rounded-xl p-4">
+
+        <h4 class="font-bold text-base mb-3">
+          Customer Details
+        </h4>
+
+        <div>
+          <strong>Name:</strong>
+          ${escapeHtml(selectedOrder.name || '')}
+        </div>
+
+        <div class="mt-1">
+          <strong>Email:</strong>
+          ${escapeHtml(selectedOrder.buyerEmail || '')}
+        </div>
+
+        <div class="mt-1">
+          <strong>Phone:</strong>
+          ${escapeHtml(selectedOrder.phone || '')}
+        </div>
+
+        <div class="mt-1">
+          <strong>Address:</strong>
+          ${escapeHtml(selectedOrder.shippingAddress || '')}
+        </div>
+
+        <div class="mt-3">
+          <strong>Payment:</strong>
+          ${escapeHtml(selectedOrder.paymentMethod || '')}
+        </div>
+
+        <div class="font-bold text-lg mt-2">
+          Total: ${formatINR(selectedOrder.total)}
+        </div>
+
+        <div class="mt-3">
+          <span class="text-xs text-gray-500">
+            Current status
+          </span>
+
+          <div>
+            <span
+              class="inline-flex mt-1 px-3 py-1 rounded-full bg-gray-100 tiny font-semibold"
+            >
+              ${escapeHtml(adminStatusLabel(currentStatus))}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- COURIER DETAILS -->
+
+      <div class="border rounded-xl p-4">
+
+        <div class="flex items-start justify-between gap-3 mb-3">
+
+          <div>
+            <h4 class="font-bold text-base">
+              Courier Details
+            </h4>
+
+            <p class="tiny text-gray-500 mt-1">
+              You can save or correct these details without
+              changing the order status.
+            </p>
+          </div>
+
+          <i class="fas fa-truck text-yellow-500 text-xl"></i>
+
+        </div>
+
+        <label class="block font-semibold mb-1">
+          Delivery Partner
+        </label>
+
+        <input
+          id="modal-delivery-partner"
+          type="text"
+          value="${escapeHtml(
+            selectedOrder.deliveryPartner || ''
+          )}"
+          placeholder="Example: Delhivery, Shiprocket, DTDC"
+          class="w-full p-2 border rounded outline-none focus:border-yellow-500"
+        >
+
+
+        <label class="block font-semibold mt-3 mb-1">
+          AWB / Tracking Number
+        </label>
+
+        <input
+          id="modal-awb"
+          type="text"
+          value="${escapeHtml(selectedOrder.awb || '')}"
+          placeholder="Enter AWB or tracking number"
+          class="w-full p-2 border rounded outline-none focus:border-yellow-500"
+        >
+
+
+        <div class="flex flex-wrap gap-2 mt-4">
+
+          <button
+            onclick="saveCourierDetails('${orderId}')"
+            id="save-courier-btn"
+            class="px-4 py-2 bg-black text-white rounded font-semibold hover:text-yellow-500 transition"
+          >
+            <i class="fas fa-save mr-1"></i>
+            Save Courier Details
+          </button>
+
+          ${
+            selectedOrder.awb
+              ? `
+                <button
+                  onclick="copyOrderAwb()"
+                  class="px-4 py-2 border rounded font-semibold hover:bg-gray-100"
+                >
+                  <i class="fas fa-copy mr-1"></i>
+                  Copy AWB
+                </button>
+              `
+              : ''
+          }
+
+        </div>
+
+        <p
+          id="courier-save-message"
+          class="tiny mt-2"
+        ></p>
+
+      </div>
+
+
+      <!-- MANUAL STATUS CORRECTION -->
+
+      <div class="border rounded-xl p-4 border-orange-200 bg-orange-50">
+
+        <div class="flex items-start justify-between gap-3">
+
+          <div>
+            <h4 class="font-bold text-base">
+              Correct Order Status
+            </h4>
+
+            <p class="tiny text-gray-600 mt-1">
+              Use this only when you need to correct an
+              accidentally selected status or move an order
+              back to a previous stage.
+            </p>
+          </div>
+
+          <i class="fas fa-rotate-left text-orange-500 text-xl"></i>
+
+        </div>
+
+        <label class="block font-semibold mt-4 mb-1">
+          Select Status
+        </label>
+
+        <select
+          id="modal-manual-status"
+          class="w-full p-2 border rounded bg-white outline-none focus:border-orange-500"
+        >
+          ${statusOptions
+            .map(
+              option => `
+                <option
+                  value="${option.value}"
+                  ${
+                    option.value === currentStatus
+                      ? 'selected'
+                      : ''
+                  }
+                >
+                  ${option.label}
+                </option>
+              `
+            )
+            .join('')}
+        </select>
+
+        <button
+          onclick="saveManualOrderStatus('${orderId}')"
+          id="save-manual-status-btn"
+          class="mt-3 px-4 py-2 bg-orange-600 text-white rounded font-semibold hover:bg-orange-700 transition"
+        >
+          <i class="fas fa-save mr-1"></i>
+          Save Corrected Status
+        </button>
+
+        <p
+          id="manual-status-message"
+          class="tiny mt-2"
+        ></p>
+
+      </div>
+
+    </div>
+
+
+    <!-- ORDER DETAILS / ACTIONS -->
+
+    <div class="space-y-4">
+
+      <div class="border rounded-xl p-4">
+
+        <h4 class="font-bold text-base mb-3">
+          Ordered Items
+        </h4>
+
+        <div class="space-y-2">
+          ${
+            itemsHtml ||
+            '<div class="text-gray-500">No items found.</div>'
+          }
+        </div>
+
+      </div>
+
+
+      <!-- NORMAL WORKFLOW BUTTONS -->
+
+      <div class="border rounded-xl p-4">
+
+        <h4 class="font-bold text-base">
+          Order Actions
+        </h4>
+
+        <p class="tiny text-gray-500 mt-1 mb-3">
+          Use these buttons for the normal order workflow.
+        </p>
+
+        <div class="flex flex-wrap gap-2">
+
+          ${
+            currentStatus === 'ORDER_PLACED'
+              ? `
+                <button
+                  onclick="acceptOrder('${orderId}')"
+                  class="px-4 py-2 bg-green-600 text-white rounded font-semibold"
+                >
+                  Accept Order
+                </button>
+              `
+              : ''
+          }
+
+          ${
+            currentStatus === 'PROCESSING'
+              ? `
+                <button
+                  onclick="dispatchOrder('${orderId}')"
+                  class="px-4 py-2 bg-blue-600 text-white rounded font-semibold"
+                >
+                  Dispatch Order
+                </button>
+              `
+              : ''
+          }
+
+          ${
+            currentStatus === 'DISPATCHED'
+              ? `
+                <button
+                  onclick="markDelivered('${orderId}')"
+                  class="px-4 py-2 bg-green-700 text-white rounded font-semibold"
+                >
+                  Mark Delivered
+                </button>
+              `
+              : ''
+          }
+
+          ${
+            ![
+              'CANCELLED',
+              'REJECTED',
+              'DELIVERED'
+            ].includes(currentStatus)
+              ? `
+                <button
+                  onclick="rejectOrder('${orderId}')"
+                  class="px-4 py-2 bg-red-600 text-white rounded font-semibold"
+                >
+                  Reject Order
+                </button>
+              `
+              : ''
+          }
+
+        </div>
+
+      </div>
+
+
+      ${
+        supportHtml
+          ? `
+            <div class="border rounded-xl p-4">
+
+              <h4 class="font-bold text-base">
+                Customer Support Queries
+              </h4>
+
+              ${supportHtml}
+
+            </div>
+          `
+          : ''
+      }
+
     </div>
   `;
-  document.getElementById('order-modal').classList.remove('hidden');
+
+  document
+    .getElementById('order-modal')
+    .classList.remove('hidden');
+
+  document.body.style.overflow = 'hidden';
+}
+
+/* ================== SAVE COURIER DETAILS ================== */
+
+async function saveCourierDetails(id) {
+  const deliveryPartner =
+    document
+      .getElementById('modal-delivery-partner')
+      ?.value.trim() || '';
+
+  const awb =
+    document
+      .getElementById('modal-awb')
+      ?.value.trim() || '';
+
+  const message =
+    document.getElementById('courier-save-message');
+
+  const button =
+    document.getElementById('save-courier-btn');
+
+  try {
+    if (message) {
+      message.textContent = 'Saving courier details...';
+      message.className = 'tiny mt-2 text-gray-600';
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = `
+        <i class="fas fa-spinner fa-spin mr-1"></i>
+        Saving...
+      `;
+    }
+
+    const { ok, body } = await adminFetch(
+      `/api/admin/orders/${id}`,
+      {
+        method: 'PUT',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+          deliveryPartner,
+          awb
+        })
+      }
+    );
+
+    if (!ok) {
+      throw new Error(
+        body.error || 'Could not save courier details.'
+      );
+    }
+
+    if (message) {
+      message.textContent =
+        'Courier details saved successfully.';
+      message.className =
+        'tiny mt-2 text-green-600 font-semibold';
+    }
+
+    /*
+      Update currently selected order immediately
+      so the modal does not show stale information.
+    */
+    if (body.order) {
+      selectedOrder = body.order;
+
+      const index = orders.findIndex(
+        order =>
+          String(order._id) === String(body.order._id) ||
+          String(order.orderId) ===
+            String(body.order.orderId)
+      );
+
+      if (index !== -1) {
+        orders[index] = body.order;
+      }
+    }
+
+    await loadOrders();
+
+  } catch (err) {
+    if (message) {
+      message.textContent =
+        err.message || 'Could not save courier details.';
+
+      message.className =
+        'tiny mt-2 text-red-600 font-semibold';
+    }
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+
+      button.innerHTML = `
+        <i class="fas fa-save mr-1"></i>
+        Save Courier Details
+      `;
+    }
+  }
+}
+
+
+/* ================== MANUAL STATUS CORRECTION ================== */
+
+async function saveManualOrderStatus(id) {
+  const status =
+    document.getElementById('modal-manual-status')?.value;
+
+  const message =
+    document.getElementById('manual-status-message');
+
+  const button =
+    document.getElementById('save-manual-status-btn');
+
+  if (!status) {
+    if (message) {
+      message.textContent = 'Please select a status.';
+      message.className = 'tiny mt-2 text-red-600';
+    }
+
+    return;
+  }
+
+  const currentStatus =
+    adminNormalizedStatus(selectedOrder?.status);
+
+  if (status === currentStatus) {
+    if (message) {
+      message.textContent =
+        'The order is already in this status.';
+
+      message.className =
+        'tiny mt-2 text-orange-700';
+    }
+
+    return;
+  }
+
+  const statusName = adminStatusLabel(status);
+
+  const confirmed = confirm(
+    `Change order status from "${adminStatusLabel(
+      currentStatus
+    )}" to "${statusName}"?\n\n` +
+    `This is an admin correction and can move the order ` +
+    `forward or backward in the workflow.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    if (message) {
+      message.textContent = 'Updating order status...';
+      message.className = 'tiny mt-2 text-gray-600';
+    }
+
+    if (button) {
+      button.disabled = true;
+
+      button.innerHTML = `
+        <i class="fas fa-spinner fa-spin mr-1"></i>
+        Updating...
+      `;
+    }
+
+    const payload = {
+      status,
+      adminOverride: true
+    };
+
+    /*
+      Preserve courier fields when changing status.
+    */
+    const deliveryPartner =
+      document
+        .getElementById('modal-delivery-partner')
+        ?.value.trim();
+
+    const awb =
+      document
+        .getElementById('modal-awb')
+        ?.value.trim();
+
+    if (deliveryPartner !== undefined) {
+      payload.deliveryPartner = deliveryPartner;
+    }
+
+    if (awb !== undefined) {
+      payload.awb = awb;
+    }
+
+    /*
+      REJECTED status should still go through the
+      dedicated rejection modal because a reason is required.
+    */
+    if (status === 'REJECTED') {
+      if (message) {
+        message.textContent =
+          'Use the Reject Order button to provide a rejection reason.';
+
+        message.className =
+          'tiny mt-2 text-red-600';
+      }
+
+      rejectOrder(id);
+      return;
+    }
+
+    const { ok, body } = await adminFetch(
+      `/api/admin/orders/${id}`,
+      {
+        method: 'PUT',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!ok) {
+      throw new Error(
+        body.error || 'Could not update order status.'
+      );
+    }
+
+    if (message) {
+      message.textContent =
+        `Order status changed to ${statusName}.`;
+
+      message.className =
+        'tiny mt-2 text-green-600 font-semibold';
+    }
+
+    await loadOrders();
+    await loadDashboard();
+
+    /*
+      Reopen modal with fresh order data.
+    */
+    const freshOrder = orders.find(
+      order =>
+        String(order._id) === String(id) ||
+        String(order.orderId) === String(id)
+    );
+
+    if (freshOrder) {
+      openOrderModal(
+        freshOrder._id || freshOrder.orderId
+      );
+    }
+
+  } catch (err) {
+    if (message) {
+      message.textContent =
+        err.message || 'Could not update order status.';
+
+      message.className =
+        'tiny mt-2 text-red-600 font-semibold';
+    }
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+
+      button.innerHTML = `
+        <i class="fas fa-save mr-1"></i>
+        Save Corrected Status
+      `;
+    }
+  }
+}
+
+
+/* ================== COPY AWB ================== */
+
+async function copyOrderAwb() {
+  const awb =
+    document
+      .getElementById('modal-awb')
+      ?.value.trim();
+
+  if (!awb) {
+    alert('No AWB number is available to copy.');
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(awb);
+  } catch (err) {
+    console.error('Could not copy AWB:', err);
+  }
 }
 
 function closeOrderModal() { document.getElementById('order-modal').classList.add('hidden'); }
@@ -965,6 +1845,32 @@ async function acceptOrder(id) {
   closeOrderModal();
   await loadOrders();
   await loadDashboard();
+}
+
+async function updateOrderProgress(id, status) {
+  const deliveryPartner = document.getElementById('modal-delivery-partner')?.value.trim() || '';
+  const awb = document.getElementById('modal-awb')?.value.trim() || '';
+  if (status === 'DISPATCHED' && (!deliveryPartner || !awb)) {
+    alert('Please enter delivery partner and AWB before dispatching.');
+    return;
+  }
+  const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, deliveryPartner, awb })
+  });
+  if (!ok) return alert(body.error || 'Could not update order');
+  closeOrderModal();
+  await loadOrders();
+  await loadDashboard();
+}
+
+function dispatchOrder(id) {
+  updateOrderProgress(id, 'DISPATCHED');
+}
+
+function markDelivered(id) {
+  updateOrderProgress(id, 'DELIVERED');
 }
 
 async function cancelAdminOrder(id) {
@@ -1009,7 +1915,7 @@ async function confirmRejectOrder() {
     const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'REJECTED', rejectionReason })
+      body: JSON.stringify({ status: 'REJECTED', rejectionReason, adminOverride: true })
     });
     if (!ok) throw new Error(body.error || 'Could not reject order');
 
@@ -1351,33 +2257,12 @@ function resetDateFilter() {
 }
 
 document.getElementById('chart-view').addEventListener('change', loadDashboard);
-document.getElementById('q-search').addEventListener('input', loadOrders);
 document.getElementById('user-search').addEventListener('input', loadUsers);
-document.getElementById('status-filter').addEventListener('change', loadOrders);
-document.getElementById('rows-per-page').addEventListener('change', () => { page = 1; renderOrdersPage(); });
-document.getElementById('prev-page').addEventListener('click', () => { if (page > 1) { page -= 1; renderOrdersPage(); } });
-document.getElementById('next-page').addEventListener('click', () => { if (page * rowsPerPage < filtered.length) { page += 1; renderOrdersPage(); } });
 document.getElementById('btn-add-product').addEventListener('click', saveProduct);
 document.getElementById('b-size').addEventListener('change', syncBundleQtyOptions);
 document.getElementById('b-gift-enabled').addEventListener('change', toggleGiftPickerPanel);
 syncBundleQtyOptions();
 toggleGiftPickerPanel();
-document.getElementById('modal-save-btn').addEventListener('click', async () => {
-  if (!selectedOrder) return;
-  const status = document.getElementById('modal-status').value;
-  const deliveryPartner = document.getElementById('modal-delivery-partner')?.value.trim() || '';
-  const awb = document.getElementById('modal-awb')?.value.trim() || '';
-  const { ok, body } = await adminFetch(`/api/admin/orders/${selectedOrder._id || selectedOrder.orderId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, deliveryPartner, awb })
-  });
-  if (!ok) return alert(body.error || 'Could not update order');
-  closeOrderModal();
-  await loadOrders();
-  await loadDashboard();
-});
-
 (function init() { 
 function setupOrderManagementControls() {
   const search = document.getElementById('q-search');
@@ -1425,6 +2310,7 @@ function setupOrderManagementControls() {
 }
 
 setupOrderManagementControls();
+
 setAuthUI(); if (adminToken) initData(); })();
 </script>
 </body>
