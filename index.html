@@ -1597,9 +1597,11 @@ rel="stylesheet">
   <script>
     // ================== CONFIG ==================
     // SET YOUR BACKEND URL HERE:
-    const BACKEND_BASE_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-      ? 'http://localhost:5000'
-      : 'eternal-essence-backend-production.up.railway.app'; // replace with your render URL if needed
+  const BACKEND_BASE_URL =
+(location.hostname === 'localhost' ||
+ location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000'
+    : 'https://eternal-essence-backend-production.up.railway.app';
 
     function escapeHtml(value) {
       if (!value && value !== 0) return '';
