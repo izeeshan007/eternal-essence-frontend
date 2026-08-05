@@ -4244,6 +4244,23 @@ const attarFacets = {
   return []; // Combo
 }
 
+    function getPricing(basePrice, multiplier = 1) {
+
+    const sellingPrice = Math.round(basePrice * multiplier);
+
+    // Example: MRP is 25% higher
+    const mrp = Math.round(sellingPrice / 0.80);
+
+    const discount = Math.round(
+        ((mrp - sellingPrice) / mrp) * 100
+    );
+
+    return {
+        sellingPrice,
+        mrp,
+        discount
+    };
+}
 
 function renderSizeButtons(product) {
   const sizeContainer = document.getElementById('size-selector-container');
@@ -5167,7 +5184,7 @@ function renderProducts(list = allProducts) {
   }
 
   list.forEach(product => {
-
+const pricing = getPricing(product.price, 1);
     /* ================= IMAGE (single source of truth) ================= */
     const imageUrl = getDefaultProductImage(product);
 
@@ -5907,8 +5924,47 @@ document.getElementById("mobile-menu").addEventListener("click", function(e){
     function nextImage(){ currentImageIndex = (currentImageIndex+1)%currentGallery.length; updateGalleryImage(); }
     function prevImage(){ currentImageIndex = (currentImageIndex-1+currentGallery.length)%currentGallery.length; updateGalleryImage(); }
 
+    function roundTo99(price) {
+    return Math.ceil(price / 100) * 100 - 1;
+}
+
+function getPricing(basePrice, multiplier = 1) {
+
+    const sellingPrice = Math.ceil(basePrice * multiplier);
+
+    const mrp = roundTo99(sellingPrice * 1.35);
+
+    const discount = Math.round(
+        ((mrp - sellingPrice) / mrp) * 100
+    );
+
+    return {
+        sellingPrice,
+        mrp,
+        discount
+    };
+}
     
-    function updatePriceDisplay(price) { document.getElementById('modal-price').textContent = `₹${Number(price||0).toLocaleString('en-IN')}`; }
+   function updatePriceDisplay(price, mrp, discount) {
+
+    document.getElementById("modal-price").innerHTML = `
+        <div class="flex items-center gap-3 flex-wrap">
+
+            <span class="text-3xl font-bold text-black">
+                ₹${Number(price).toLocaleString("en-IN")}
+            </span>
+
+            <span class="text-lg text-gray-400 line-through">
+                ₹${Number(mrp).toLocaleString("en-IN")}
+            </span>
+
+            <span class="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                ${discount}% OFF
+            </span>
+
+        </div>
+    `;
+}
       function closeModal() {
   document.getElementById("product-modal").classList.add("hidden");
   document.body.style.overflow = "auto";
@@ -7438,6 +7494,7 @@ function renderFilteredProducts(list) {
   }
 
   list.forEach(product => {
+    const pricing = getPricing(product.price, 1);
     const card = document.createElement('div');
     card.className = 'product-card bg-white cursor-pointer';
     card.onclick = () => openModal(product);
@@ -7449,7 +7506,25 @@ function renderFilteredProducts(list) {
       <div class="p-4 text-center">
         <p class="text-xs text-gray-500">${product.type}</p>
         <h3 class="brand-font font-bold">${product.name}</h3>
-        <p class="text-yellow-600 font-semibold">₹${product.price}</p>
+        <div class="mt-2">
+
+    <div class="text-xl font-bold text-yellow-600">
+        ₹${pricing.sellingPrice.toLocaleString("en-IN")}
+    </div>
+
+    <div class="flex justify-center items-center gap-2 mt-1">
+
+        <span class="text-gray-400 line-through text-sm">
+            ₹${pricing.mrp.toLocaleString("en-IN")}
+        </span>
+
+        <span class="bg-green-600 text-white text-[10px] px-2 py-1 rounded-full font-bold">
+            ${pricing.discount}% OFF
+        </span>
+
+    </div>
+
+</div>
       </div>
     `;
     grid.appendChild(card);
