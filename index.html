@@ -4117,7 +4117,9 @@ const attarFacets = {
     function getSizesByCategory(category) {
  if (category === 'Perfume') {
   return [
-  
+ 
+    { value: 8,  unit: 'ml', priceMultiplier: 0.278557114228 }, 
+    { value: 20,  unit: 'ml', priceMultiplier: 0.69939 }, 
     { value: 30,  unit: 'ml', priceMultiplier: 1 }, // 0.47 / 0.12
     { value: 50,  unit: 'ml', priceMultiplier: 1.4 }, // 0.62 / 0.12
     { value: 100, unit: 'ml', priceMultiplier: 2.4 },  // 1 / 0.12
@@ -4770,10 +4772,10 @@ const BUNDLE_PREFERENCES = [
   { key: 'musk', label: 'Musk', terms: ['musk', 'powdery', 'clean'] }
 ];
 const DEFAULT_BUNDLE_RULES = [
-  { sizeMl: 8, setQty: 4, label: '4 x 8 ml Discovery Set', discountType: 'percentage', discountValue: 10, freeGiftEnabled: false, isActive: true },
-  { sizeMl: 8, setQty: 6, label: '6 x 8 ml Discovery Set', discountType: 'percentage', discountValue: 15, freeGiftEnabled: true, freeGiftName: 'Surprise Perfume', freeGiftSize: '8 ml', isActive: true },
+  { sizeMl: 8, setQty: 4, label: '4 x 8 ml Discovery Set', discountType: 'percentage', discountValue: 5, freeGiftEnabled: false, isActive: true },
+  { sizeMl: 8, setQty: 6, label: '6 x 8 ml Discovery Set', discountType: 'percentage', discountValue: 10, freeGiftEnabled: true, freeGiftName: 'Surprise Perfume', freeGiftSize: '8 ml', isActive: true },
   { sizeMl: 20, setQty: 2, label: '2 x 20 ml Travel Set', discountType: 'percentage', discountValue: 10, freeGiftEnabled: false, isActive: true },
-  { sizeMl: 20, setQty: 4, label: '4 x 20 ml Gift Set', discountType: 'percentage', discountValue: 20, freeGiftEnabled: false, isActive: true }
+  { sizeMl: 20, setQty: 4, label: '4 x 20 ml Gift Set', discountType: 'percentage', discountValue: 15, freeGiftEnabled: false, isActive: true }
 ];
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 
