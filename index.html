@@ -4275,46 +4275,39 @@ function renderSizeButtons(product) {
 
     btn.textContent = `${s.value}${s.unit}`;
 
-    btn.onclick = () => {
+btn.onclick = () => {
 
-  // Store selected size consistently
-  selectedSize = `${s.value}${s.unit}`;
+    selectedSize = `${s.value}${s.unit}`;
 
-  // Update price
-  currentPrice = Math.ceil(
-    currentProduct.price * s.priceMultiplier
-  );
+    const pricing = getPricing(product.price, 1);
 
-  updatePriceDisplay(currentPrice);
+currentPrice = pricing.sellingPrice;
 
-  // Update correct variant image
-  currentImageIndex = getPerfumeVariantIndex(selectedSize);
+updatePriceDisplay(
+    pricing.sellingPrice,
+    pricing.mrp,
+    pricing.discount
+);
 
-  updateGalleryImage();
+selectedSize = "Set";
 
-  // Reset all size buttons
-  document.querySelectorAll('.size-btn').forEach(b =>
-    b.classList.remove(
-      'bg-black',
-      'text-yellow-500',
-      'border-black'
-    )
-  );
+    currentImageIndex = getPerfumeVariantIndex(selectedSize);
 
-  // Highlight current size button
-  btn.classList.add(
-    'bg-black',
-    'text-yellow-500',
-    'border-black'
-  );
+    updateGalleryImage();
 
-  // IMPORTANT:
-  // Update heart for exact product + selected size
-  if (currentProduct) {
-    syncWishlistHeart(
-      String(currentProduct.id || currentProduct._id)
+    document.querySelectorAll('.size-btn').forEach(b =>
+        b.classList.remove(
+            'bg-black',
+            'text-yellow-500',
+            'border-black'
+        )
     );
-  }
+
+    btn.classList.add(
+        'bg-black',
+        'text-yellow-500',
+        'border-black'
+    );
 };
 
     sizeButtons.appendChild(btn);
