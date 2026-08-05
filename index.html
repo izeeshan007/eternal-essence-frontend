@@ -4164,8 +4164,15 @@ function renderSizeButtons(product) {
   /* ================= COMBO / NO SIZE ================= */
   if (!product.sizes || product.sizes.length === 0) {
     sizeContainer.classList.add('hidden');
-    currentPrice = product.price;
-    updatePriceDisplay(currentPrice);
+    const pricing = getPricing(product.price, 1);
+
+currentPrice = pricing.sellingPrice;
+
+updatePriceDisplay(
+    pricing.sellingPrice,
+    pricing.mrp,
+    pricing.discount
+);
     selectedSize = 'Set';
     return;
   }
@@ -4186,11 +4193,18 @@ function renderSizeButtons(product) {
   selectedSize = `${s.value}${s.unit}`;
 
   // Update price
-  currentPrice = Math.ceil(
-    currentProduct.price * s.priceMultiplier
-  );
+const pricing = getPricing(
+    currentProduct.price,
+    s.priceMultiplier
+);
 
-  updatePriceDisplay(currentPrice);
+currentPrice = pricing.sellingPrice;
+
+updatePriceDisplay(
+    pricing.sellingPrice,
+    pricing.mrp,
+    pricing.discount
+);
 
   // Update correct variant image
   currentImageIndex = getPerfumeVariantIndex(selectedSize);
@@ -5819,8 +5833,67 @@ document.getElementById("mobile-menu").addEventListener("click", function(e){
     function nextImage(){ currentImageIndex = (currentImageIndex+1)%currentGallery.length; updateGalleryImage(); }
     function prevImage(){ currentImageIndex = (currentImageIndex-1+currentGallery.length)%currentGallery.length; updateGalleryImage(); }
 
+    // =======================================
+// Helper Functions
+// =======================================
+
+function formatPrice(price) {
+    return "₹" + price;
+}
+
+/* =====================================================
+   PRICE + MRP + DISCOUNT CALCULATOR
+===================================================== */
+
+function roundTo99(price) {
+
+    return Math.ceil(price / 100) * 100 - 1;
+
+}
+
+function getPricing(basePrice, multiplier) {
+
+    const sellingPrice = Math.ceil(basePrice * multiplier);
+
+    const mrp = roundTo99(sellingPrice * 1.35);
+
+    const discount = Math.round(
+        ((mrp - sellingPrice) / mrp) * 100
+    );
+
+    return {
+        sellingPrice,
+        mrp,
+        discount
+    };
+}
+
+
     
-    function updatePriceDisplay(price) { document.getElementById('modal-price').textContent = `₹${Number(price||0).toLocaleString('en-IN')}`; }
+    function updatePriceDisplay(price, mrp, discount) {
+
+    const priceBox = document.getElementById("product-price");
+
+    if (!priceBox) return;
+
+    priceBox.innerHTML = `
+        <div class="flex items-center gap-3 flex-wrap">
+
+            <span class="text-3xl font-bold text-black">
+                ₹${price}
+            </span>
+
+            <span class="text-lg text-gray-400 line-through">
+                ₹${mrp}
+            </span>
+
+            <span class="bg-green-600 text-white text-xs px-2 py-1 rounded font-bold">
+                ${discount}% OFF
+            </span>
+
+        </div>
+    `;
+}
       function closeModal() {
   document.getElementById("product-modal").classList.add("hidden");
   document.body.style.overflow = "auto";
