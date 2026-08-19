@@ -1,6 +1,6 @@
 const normalizeAdminBackend = value => String(value || '').trim().replace(/\/+$/, '');
-const BACKEND_BASE_URL = normalizeAdminBackend(window.__EE_BACKEND_BASE_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend.onrender.com'));
-const BACKEND_FALLBACK_URL = normalizeAdminBackend(window.__EE_BACKEND_FALLBACK_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://eternal-essence-backend-production.up.railway.app'));
+const BACKEND_BASE_URL = normalizeAdminBackend(window.__EE_BACKEND_BASE_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend-production.up.railway.app'));
+const BACKEND_FALLBACK_URL = normalizeAdminBackend(window.__EE_BACKEND_FALLBACK_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://eternal-essence-backend.onrender.com'));
 let activeAdminBackend = BACKEND_BASE_URL;
 const ADMIN_TOKEN_KEY = 'ee_admin_token_v1';
 const PRODUCT_CATALOGUE_PAGE = location.pathname.replace(/\/+$/, '') === '/admin/products';
