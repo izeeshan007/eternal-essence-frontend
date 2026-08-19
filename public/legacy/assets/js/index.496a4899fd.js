@@ -2834,7 +2834,7 @@ function renderPerfumeCardBrandFooter() {
 return `
 <div class="perfume-card-footer-brand">
 <span>Crafted With Love by</span>
-<img src="/products/ee.webp" alt="Eternal Essence" onerror="this.onerror=null;this.src='ee.webp';">
+<img src="/products/ee-brand-20260819.webp" alt="Eternal Essence" onerror="this.onerror=null;this.src='/products/ee.webp';">
 </div>
 `;
 }

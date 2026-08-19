@@ -234,7 +234,7 @@ export function ScentJourney({product}){
 }
 
 function WhySection(){return <section className="ee-why"><div className="ee-section-title"><span/>WHY ETERNAL ESSENCE<span/></div><div className="ee-why-grid"><div><b>100+ HAPPY CUSTOMERS</b><span>And counting</span></div><div><b>CURATED FRAGRANCE OILS</b><span>Selected for character</span></div><div><b>LONG-LASTING PROFILES</b><span>Built for day-to-night wear</span></div><div><b>TOP · HEART · BASE</b><span>Clear scent journey</span></div><div><b>CRUELTY-CONSCIOUS</b><span>Responsible product choices</span></div><div><b>QUALITY ASSURED</b><span>Made for repeat wear</span></div></div></section>}
-function ProductFooter(){return <footer className="ee-product-footer"><img src="/products/ee.webp" alt="Eternal Essence"/><div><b>ETERNAL ESSENCE</b><span>Essence, Redefined.</span></div><small>© 2026 Eternal Essence · Byculla, Mumbai</small></footer>}
+function ProductFooter(){return <footer className="ee-product-footer"><img src="/products/ee-brand-20260819.webp" alt="Eternal Essence"/><div><b>ETERNAL ESSENCE</b><span>Essence, Redefined.</span></div><small>© 2026 Eternal Essence · Byculla, Mumbai</small></footer>}
 function readCartCount(){
   try{
     const cart=window.EE?.getCart?.()||JSON.parse(localStorage.getItem('ee_cart_v1')||'[]');

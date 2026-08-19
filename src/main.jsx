@@ -168,7 +168,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         }
         // The deployed logo asset is case-sensitive (`ee.webp`). Normalize the
         // two legacy header/footer references before the old scripts render.
-        ref.current.querySelectorAll('img[src="/products/ee.webp"]').forEach(img=>{img.src='/products/ee.webp';});
+        ref.current.querySelectorAll('img[src="/products/ee.webp"]').forEach(img=>{img.src='/products/ee-brand-20260819.webp';});
         const home=document.getElementById('page-home');
         if(home && !document.getElementById('ee-home-react-mount')){
           const mount=document.createElement('div');
