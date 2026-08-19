@@ -6,6 +6,14 @@
 <title>Eternal Essence | Premium Perfumes & Attars</title>
 <meta name="description" content="Eternal Essence premium perfumes, attars, custom fragrance sets and inspired scent profiles."/>
 <link rel="canonical" href="https://eternalessence.in/"/>
+<script>
+  // Keep authentication, cart storage and API traffic on one canonical host.
+  // Apex and www otherwise have separate localStorage and can look like
+  // different deployments even when they share the same Pages project.
+  if (location.hostname === 'www.eternalessence.in') {
+    location.replace('https://eternalessence.in' + location.pathname + location.search + location.hash);
+  }
+</script>
 <link rel="icon" href="/products/ee-brand-20260819.webp"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">

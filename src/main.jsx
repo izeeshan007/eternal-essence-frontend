@@ -22,7 +22,11 @@ const normalizeBackendBase=value=>String(value||'').trim().replace(/\/+$/,'');
 const isLocalFrontend=location.hostname==='localhost'||location.hostname==='127.0.0.1';
 const primaryBackendBase=normalizeBackendBase(
   import.meta.env.VITE_BACKEND_BASE_URL ||
-  (isLocalFrontend?'http://localhost:5000':'https://eternal-essence-backend-production.up.railway.app')
+  // Production is routed through the Cloudflare `/api/*` worker. Keeping the
+  // default same-origin makes apex/www use the same backend and avoids a
+  // deployment silently bypassing the worker when the Pages variable is
+  // missing. A Pages environment variable can still override this explicitly.
+  (isLocalFrontend?'http://localhost:5000':location.origin)
 );
 const fallbackBackendBase=normalizeBackendBase(
   import.meta.env.VITE_BACKEND_FALLBACK_URL ||
