@@ -7,6 +7,7 @@ import JournalPage from './JournalPage';
 import OfferPopup from './OfferPopup';
 import HomeEnhancements from './HomeEnhancements';
 import DealerPage from './DealerPage';
+import './legacy.css';
 import './app.css';
 
 window.eeLoadPdfEngine=async()=>{

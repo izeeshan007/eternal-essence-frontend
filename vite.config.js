@@ -43,7 +43,12 @@ function restoreAdminDashboard(backendBase,backendFallback){
     },
     writeBundle(options){
       const outDir=path.resolve(frontendDir,options.dir||'dist');
-      fs.writeFileSync(path.join(outDir,'admin.html'),adminHtml(backendBase,backendFallback),'utf8');
+      const markup=adminHtml(backendBase,backendFallback);
+      const adminDir=path.join(outDir,'admin');
+      const productsDir=path.join(adminDir,'products');
+      fs.mkdirSync(productsDir,{recursive:true});
+      fs.writeFileSync(path.join(adminDir,'index.html'),markup,'utf8');
+      fs.writeFileSync(path.join(productsDir,'index.html'),markup,'utf8');
     }
   };
 }

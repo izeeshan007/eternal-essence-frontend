@@ -34,6 +34,7 @@ Other clean page routes:
 - `/custom-set`
 - `/perfume-card`
 
-The included `public/_redirects` file restores `/admin` from `admin.html`, redirects the retired `/admin/dealers` URL back to `/admin`, and sends other routes to the React application.
-
-This is required so refreshing a deep React route on Cloudflare Pages returns the React application instead of a 404.
+The production build emits physical `admin/index.html` and
+`admin/products/index.html` files. This avoids Cloudflare Pages' automatic
+`.html` canonical redirect and prevents `/admin` redirect loops. Other routes
+use Cloudflare Pages' default single-page application fallback.
