@@ -1,4 +1,4 @@
-const BACKEND_BASE_URL = String(window.__EE_CONFIG__?.BACKEND_BASE_URL || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend-production.up.railway.app')).trim().replace(/\/+$/, '');
+const BACKEND_BASE_URL = String(window.__EE_CONFIG__?.BACKEND_BASE_URL || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend.onrender.com')).trim().replace(/\/+$/, '');
 function escapeHtml(value) {
 if (!value && value !== 0) return '';
 return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2979,57 +2979,57 @@ const DEFAULT_BUNDLE_RULES = [
 ];
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 async function loadBackendProducts() {
-mergeProducts();
-return;
 try {
-const res = await fetch(`${BACKEND_BASE_URL}/api/products`);
+const res = await fetch(`${BACKEND_BASE_URL}/api/products`, { cache: 'no-store' });
 const text = await res.text();
-if (text.startsWith('<')) {
-console.warn('Backend returned HTML instead of JSON');
-mergeProducts();
-return;
-}
+if (text.startsWith('<')) throw new Error('Backend returned HTML instead of JSON');
 const data = JSON.parse(text);
-if (!data.success || !Array.isArray(data.products)) {
-mergeProducts();
-return;
-}
-function normalizeCategory(cat) {
+if (!data.success || !Array.isArray(data.products)) throw new Error(data.error || 'Invalid catalogue response');
+const normalizeCategory = cat => {
 if (!cat) return 'Perfume';
-const key = cat.toLowerCase().replace(/\s+/g, '');
-return map[key] || 'Perfume';
-}
-backendProducts = data.products.map(p => ({
-id: 'db_' + p._id,
+const key = String(cat).toLowerCase().replace(/\s+/g, '');
+return ({ perfume:'Perfume', attar:'Attar', solidperfume:'Solid Perfume', combo:'Combo' })[key] || cat;
+};
+backendProducts = data.products.map(p => {
+const databaseId = p._id ? `db_${p._id}` : '';
+const id = databaseId || String(p.id ?? p.productId ?? '');
+return {
+id,
+_id: p._id || undefined,
 name: p.name,
-type: normalizeCategory(p.category),
+description: p.description || '',
+type: normalizeCategory(p.category || p.type),
 inspiredBy: p.inspiredBy || '',
 gender: p.gender || 'Unisex',
-description: p.description || '',
 season: p.season || 'All Season',
 time: p.time || 'Day/Night',
 family: p.family || '',
 accords: p.accords || [],
-top: p.notes?.top || '',
-mid: p.notes?.mid || '',
-base: p.notes?.base || '',
-price: p.price,
-image: resolveMergeImage(p.images?.[0]),
-images: (p.images || []).map(resolveMergeImage),
-source: 'backend'
-}));
+top: p.notes?.top ?? p.top ?? '',
+mid: p.notes?.mid ?? p.mid ?? '',
+base: p.notes?.base ?? p.base ?? '',
+price: Number(p.price || 0),
+image: resolveMergeImage(p.images?.[0] || p.image),
+images: (p.images || (p.image ? [p.image] : [])).map(resolveMergeImage),
+sizes: Array.isArray(p.sizes) ? p.sizes : [],
+source: p.source || 'backend'
+};
+}).filter(p => p.name && p.id);
+if (!backendProducts.length) throw new Error('Backend catalogue is empty');
 mergeProducts();
 } catch (err) {
-console.error('Failed to load backend products', err);
+console.error('Failed to load backend products; using local catalogue fallback', err);
+backendProducts = [];
 mergeProducts();
 }
 }
 function mergeProducts() {
-allProducts = [
-...products.map(p => ({ ...p, source: 'frontend' }))
-];
+allProducts = backendProducts.length
+? backendProducts.map(p => ({ ...p }))
+: products.map(p => ({ ...p, source: 'frontend-fallback' }));
 renderProducts(allProducts);
 renderBundleBuilder();
+try { buildMenu('attarMenu'); buildMenu('attarMenuMobile'); buildPerfumeMenu('perfumeMenu'); buildPerfumeMenu('perfumeMenuMobile'); } catch (e) { console.warn('Catalogue menu refresh skipped', e); }
 }
 function placeProductFilters() {
 const filterBar = document.getElementById('filter-bar');
@@ -5681,6 +5681,16 @@ groups[s].push(p);
 });
 function buildMenu(id){
 const el = document.getElementById(id);
+if (!el) return;
+const sourceProducts = allProducts.length ? allProducts : products;
+const currentAttars = sourceProducts.filter(p => String(p.type || p.category || '').toLowerCase() === 'attar');
+const currentAttarGroups = {};
+currentAttars.forEach(p => { const s = getSeries(p.price); if(!currentAttarGroups[s]) currentAttarGroups[s]=[]; currentAttarGroups[s].push(p); });
+const currentAttarFacets = {
+"By Gender": {"For Him": currentAttars.filter(p=>p.gender==='Male'), "For Her": currentAttars.filter(p=>p.gender==='Female'), "Unisex": currentAttars.filter(p=>p.gender==='Unisex')},
+"By Season": {"Summer": currentAttars.filter(p=>String(p.season||'').includes('Summer')), "Winter": currentAttars.filter(p=>String(p.season||'').includes('Winter')), "All Season": currentAttars.filter(p=>String(p.season||'').toLowerCase().replace(/\s+/g,'') === 'allseason')},
+"By Time": {"Day": currentAttars.filter(p=>p.time==='Day'), "Night": currentAttars.filter(p=>p.time==='Night'), "Day / Night": currentAttars.filter(p=>p.time==='Day/Night')}
+};
 el.innerHTML = "";
 el.innerHTML += `
 <div onclick="goToCategory('Attar')"
@@ -5688,25 +5698,25 @@ class="px-4 py-2 bg-yellow-500 text-black font-bold cursor-pointer text-center">
 All Attars
 </div>
 `;
-for(const facet in attarFacets){
+for(const facet in currentAttarFacets){
 el.innerHTML += `
 <div class="px-4 py-2 text-yellow-500 font-bold cursor-pointer"
 onclick="this.nextElementSibling.classList.toggle('hidden')">
 ${facet}
 </div>
 <div class="hidden">
-${Object.keys(attarFacets[facet]).map(key => `
+${Object.keys(currentAttarFacets[facet]).map(key => `
 <div class="px-6 py-2 text-gray-300 font-semibold cursor-pointer"
 onclick="this.nextElementSibling.classList.toggle('hidden')">
 ${key}
 </div>
 <div class="hidden">
-${attarFacets[facet][key].map(p => `
+${currentAttarFacets[facet][key].map(p => `
 <div class="px-8 py-2 hover:bg-yellow-500 hover:text-black cursor-pointer"
-onmouseenter="showAttarPreview(event, ${p.id})"
+onmouseenter="showAttarPreview(event, ${JSON.stringify(String(p.id))})"
 onmousemove="moveAttarPreview(event)"
 onmouseleave="hideAttarPreview()"
-onclick="event.stopPropagation(); openProduct(${p.id})"
+onclick="event.stopPropagation(); openProduct(${JSON.stringify(String(p.id))})"
 >
 ${p.name} — ₹${p.price}
 </div>
@@ -5716,19 +5726,19 @@ ${p.name} — ₹${p.price}
 </div>
 `;
 }
-for(const series in attarGroups){
+for(const series in currentAttarGroups){
 el.innerHTML += `
 <div class="px-4 py-2 text-yellow-500 font-bold cursor-pointer"
 onclick="this.nextElementSibling.classList.toggle('hidden')">
 ${series}
 </div>
 <div class="hidden">
-${attarGroups[series].map(p => `
+${currentAttarGroups[series].map(p => `
 <div class="px-6 py-2 hover:bg-yellow-500 hover:text-black cursor-pointer"
-onmouseenter="showAttarPreview(event, ${p.id})"
+onmouseenter="showAttarPreview(event, ${JSON.stringify(String(p.id))})"
 onmousemove="moveAttarPreview(event)"
 onmouseleave="hideAttarPreview()"
-onclick="event.stopPropagation(); openProduct(${p.id})"
+onclick="event.stopPropagation(); openProduct(${JSON.stringify(String(p.id))})"
 >
 ${p.name} — ₹${p.price}
 </div>
@@ -5774,7 +5784,7 @@ document.getElementById("time-filter").value = value;
 goToCategory("Perfume");
 }
 function showAttarPreview(e, id){
-const p = products.find(x => x.id === id);
+const p = findProductByAnyId(id) || (allProducts.length ? allProducts : products).find(x => String(x.id) === String(id));
 if(!p) return;
 document.getElementById("attar-preview-img").src = p.image;
 document.getElementById("attar-preview-name").textContent = p.name;
@@ -5815,6 +5825,14 @@ const perfumeFacets = {
 };
 function buildPerfumeMenu(id){
 const el = document.getElementById(id);
+if (!el) return;
+const sourceProducts = allProducts.length ? allProducts : products;
+const currentPerfumes = sourceProducts.filter(p => String(p.type || p.category || '').toLowerCase() === 'perfume');
+const currentPerfumeFacets = {
+"By Gender": {"For Him": currentPerfumes.filter(p=>p.gender==='Male'), "For Her": currentPerfumes.filter(p=>p.gender==='Female'), "Unisex": currentPerfumes.filter(p=>p.gender==='Unisex')},
+"By Season": {"Summer": currentPerfumes.filter(p=>String(p.season||'').includes('Summer')), "Winter": currentPerfumes.filter(p=>String(p.season||'').includes('Winter')), "All Season": currentPerfumes.filter(p=>String(p.season||'').toLowerCase().replace(/\s+/g,'') === 'allseason')},
+"By Time": {"Day": currentPerfumes.filter(p=>p.time==='Day'), "Night": currentPerfumes.filter(p=>p.time==='Night'), "Day / Night": currentPerfumes.filter(p=>p.time==='Day/Night')}
+};
 el.innerHTML = "";
 el.innerHTML += `
 <div onclick="goToCategory('Perfume')"
@@ -5822,26 +5840,26 @@ class="px-4 py-2 bg-yellow-500 text-black font-bold cursor-pointer text-center">
 All Perfumes
 </div>
 `;
-for(const facet in perfumeFacets){
+for(const facet in currentPerfumeFacets){
 el.innerHTML += `
 <div class="px-4 py-2 text-yellow-500 font-bold cursor-pointer"
 onclick="this.nextElementSibling.classList.toggle('hidden')">
 ${facet}
 </div>
 <div class="hidden">
-${Object.keys(perfumeFacets[facet]).map(key => `
+${Object.keys(currentPerfumeFacets[facet]).map(key => `
 <div class="px-6 py-2 text-gray-300 font-semibold cursor-pointer"
 onclick="this.nextElementSibling.classList.toggle('hidden')">
 ${key}
 </div>
 <div class="hidden">
-${perfumeFacets[facet][key].map(p => `
+${currentPerfumeFacets[facet][key].map(p => `
 <div
 class="px-8 py-2 hover:bg-yellow-500 hover:text-black cursor-pointer"
-onmouseenter="showAttarPreview(event, ${p.id})"
+onmouseenter="showAttarPreview(event, ${JSON.stringify(String(p.id))})"
 onmousemove="moveAttarPreview(event)"
 onmouseleave="hideAttarPreview()"
-onclick="event.stopPropagation(); openProduct(${p.id})">
+onclick="event.stopPropagation(); openProduct(${JSON.stringify(String(p.id))})">
 ${p.name} — ₹${p.price}
 </div>
 `).join("")}
@@ -6123,7 +6141,7 @@ Your wishlist is empty.
 return;
 }
 wishlistIds.forEach(id => {
-const p = products.find(x => Number(x.id) === Number(id));
+const p = (allProducts.length ? allProducts : products).find(x => String(x.id) === String(id) || Number(x.id) === Number(id));
 if (!p) return;
 container.innerHTML += `
 <div class="product-card cursor-pointer border p-3"
