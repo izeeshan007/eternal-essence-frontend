@@ -3952,7 +3952,7 @@ return;
 }
 empty.classList.add('hidden'); content.classList.remove('hidden');
 cart.forEach((item, idx)=>{
-const tr = document.createElement('tr'); tr.className = "block md:table-row border-b border-gray-100 hover:bg-gray-50 relative";
+const tr = document.createElement('tr'); tr.className = "ee-cart-item block md:table-row border-b border-gray-100 hover:bg-gray-50 relative";
 const itemImage = normalizeImageUrl(item.image) || getDefaultProductImage(item);
 const itemFallback = normalizeImageUrl(item.imageFallback) || getDefaultProductImage(item);
 const bundleDetails = item.itemType === 'bundle' && item.bundleMeta
@@ -3980,14 +3980,14 @@ const quantityControls = canChangeQty
 </div>`
 : `<span class="text-xs text-gray-500">${item.itemType === 'perfume_card' ? `Qty ${item.cardMeta?.qty || 1}` : 'Set item'}</span>`;
 tr.innerHTML = `
-<td class="p-4 flex items-center gap-4 pr-14 md:pr-4 cursor-pointer" onclick="editCartItem(${idx})" title="Open product options">
+<td class="ee-cart-product p-4 flex items-center gap-4 pr-14 md:pr-4 cursor-pointer" onclick="editCartItem(${idx})" title="Open product options">
 ${itemVisual}
-<div><p class="font-bold text-sm">${item.name}</p>${bundleDetails}</div>
+<div class="ee-cart-product-copy"><p class="font-bold text-sm">${item.name}</p>${bundleDetails}</div>
 </td>
-<td class="block md:table-cell px-4 pb-2 md:p-4 text-sm text-gray-600"><span class="md:hidden font-bold text-gray-500 mr-2">Size:</span>${item.selectedSize}</td>
-<td class="block md:table-cell px-4 pb-4 md:p-4 text-sm">${quantityControls}</td>
-<td class="block md:table-cell px-4 pb-4 md:p-4 text-sm font-bold"><span class="md:hidden font-bold text-gray-500 mr-2">Price:</span>₹${linePrice.toLocaleString('en-IN')}${canChangeQty && qty > 1 ? `<small class="block text-[11px] font-normal text-gray-500">₹${unitPrice.toLocaleString('en-IN')} each</small>` : ''}</td>
-<td class="absolute top-4 right-4 md:static md:table-cell p-0 md:p-4 md:text-right">
+<td class="ee-cart-size block md:table-cell px-4 pb-2 md:p-4 text-sm text-gray-600"><span class="md:hidden font-bold text-gray-500 mr-2">Size:</span>${item.selectedSize}</td>
+<td class="ee-cart-quantity block md:table-cell px-4 pb-4 md:p-4 text-sm"><span class="ee-cart-mobile-label md:hidden">Quantity</span>${quantityControls}</td>
+<td class="ee-cart-price block md:table-cell px-4 pb-4 md:p-4 text-sm font-bold"><span class="md:hidden font-bold text-gray-500 mr-2">Price:</span>₹${linePrice.toLocaleString('en-IN')}${canChangeQty && qty > 1 ? `<small class="block text-[11px] font-normal text-gray-500">₹${unitPrice.toLocaleString('en-IN')} each</small>` : ''}</td>
+<td class="ee-cart-actions absolute top-4 right-4 md:static md:table-cell p-0 md:p-4 md:text-right">
 <div class="flex items-center justify-end gap-2">
 <button onclick="editCartItem(${idx})" class="w-9 h-9 rounded-full border border-yellow-200 text-yellow-700 hover:bg-yellow-50" title="Edit item"><i class="fas fa-pen"></i></button>
 <button onclick="removeFromCart(${idx})" class="w-9 h-9 rounded-full border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700" title="Remove item"><i class="fas fa-trash"></i></button>

@@ -164,7 +164,7 @@ export function ScentJourney({product}){
   useEffect(()=>{
     const cv=canvas.current;if(!cv)return;
     const ctx=cv.getContext('2d');
-    const W=Math.max(280,chartWidth||Math.round(wrap.current?.clientWidth||720)),H=Math.max(260,Math.min(360,Math.round(W*.32))),PT=18,PB=76,cW=W-PL-PR,cH=H-PT-PB;
+    const W=Math.max(280,chartWidth||Math.round(wrap.current?.clientWidth||720)),compact=W<560,H=compact?250:Math.max(260,Math.min(360,Math.round(W*.32))),PT=18,PB=compact?50:76,cW=W-PL-PR,cH=H-PT-PB;
     const DPR=Math.min(3,window.devicePixelRatio||1);
     cv.width=W*DPR;cv.height=H*DPR;cv.style.width='100%';cv.style.height=`${H}px`;
     ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -184,12 +184,12 @@ export function ScentJourney({product}){
       ctx.strokeStyle='rgba(252,196,41,.22)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(PL,PT+cH);ctx.lineTo(W-PR,PT+cH);ctx.stroke();
       const ticks=[[0,'Spray'],...([.25,.5,.75,1].map(f=>[longevity.max*f/timelineMax,displayHour(longevity.max*f,longevity.max)]))];
       ticks.forEach(([tt,label])=>{const x=px(tt);ctx.strokeStyle='rgba(167,127,18,.28)';ctx.beginPath();ctx.moveTo(x,PT+cH);ctx.lineTo(x,PT+cH+4);ctx.stroke();ctx.fillStyle='#6d5a25';ctx.font='600 11px Lato,Arial';ctx.textAlign='center';ctx.fillText(label,x,PT+cH+17);});
-      [['Opening',phases.openingEnd/2,'#d2ad36'],['Heart',(phases.openingEnd+phases.heartEnd)/2,'#54b96a'],['Dry-down',(phases.heartEnd+phases.maxEnd)/2,'#9d8c4c']].forEach(([label,x,c])=>{ctx.fillStyle=c;ctx.font='700 10px Lato,Arial';ctx.textAlign='center';ctx.fillText(label,px(x),PT+cH+34);});
+      [['Opening',compact?.13:phases.openingEnd/2,'#d2ad36'],['Heart',compact?.45:(phases.openingEnd+phases.heartEnd)/2,'#54b96a'],['Dry-down',compact?.78:(phases.heartEnd+phases.maxEnd)/2,'#9d8c4c']].forEach(([label,x,c])=>{ctx.fillStyle=c;ctx.font=`700 ${compact?9:10}px Lato,Arial`;ctx.textAlign='center';ctx.fillText(label,px(x),PT+cH+34);});
       ctx.fillStyle='#82785b';ctx.font=`700 ${W<520?7:9}px Lato,Arial`;ctx.textAlign='right';ctx.fillText(W<520?'TRACE':'AFTERGLOW · 2–5% TRACE',W-PR-3,PT+13);
       ctx.beginPath();ctx.moveTo(points[0][0],PT+cH);points.forEach(p=>ctx.lineTo(p[0],p[1]));ctx.lineTo(points.at(-1)[0],PT+cH);ctx.closePath();
       const fill=ctx.createLinearGradient(0,PT,0,PT+cH);fill.addColorStop(0,'rgba(58,127,63,.10)');fill.addColorStop(1,'rgba(252,196,41,.02)');ctx.fillStyle=fill;ctx.fill();
       ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle='#a77f12';ctx.lineWidth=2.6;ctx.shadowColor='rgba(167,127,18,.20)';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
-      notes.forEach(n=>{const x=px(n.t);ctx.strokeStyle='rgba(167,127,18,.28)';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x,PT+8);ctx.lineTo(x,PT+cH-3);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#4a463b';ctx.font='600 11px Lato,Arial';ctx.textAlign='center';ctx.fillText(n.label.length>23?n.label.slice(0,23)+'…':n.label,x,PT+cH+53);});
+      notes.forEach(n=>{const x=px(n.t);ctx.strokeStyle='rgba(167,127,18,.28)';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x,PT+8);ctx.lineTo(x,PT+cH-3);ctx.stroke();ctx.setLineDash([]);if(!compact){ctx.fillStyle='#4a463b';ctx.font='600 11px Lato,Arial';ctx.textAlign='center';ctx.fillText(n.label.length>23?n.label.slice(0,23)+'…':n.label,x,PT+cH+53);}});
       if(t!=null){
         const d=getAt(t),x=px(t),y=yOnCurve(points,x),c=phaseColor(d.phase);
         ctx.strokeStyle=c;ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+cH);ctx.stroke();ctx.setLineDash([]);
@@ -217,7 +217,7 @@ export function ScentJourney({product}){
     <p className="sj-hint"><Sparkles size={13}/> Estimated wear: <b>{longevity.label}</b> · move across the curve to follow its evolution</p><p className="sj-disclaimer">* Wear time is an estimate, not a guarantee. It varies with skin, clothing, weather, storage and application. The afterglow represents only a faint 2–5% trace.</p>
     <div className="sj-chart-wrap" ref={wrap}>
       <canvas ref={canvas} className="sj-canvas" onMouseEnter={e=>setT(e)} onMouseMove={e=>{if(dragging.current||e.buttons===0)setT(e)}} onMouseDown={e=>{dragging.current=true;setT(e)}} onMouseUp={()=>{dragging.current=false}} onMouseLeave={()=>{if(!dragging.current)setHover(null)}} onTouchStart={e=>setT({clientX:e.touches[0].clientX})} onTouchMove={e=>setT({clientX:e.touches[0].clientX})}/>
-      {active && <div className="sj-tooltip" style={{left:`${Math.min(82,Math.max(18,((PL+(hover??0)*Math.max(1,(chartWidth||720)-PL-PR))/(chartWidth||720))*100))}%`}}>
+      {active && <div className="sj-tooltip" style={{left:`${Math.min(chartWidth<560?70:82,Math.max(chartWidth<560?30:18,((PL+(hover??0)*Math.max(1,(chartWidth||720)-PL-PR))/(chartWidth||720))*100))}%`}}>
         <strong>{active.phase}</strong><b>{active.time} · {Math.round(active.v*100)}%</b><span>{active.feel}</span>
       </div>}
     </div>
