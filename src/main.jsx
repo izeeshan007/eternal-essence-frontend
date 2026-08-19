@@ -27,6 +27,7 @@ const fallbackBackendBase=normalizeBackendBase(
   import.meta.env.VITE_BACKEND_FALLBACK_URL ||
   (isLocalFrontend?'':'https://eternal-essence-backend.onrender.com')
 );
+let activeBackendBase=primaryBackendBase;
 function backendUrl(){return primaryBackendBase;}
 function backendRequestUrl(input){
   if(typeof input==='string')return input;
@@ -56,6 +57,10 @@ function installBackendFailover(){
     const safeRetry=canSafelyFailOver(method,requestUrl);
     const fallbackUrl=fallbackBackendBase+requestUrl.slice(primaryBackendBase.length);
     const requestClone=input instanceof Request?input.clone():null;
+    if(activeBackendBase===fallbackBackendBase){
+      const activeInput=requestClone?new Request(fallbackUrl,requestClone):fallbackUrl;
+      return nativeFetch(activeInput,init);
+    }
     try{
       const response=await nativeFetch(input,init);
       const unavailable=[502,503,504,521,522,523,524].includes(response.status);
@@ -63,14 +68,24 @@ function installBackendFailover(){
       if(safeRetry&&(unavailable||htmlNotFound)){
         console.warn(`Primary backend unavailable (${response.status}); using Render backup.`);
         const retryInput=requestClone?new Request(fallbackUrl,requestClone):fallbackUrl;
-        return nativeFetch(retryInput,init);
+        const fallbackResponse=await nativeFetch(retryInput,init);
+        if(![502,503,504,521,522,523,524].includes(fallbackResponse.status)){
+          activeBackendBase=fallbackBackendBase;
+          window.__EE_CONFIG__.ACTIVE_BACKEND_BASE_URL=fallbackBackendBase;
+        }
+        return fallbackResponse;
       }
       return response;
     }catch(error){
       if(!safeRetry)throw error;
       console.warn('Primary backend could not be reached; using Render backup.');
       const retryInput=requestClone?new Request(fallbackUrl,requestClone):fallbackUrl;
-      return nativeFetch(retryInput,init);
+      const fallbackResponse=await nativeFetch(retryInput,init);
+      if(![502,503,504,521,522,523,524].includes(fallbackResponse.status)){
+        activeBackendBase=fallbackBackendBase;
+        window.__EE_CONFIG__.ACTIVE_BACKEND_BASE_URL=fallbackBackendBase;
+      }
+      return fallbackResponse;
     }
   };
 }
