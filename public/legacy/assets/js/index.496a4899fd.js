@@ -2979,10 +2979,8 @@ const DEFAULT_BUNDLE_RULES = [
 ];
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 async function loadBackendProducts() {
-mergeProducts();
-return;
 try {
-const res = await fetch(`${BACKEND_BASE_URL}/api/products`);
+const res = await fetch(`${BACKEND_BASE_URL}/api/products`, { headers: { 'Accept': 'application/json' } });
 const text = await res.text();
 if (text.startsWith('<')) {
 console.warn('Backend returned HTML instead of JSON');
@@ -2996,8 +2994,9 @@ return;
 }
 function normalizeCategory(cat) {
 if (!cat) return 'Perfume';
-const key = cat.toLowerCase().replace(/\s+/g, '');
-return map[key] || 'Perfume';
+const key = String(cat).toLowerCase().replace(/\s+/g, '');
+const categoryMap = { perfume: 'Perfume', attar: 'Attar', solidperfume: 'Solid Perfume', combo: 'Combo' };
+return categoryMap[key] || 'Perfume';
 }
 backendProducts = data.products.map(p => ({
 id: 'db_' + p._id,
@@ -3025,9 +3024,8 @@ mergeProducts();
 }
 }
 function mergeProducts() {
-allProducts = [
-...products.map(p => ({ ...p, source: 'frontend' }))
-];
+const primary = Array.isArray(backendProducts) && backendProducts.length ? backendProducts : products;
+allProducts = primary.map(p => ({ ...p, source: p.source || (primary === backendProducts ? 'backend' : 'frontend') }));
 renderProducts(allProducts);
 renderBundleBuilder();
 }
