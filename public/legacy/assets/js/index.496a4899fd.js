@@ -2980,6 +2980,7 @@ const DEFAULT_BUNDLE_RULES = [
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 async function loadBackendProducts() {
 mergeProducts();
+return;
 try {
 const res = await fetch(`${BACKEND_BASE_URL}/api/products`);
 const text = await res.text();
@@ -2996,14 +2997,6 @@ return;
 function normalizeCategory(cat) {
 if (!cat) return 'Perfume';
 const key = cat.toLowerCase().replace(/\s+/g, '');
-const map = {
-perfume: 'Perfume',
-perfumes: 'Perfume',
-attar: 'Attar',
-attars: 'Attar',
-solidperfume: 'Solid Perfume',
-combo: 'Combo'
-};
 return map[key] || 'Perfume';
 }
 backendProducts = data.products.map(p => ({
@@ -3032,9 +3025,8 @@ mergeProducts();
 }
 }
 function mergeProducts() {
-const catalogue = backendProducts.length ? backendProducts : products;
 allProducts = [
-...catalogue.map(p => ({ ...p, source: p.source || (backendProducts.length ? 'backend' : 'frontend') }))
+...products.map(p => ({ ...p, source: 'frontend' }))
 ];
 renderProducts(allProducts);
 renderBundleBuilder();
@@ -3076,11 +3068,8 @@ init.headers['Authorization'] = `Bearer ${authToken}`;
 }
 const res = await _orig(input, init);
 if (res && res.status === 401) {
-// A stale token must not make background requests (wishlist, coupon
-// suggestions, analytics) interrupt checkout with a browser alert.  Clear it
-// silently; protected actions will receive the normal API response and can
-// ask the shopper to sign in again.
 clearAuth();
+try { if (!document.hidden) alert('Session expired or unauthorized. You have been logged out.'); } catch(e){}
 }
 return res;
 } catch (err) {
@@ -4560,14 +4549,11 @@ address: checkoutAddress,
 addresses
 };
 saveAuthToStorage();
-const profileRes = await fetch(`${BACKEND_BASE_URL}/api/auth/me`, {
+fetch(`${BACKEND_BASE_URL}/api/auth/me`, {
 method: 'PUT',
 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
 body: JSON.stringify({ name, phone, address: currentUser.address, addresses })
-});
-if (profileRes.status === 401) {
-  throw new Error('Your session expired. Please sign in again before checkout.');
-}
+}).catch(err => console.warn('Could not save checkout address', err));
 }
 const paymentMethod = getSelectedPaymentMethod() || 'Not Selected';
 const btn = document.getElementById('checkout-btn'); const originalText = btn.textContent;
@@ -4594,7 +4580,6 @@ Object.assign(payload, quoteData.quote);
 if (payload.total <= 0) throw new Error('Invalid total amount.');
 const res = await fetch(`${BACKEND_BASE_URL}/api/orders/cod`, { method:'POST', headers, body: JSON.stringify(payload) });
 const d = await res.json().catch(()=>({}));
-if (res.status === 401) throw new Error('Your session expired. Please sign in again before checkout.');
 if (!res.ok || !d.success) throw new Error(d.error || 'Could not place COD order.');
 cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(d.deliveryEstimate); return;
 }
@@ -4605,7 +4590,6 @@ Object.assign(payload, quoteData.quote);
 if (payload.total <= 0) throw new Error('Invalid total amount.');
 const res = await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`, { method:'POST', headers, body: JSON.stringify(payload) });
 const d = await res.json().catch(()=>({}));
-if (res.status === 401) throw new Error('Your session expired. Please sign in again before checkout.');
 if (!res.ok || !d.success || !d.razorpayOrderId) throw new Error(d.error || 'Could not start online payment.');
 const options = {
 key: d.keyId,
