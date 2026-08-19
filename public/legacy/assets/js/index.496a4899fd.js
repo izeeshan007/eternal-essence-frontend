@@ -2996,6 +2996,14 @@ return;
 function normalizeCategory(cat) {
 if (!cat) return 'Perfume';
 const key = cat.toLowerCase().replace(/\s+/g, '');
+const map = {
+perfume: 'Perfume',
+perfumes: 'Perfume',
+attar: 'Attar',
+attars: 'Attar',
+solidperfume: 'Solid Perfume',
+combo: 'Combo'
+};
 return map[key] || 'Perfume';
 }
 backendProducts = data.products.map(p => ({
