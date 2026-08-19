@@ -194,7 +194,11 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         // Payments are optional during initial catalogue boot; a blocked
         // checkout CDN must never prevent products, admin or PDFs from loading.
         add('https://checkout.razorpay.com/v1/checkout.js').catch(e=>console.warn('Payment widget unavailable until checkout.',e));
-        for(const src of ['/legacy/assets/js/index.496a4899fd.js','/legacy/assets/js/index.75993714cf.js','/legacy/assets/js/index.3563c0bc19.js']){
+        // The legacy files keep stable filenames for compatibility, so add a
+        // release query when their contents change. This prevents Pages/browser
+        // caches from serving an older bundle after a deployment.
+        const legacyVersion='20260819-2';
+        for(const src of [`/legacy/assets/js/index.496a4899fd.js?v=${legacyVersion}`,`/legacy/assets/js/index.75993714cf.js?v=${legacyVersion}`,`/legacy/assets/js/index.3563c0bc19.js?v=${legacyVersion}`]){
           try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${src}`,e);}
         }
         if(!window.EE){
