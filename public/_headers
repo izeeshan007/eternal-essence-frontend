@@ -6,3 +6,6 @@
 
 /legacy/assets/css/*
   Cache-Control: no-cache, no-store, must-revalidate
+
+/legacy/assets/js/*
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
