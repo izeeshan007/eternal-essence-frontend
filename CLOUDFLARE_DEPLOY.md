@@ -9,6 +9,12 @@ Build output directory:
 Set this Cloudflare Pages environment variable:
 `VITE_BACKEND_BASE_URL=https://YOUR-RAILWAY-BACKEND-DOMAIN`
 
+Optional production backup backend (used automatically for safe requests when Railway is unavailable):
+`VITE_BACKEND_FALLBACK_URL=https://eternal-essence-backend.onrender.com`
+
+Do not include a trailing slash in either URL. The application also normalizes
+trailing slashes defensively so requests never contain `//api`.
+
 Railway backend CORS example:
 `FRONTEND_URL=https://eternalessence.in,https://www.eternalessence.in,http://localhost:5173,http://localhost:3000`
 

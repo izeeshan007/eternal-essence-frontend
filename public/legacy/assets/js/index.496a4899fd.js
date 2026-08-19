@@ -1,4 +1,4 @@
-const BACKEND_BASE_URL = window.__EE_CONFIG__?.BACKEND_BASE_URL || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend.onrender.com');
+const BACKEND_BASE_URL = String(window.__EE_CONFIG__?.BACKEND_BASE_URL || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend-production.up.railway.app')).trim().replace(/\/+$/, '');
 function escapeHtml(value) {
 if (!value && value !== 0) return '';
 return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

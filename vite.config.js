@@ -16,8 +16,10 @@ if(!legacyAdminSource)throw new Error('The existing admin dashboard shell could 
 // Cache before Vite clears its output directory during a production build.
 const legacyAdminMarkup=fs.readFileSync(legacyAdminSource,'utf8');
 
-function adminHtml(backendBase=''){
-  const runtimeConfig=`<script>window.__EE_BACKEND_BASE_URL__=${JSON.stringify(String(backendBase||'').replace(/\/$/, '')).replace(/</g,'\\u003c')};</script>`;
+function adminHtml(backendBase='',backendFallback=''){
+  const primary=String(backendBase||'').trim().replace(/\/+$/, '');
+  const fallback=String(backendFallback||'').trim().replace(/\/+$/, '');
+  const runtimeConfig=`<script>window.__EE_BACKEND_BASE_URL__=${JSON.stringify(primary).replace(/</g,'\\u003c')};window.__EE_BACKEND_FALLBACK_URL__=${JSON.stringify(fallback).replace(/</g,'\\u003c')};</script>`;
   return legacyAdminMarkup
     .replace(/<script>window\.__EE_BACKEND_BASE_URL__=[\s\S]*?<\/script>/g,'')
     .replace('<head>','<head>'+runtimeConfig)
@@ -25,7 +27,7 @@ function adminHtml(backendBase=''){
     .replace(/(["'])\/?(?:\.\/)?assets\/js\/admin\.9a74483567\.js/g,'$1/legacy/assets/js/admin.9a74483567.js');
 }
 
-function restoreAdminDashboard(backendBase){
+function restoreAdminDashboard(backendBase,backendFallback){
   return {
     name:'restore-admin-dashboard',
     configureServer(server){
@@ -35,18 +37,18 @@ function restoreAdminDashboard(backendBase){
           res.statusCode=302; res.setHeader('Location','/admin'); res.end(); return;
         }
         if(pathname!=='/admin'&&pathname!=='/admin.html'&&pathname!=='/admin/products') return next();
-        const html=await server.transformIndexHtml('/admin',adminHtml(backendBase));
+        const html=await server.transformIndexHtml('/admin',adminHtml(backendBase,backendFallback));
         res.statusCode=200; res.setHeader('Content-Type','text/html; charset=utf-8'); res.end(html);
       });
     },
     writeBundle(options){
       const outDir=path.resolve(frontendDir,options.dir||'dist');
-      fs.writeFileSync(path.join(outDir,'admin.html'),adminHtml(backendBase),'utf8');
+      fs.writeFileSync(path.join(outDir,'admin.html'),adminHtml(backendBase,backendFallback),'utf8');
     }
   };
 }
 
 export default defineConfig(({mode})=>{
   const env=loadEnv(mode,frontendDir,'');
-  return { plugins:[react(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'')] };
+  return { plugins:[react(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'',env.VITE_BACKEND_FALLBACK_URL||'')] };
 });

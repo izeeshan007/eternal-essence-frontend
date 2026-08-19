@@ -17,12 +17,69 @@ window.eeLoadPdfEngine=async()=>{
   return window.jspdf;
 };
 
-function backendUrl(){
-  return import.meta.env.VITE_BACKEND_BASE_URL ||
-    ((location.hostname==='localhost'||location.hostname==='127.0.0.1')
-      ? 'http://localhost:5000'
-      : 'https://eternal-essence-backend.onrender.com');
+const normalizeBackendBase=value=>String(value||'').trim().replace(/\/+$/,'');
+const isLocalFrontend=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const primaryBackendBase=normalizeBackendBase(
+  import.meta.env.VITE_BACKEND_BASE_URL ||
+  (isLocalFrontend?'http://localhost:5000':'https://eternal-essence-backend-production.up.railway.app')
+);
+const fallbackBackendBase=normalizeBackendBase(
+  import.meta.env.VITE_BACKEND_FALLBACK_URL ||
+  (isLocalFrontend?'':'https://eternal-essence-backend.onrender.com')
+);
+function backendUrl(){return primaryBackendBase;}
+function backendRequestUrl(input){
+  if(typeof input==='string')return input;
+  if(input instanceof URL)return input.href;
+  return input?.url||'';
 }
+function canSafelyFailOver(method,url){
+  if(['GET','HEAD','OPTIONS'].includes(method))return true;
+  const pathname=new URL(url,location.origin).pathname.replace(/\/+$/,'');
+  return [
+    '/api/auth/login',
+    '/api/auth/me',
+    '/api/analytics/event',
+    '/api/orders/quote',
+    '/api/orders/validate-coupon',
+    '/api/orders/coupon-suggestions'
+  ].includes(pathname);
+}
+function installBackendFailover(){
+  if(window.__EE_BACKEND_FAILOVER_INSTALLED__||!fallbackBackendBase||fallbackBackendBase===primaryBackendBase)return;
+  window.__EE_BACKEND_FAILOVER_INSTALLED__=true;
+  const nativeFetch=window.fetch.bind(window);
+  window.fetch=async(input,init={})=>{
+    const requestUrl=backendRequestUrl(input);
+    if(!requestUrl.startsWith(`${primaryBackendBase}/`))return nativeFetch(input,init);
+    const method=String(init.method||(input instanceof Request?input.method:'GET')||'GET').toUpperCase();
+    const safeRetry=canSafelyFailOver(method,requestUrl);
+    const fallbackUrl=fallbackBackendBase+requestUrl.slice(primaryBackendBase.length);
+    const requestClone=input instanceof Request?input.clone():null;
+    try{
+      const response=await nativeFetch(input,init);
+      const unavailable=[502,503,504,521,522,523,524].includes(response.status);
+      const htmlNotFound=response.status===404&&String(response.headers.get('content-type')||'').includes('text/html');
+      if(safeRetry&&(unavailable||htmlNotFound)){
+        console.warn(`Primary backend unavailable (${response.status}); using Render backup.`);
+        const retryInput=requestClone?new Request(fallbackUrl,requestClone):fallbackUrl;
+        return nativeFetch(retryInput,init);
+      }
+      return response;
+    }catch(error){
+      if(!safeRetry)throw error;
+      console.warn('Primary backend could not be reached; using Render backup.');
+      const retryInput=requestClone?new Request(fallbackUrl,requestClone):fallbackUrl;
+      return nativeFetch(retryInput,init);
+    }
+  };
+}
+window.__EE_CONFIG__={
+  ...(window.__EE_CONFIG__||{}),
+  BACKEND_BASE_URL:primaryBackendBase,
+  BACKEND_FALLBACK_URL:fallbackBackendBase
+};
+installBackendFailover();
 function analyticsVisitorId(){
   const key='ee_analytics_visitor_v1';
   let id=sessionStorage.getItem(key);
@@ -104,7 +161,11 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
           if(filterBar) home.insertBefore(mount,filterBar);
           else home.appendChild(mount);
         }
-        window.__EE_CONFIG__={BACKEND_BASE_URL:backendUrl()};
+        window.__EE_CONFIG__={
+          ...(window.__EE_CONFIG__||{}),
+          BACKEND_BASE_URL:backendUrl(),
+          BACKEND_FALLBACK_URL:fallbackBackendBase
+        };
         window.__EE_IMAGE_BASE__='/products/';
         window.__EE_CARD_BASE__='/card/';
         const add=(src)=>new Promise((resolve,reject)=>{

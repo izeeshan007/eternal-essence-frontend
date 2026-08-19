@@ -1,4 +1,7 @@
-const BACKEND_BASE_URL = window.__EE_BACKEND_BASE_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend.onrender.com');
+const normalizeAdminBackend = value => String(value || '').trim().replace(/\/+$/, '');
+const BACKEND_BASE_URL = normalizeAdminBackend(window.__EE_BACKEND_BASE_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend-production.up.railway.app'));
+const BACKEND_FALLBACK_URL = normalizeAdminBackend(window.__EE_BACKEND_FALLBACK_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://eternal-essence-backend.onrender.com'));
+let activeAdminBackend = BACKEND_BASE_URL;
 const ADMIN_TOKEN_KEY = 'ee_admin_token_v1';
 const PRODUCT_CATALOGUE_PAGE = location.pathname.replace(/\/+$/, '') === '/admin/products';
 let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || null;
@@ -82,11 +85,39 @@ let adminPageInitializing = false;
 let adminInitialLoadDone = false;
 let adminReconnectTimer = null;
 let adminCapabilities = null;
+function safeAdminFailover(path, opts = {}) {
+const method = String(opts.method || 'GET').toUpperCase();
+return ['GET', 'HEAD', 'OPTIONS'].includes(method) || (method === 'POST' && path === '/api/admin/login');
+}
+async function adminBackendFetch(path, opts = {}) {
+const safeRetry = safeAdminFailover(path, opts);
+const bases = [activeAdminBackend];
+if (safeRetry && BACKEND_FALLBACK_URL && BACKEND_FALLBACK_URL !== activeAdminBackend) bases.push(BACKEND_FALLBACK_URL);
+let lastError = null;
+for (let index = 0; index < bases.length; index += 1) {
+const base = bases[index];
+try {
+const res = await fetch(base + path, opts);
+const unavailable = [502, 503, 504, 521, 522, 523, 524].includes(res.status);
+const htmlNotFound = res.status === 404 && String(res.headers.get('content-type') || '').includes('text/html');
+if (index + 1 < bases.length && (unavailable || htmlNotFound)) continue;
+if (res.ok && base !== activeAdminBackend) {
+activeAdminBackend = base;
+console.warn('Admin switched to the Render backup backend.');
+}
+return res;
+} catch (err) {
+lastError = err;
+if (index + 1 >= bases.length) throw err;
+}
+}
+throw lastError || new Error('No backend is available.');
+}
 async function adminFetch(path, opts = {}) {
 const headers = new Headers(opts.headers || {});
 if (adminToken) headers.set('Authorization', `Bearer ${adminToken}`);
 try {
-const res = await fetch(BACKEND_BASE_URL + path, { ...opts, headers });
+const res = await adminBackendFetch(path, { ...opts, headers });
 const json = await res.json().catch(() => ({}));
 if (res.status === 401) {
 const msg = String(json.error || '').toLowerCase();
@@ -370,7 +401,7 @@ const password = document.getElementById('admin-password').value.trim();
 if (!email || !password) return;
 try {
 btnLogin.disabled = true; loginMsg.textContent = 'Signing in...';
-const res = await fetch(`${BACKEND_BASE_URL}/api/admin/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+const res = await adminBackendFetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
 const d = await res.json();
 if (!res.ok || !d.success) throw new Error(d.error || 'Login failed');
 adminToken = d.token;
