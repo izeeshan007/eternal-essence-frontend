@@ -197,7 +197,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         // The legacy files keep stable filenames for compatibility, so add a
         // release query when their contents change. This prevents Pages/browser
         // caches from serving an older bundle after a deployment.
-        const legacyVersion='20260819-2';
+        const legacyVersion='20260820-1';
         for(const src of [`/legacy/assets/js/index.496a4899fd.js?v=${legacyVersion}`,`/legacy/assets/js/index.75993714cf.js?v=${legacyVersion}`,`/legacy/assets/js/index.3563c0bc19.js?v=${legacyVersion}`]){
           try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${src}`,e);}
         }

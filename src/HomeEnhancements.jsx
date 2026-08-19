@@ -1,6 +1,21 @@
 import React,{useEffect,useMemo,useState} from 'react';
 
-const imageUrl=p=>{const image=p?.images?.[0]||p?.image||'';return !image?'/products/placeholder.webp':String(image).startsWith('http')?image:`/products/${String(image).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;};
+// Backend variant arrays usually start with the transparent 8 ml bottle
+// (for example `million8.png`). Home/collection tiles should use the
+// established default gift-pack image instead. Prefer an explicit image or
+// index 6, then derive the un-suffixed product asset (`million.webp`) from a
+// size-suffixed filename. Product detail/variant views still use the original
+// array entries and are not affected by this presentation-only choice.
+const imageUrl=p=>{
+  const images=Array.isArray(p?.images)?p.images:[];
+  let image=p?.image||images[6]||images[0]||'';
+  if(!p?.image&& !images[6] && image && !String(image).startsWith('http')){
+    const raw=String(image).split('/').pop();
+    const match=raw.match(/^(.*?)(?:\d+)\.(png|jpe?g|webp)$/i);
+    if(match) image=raw.replace(raw,`${match[1]}.${match[2]}`);
+  }
+  return !image?'/products/placeholder.webp':String(image).startsWith('http')?image:`/products/${String(image).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
+};
 const typeOf=p=>String(p?.type||p?.category||'').toLowerCase().includes('attar')?'Attar':'Perfume';
 function useProducts(){const [products,setProducts]=useState([]);useEffect(()=>{const sync=()=>setProducts(window.EE?.getProducts?.()||[]);sync();const timer=setInterval(sync,600);return()=>clearInterval(timer);},[]);return products;}
 function collectionRoute(type,filter={}){const kind=String(type||'all').toLowerCase().includes('attar')?'attar':'perfume';const gender=filter.gender;if(gender)return `/collections/${kind}/${gender==='Male'?'for-him':gender==='Female'?'for-her':'unisex'}`;const mood=filter.mood;if(mood)return `/collections/${kind}/${mood}`;return `/collections/${kind}`;}
