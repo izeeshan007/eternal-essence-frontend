@@ -2455,7 +2455,7 @@ const attarFacets = {
 function getSizesByCategory(category) {
 if (category === 'Perfume') {
 return [
-{ value: 8,   unit: 'ml', priceMultiplier: 0.278557114228 }, // 0.12 / 0.12
+{ value: 8,   unit: 'ml', priceMultiplier: 0.2985 }, // 0.12 / 0.12
 { value: 20,  unit: 'ml', priceMultiplier: 0.6993987 }, // 0.32 / 0.12
 { value: 30,  unit: 'ml', priceMultiplier: 1 }, // 0.47 / 0.12
 { value: 50,  unit: 'ml', priceMultiplier: 1.4008 }, // 0.62 / 0.12
