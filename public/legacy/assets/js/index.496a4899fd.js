@@ -2980,7 +2980,7 @@ const DEFAULT_BUNDLE_RULES = [
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 async function loadBackendProducts() {
 try {
-const res = await fetch(`${BACKEND_BASE_URL}/api/products`, { headers: { 'Accept': 'application/json' } });
+const res = await fetch(`${BACKEND_BASE_URL}/api/products`);
 const text = await res.text();
 if (text.startsWith('<')) {
 console.warn('Backend returned HTML instead of JSON');
@@ -2994,11 +2994,10 @@ return;
 }
 function normalizeCategory(cat) {
 if (!cat) return 'Perfume';
-const key = String(cat).toLowerCase().replace(/\s+/g, '');
-const categoryMap = { perfume: 'Perfume', attar: 'Attar', solidperfume: 'Solid Perfume', combo: 'Combo' };
-return categoryMap[key] || 'Perfume';
+const key = cat.toLowerCase().replace(/\s+/g, '');
+return ({perfume:'Perfume',attar:'Attar',solidperfume:'Solid Perfume',combo:'Combo'})[key] || 'Perfume';
 }
-backendProducts = data.products.map(p => ({
+backendProducts = data.products.slice().sort((a,b) => Number(a.catalogOrder ?? 999999) - Number(b.catalogOrder ?? 999999)).map(p => ({
 id: 'db_' + p._id,
 name: p.name,
 type: normalizeCategory(p.category),
@@ -3024,8 +3023,8 @@ mergeProducts();
 }
 }
 function mergeProducts() {
-const primary = Array.isArray(backendProducts) && backendProducts.length ? backendProducts : products;
-allProducts = primary.map(p => ({ ...p, source: p.source || (primary === backendProducts ? 'backend' : 'frontend') }));
+const frontendProducts = products.map(p => ({ ...p, source: 'frontend' }));
+allProducts = backendProducts.length ? backendProducts : frontendProducts;
 renderProducts(allProducts);
 renderBundleBuilder();
 }

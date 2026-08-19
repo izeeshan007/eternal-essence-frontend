@@ -20,18 +20,19 @@ window.eeLoadPdfEngine=async()=>{
 
 const normalizeBackendBase=value=>String(value||'').trim().replace(/\/+$/,'');
 const isLocalFrontend=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+// Production API traffic MUST stay same-origin so `/api/*` is always handled
+// by the Cloudflare Worker route attached to eternalessence.in/www. This also
+// prevents an accidentally stale Cloudflare environment variable from sending
+// the browser directly to Railway/Render. Local development continues to use
+// the local backend.
 const primaryBackendBase=normalizeBackendBase(
-  import.meta.env.VITE_BACKEND_BASE_URL ||
-  // Production is routed through the Cloudflare `/api/*` worker. Keeping the
-  // default same-origin makes apex/www use the same backend and avoids a
-  // deployment silently bypassing the worker when the Pages variable is
-  // missing. A Pages environment variable can still override this explicitly.
-  (isLocalFrontend?'http://localhost:5000':location.origin)
+  isLocalFrontend
+    ? (import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:5000')
+    : location.origin
 );
-const fallbackBackendBase=normalizeBackendBase(
-  import.meta.env.VITE_BACKEND_FALLBACK_URL ||
-  (isLocalFrontend?'':'https://eternal-essence-backend.onrender.com')
-);
+// Railway -> Render failover is handled by the Cloudflare Worker in production.
+// Do not install a second browser-side Render failover layer.
+const fallbackBackendBase='';
 let activeBackendBase=primaryBackendBase;
 function backendUrl(){return primaryBackendBase;}
 function backendRequestUrl(input){
@@ -197,10 +198,14 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         // The legacy files keep stable filenames for compatibility, so add a
         // release query when their contents change. This prevents Pages/browser
         // caches from serving an older bundle after a deployment.
-        const legacyVersion='20260820-1';
+        const legacyVersion='20260820-3';
         for(const src of [`/legacy/assets/js/index.496a4899fd.js?v=${legacyVersion}`,`/legacy/assets/js/index.75993714cf.js?v=${legacyVersion}`,`/legacy/assets/js/index.3563c0bc19.js?v=${legacyVersion}`]){
           try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${src}`,e);}
         }
+        // Inline handlers in legacy-body.html call these functions by global
+        // name. Explicitly expose the legacy menu function for strict/module
+        // execution contexts.
+        if(typeof window.openMobileMenu==='function') window.openMobileMenu=window.openMobileMenu;
         if(!window.EE){
           await new Promise(resolve=>{
             const done=()=>{window.removeEventListener('ee:ready',done);resolve()};
