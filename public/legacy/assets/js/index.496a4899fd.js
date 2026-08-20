@@ -21,6 +21,12 @@ let wishlistIds = [];
 let wishlistReady = false;
 let wishlistLoaded = false;
 // ================ PRODUCTS (all included) ================
+// The compact array keeps the same order as data/current-catalog.json. These
+// are the only rows that are perfumes; every other row is an attar.
+const PERFUME_CATALOG_POSITIONS = new Set([
+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,22,52,60,71,75,95,98,
+117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137
+]);
 const products = [
 ["Purple OUD","Purple Oud (Dior)","Unisex","Autumn-Winter","Day/Night","Woody|Spicy|Citrus|Oud","Mandarin Orange","Pink Pepper, Saffron","Oud (Agarwood)",499,["purple_oud8.webp","purple_oud20.webp","purple_oud3.webp"]],
 ["Pulse Royale","CR-7","Unisex","All Season","Day","Aromatic|Woody|Powdery|Warm Spicy","Lavender, Cardamom, Artemisia, Bergamot","Tobacco, Cinnamon, Cedar, Iris","Vanilla, Musk, Sandalwood, Amber",499,["pulse_royale8.webp","pulse_royale20.webp","pulse_royale3.webp"]],
@@ -181,15 +187,20 @@ const products = [
         `${imageBase}100.webp`
     ];
 
+    const explicitSizeImage = size => (comboImages || []).find(image =>
+        new RegExp(`${size}(?:\\.[a-z0-9]+)?$`, 'i').test(String(image || ''))
+    );
     const comboOverlayImages = {
-        8: comboImages?.[0] || `${imageBase}8.webp`,
-        20: comboImages?.[1] || `${imageBase}20.webp`
+        // A one-image gallery such as ["ember.webp"] is the product card,
+        // not its 8 ml bottle. Use it only when the filename names the size.
+        8: explicitSizeImage(8) || `${imageBase}8.webp`,
+        20: explicitSizeImage(20) || `${imageBase}20.webp`
     };
 
     return {
         id: `frontend_${index + 1}`,
         name,
-        type: 'Perfume',
+        type: PERFUME_CATALOG_POSITIONS.has(index + 1) ? 'Perfume' : 'Attar',
         inspiredBy,
         gender,
         season,
@@ -415,7 +426,7 @@ const sizeSuffix = Number(sizeMl) === 20 ? '20' : '8';
 const base = product?.images?.[0] || product?.image || '';
 if (!base) return [];
 const src = String(base);
-if (src.startsWith('http') || src.startsWith('/') || src.includes('?')) return [];
+if (src.startsWith('http') || src.includes('?')) return [];
 const slashIndex = Math.max(src.lastIndexOf('/'), src.lastIndexOf('\\'));
 const folder = slashIndex >= 0 ? src.slice(0, slashIndex + 1) : '';
 const filename = slashIndex >= 0 ? src.slice(slashIndex + 1) : src;
@@ -445,8 +456,10 @@ return normalizeBundleAsset(deriveTransparentBottleImage(product, sizeMl)) || ge
 }
 function getBundleBottleImageCandidates(product, sizeMl) {
 const explicit = product?.bottleImage ? [normalizeBundleAsset(product.bottleImage)] : [];
+const catalogueSizeImage = product?.comboOverlayImages?.[Number(sizeMl)];
 return [
 ...explicit,
+normalizeBundleAsset(catalogueSizeImage),
 ...deriveTransparentBottleImages(product, sizeMl).map(normalizeBundleAsset),
 getCommonBundleBottleImage(sizeMl),
 // The product thumbnail is deliberately last: it is a safe fallback, never
@@ -785,6 +798,7 @@ return ({perfume:'Perfume',attar:'Attar',solidperfume:'Solid Perfume',combo:'Com
 }
 backendProducts = data.products.slice().sort((a,b) => Number(a.catalogOrder ?? 999999) - Number(b.catalogOrder ?? 999999)).map(p => ({
 id: 'db_' + p._id,
+catalogOrder: Number(p.catalogOrder),
 name: p.name,
 type: normalizeCategory(p.category),
 inspiredBy: p.inspiredBy || '',
@@ -810,9 +824,38 @@ mergeProducts();
 }
 function mergeProducts() {
 const frontendProducts = products.map(p => ({ ...p, source: 'frontend' }));
-allProducts = backendProducts.length ? backendProducts : frontendProducts;
+allProducts = backendProducts.length ? backendProducts.map(serverProduct => {
+const order = Number(serverProduct.catalogOrder);
+// catalogOrder is zero-based in current-catalog.json and MongoDB.
+const canonical = Number.isInteger(order) && order >= 0 && order < frontendProducts.length
+? frontendProducts[order]
+: null;
+if (!canonical) return serverProduct;
+const correctedAsset = value => {
+const source = String(value || '');
+const filename = source.split('/').pop().toLowerCase();
+const corrected = {
+'dark rebel.webp': 'dark_rebel.webp',
+'blue_oud.webp': 'blueoud.webp',
+'fire_oud.webp': 'fire oud.webp'
+}[filename];
+return corrected ? source.replace(/[^/\\]+$/, corrected) : source;
+};
+return {
+...canonical,
+...serverProduct,
+// Keep live database metadata while protecting the canonical category from
+// the older import that marked every item as Perfume. Correct the three known
+// stale primary filenames without discarding Admin-managed image galleries.
+type: canonical.type,
+image: correctedAsset(serverProduct.image),
+images: (serverProduct.images || []).map(correctedAsset),
+source: 'backend'
+};
+}) : frontendProducts;
 renderProducts(allProducts);
 renderBundleBuilder();
+buildCollectionMenus();
 }
 function placeProductFilters() {
 const filterBar = document.getElementById('filter-bar');
@@ -905,6 +948,7 @@ const savedAddressBtn = document.getElementById('use-saved-address-btn');
 const signupCard = document.getElementById('signup-card');
 const loginCard = document.getElementById('login-card');
 const navAccountLink = document.getElementById('nav-account-link');
+const navAccountLinks = [...new Set([navAccountLink, ...document.querySelectorAll('a[href="#account"]')].filter(Boolean))];
 if (currentUser && authToken) {
 if (welcome) { welcome.classList.remove('hidden'); if (welcomeEmail) welcomeEmail.textContent = currentUser.email || ''; }
 if (navUserIcon) { navUserIcon.classList.remove('text-gray-300'); navUserIcon.classList.add('text-yellow-400'); }
@@ -912,10 +956,10 @@ if (checkoutEmail) { checkoutEmail.value = currentUser.email || ''; checkoutEmai
 renderSavedAddressControls();
 if (signupCard) signupCard.classList.add('hidden');
 if (loginCard) loginCard.classList.add('hidden');
-if (navAccountLink) {
-navAccountLink.textContent = 'Profile';
-navAccountLink.onclick = () => switchPage('profile');
-}
+navAccountLinks.forEach(link => {
+link.textContent = 'Profile';
+link.onclick = event => { event.preventDefault(); switchPage('profile'); closeMenus(); };
+});
 populateProfile();
 } else {
 if (welcome) welcome.classList.add('hidden');
@@ -924,13 +968,15 @@ if (checkoutEmail) { checkoutEmail.readOnly = false; }
 if (savedAddressBtn) savedAddressBtn.classList.add('hidden');
 if (signupCard) signupCard.classList.remove('hidden');
 if (loginCard) loginCard.classList.remove('hidden');
-if (navAccountLink) {
-navAccountLink.textContent = 'Account';
-navAccountLink.onclick = () => switchPage('profile');
-}
+navAccountLinks.forEach(link => {
+link.textContent = 'Account';
+link.onclick = event => { event.preventDefault(); switchPage('account'); closeMenus(); };
+});
 }
 }
 function switchPage(pageId) {
+if (pageId === 'profile' && (!currentUser || !authToken)) pageId = 'account';
+if (pageId === 'account' && currentUser && authToken) pageId = 'profile';
 document.body.style.overflow = "auto";
 ['home','custom-set','perfume-card','about','contact','cart','orders','account','profile'].forEach(id => {
 const el = document.getElementById('page-'+id);
@@ -1185,9 +1231,11 @@ function getBundleQtyOptions(sizeMl) {
 return Number(sizeMl) === 8 ? [4, 6] : [2, 4];
 }
 function getSizePrice(product, sizeMl) {
-const sizes = getSizesByCategory(product.type || product.category);
+const sizes = Array.isArray(product.sizes) && product.sizes.length
+? product.sizes
+: getSizesByCategory(product.type || product.category);
 const size = sizes.find(s => Number(s.value) === Number(sizeMl) && String(s.unit).toLowerCase() === 'ml');
-return Math.ceil(Number(product.price || 0) * (size?.priceMultiplier || 1));
+return Math.round(Number(product.price || 0) * (size?.priceMultiplier || 1));
 }
 function getBundleEligibleProducts() {
 const perfumes = allProducts.filter(
@@ -2142,6 +2190,20 @@ const data = await res.json().catch(()=>({}));
 if (!res.ok || !data.success) throw new Error(data.error || 'Could not fetch orders.');
 return data.orders || [];
 }
+const PENDING_PAYMENT_STORAGE_KEY = 'ee_pending_payment_attempts_v1';
+function readPendingPaymentAttempts(){try{const value=JSON.parse(localStorage.getItem(PENDING_PAYMENT_STORAGE_KEY)||'[]');return Array.isArray(value)?value:[];}catch{return[];}}
+function writePendingPaymentAttempts(attempts){try{localStorage.setItem(PENDING_PAYMENT_STORAGE_KEY,JSON.stringify(attempts.slice(-5)));}catch{}}
+function rememberPendingPayment(payload, quote, razorpayOrderId, reason='Payment was cancelled'){
+const attempt={localId:`pending-${globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`}`,createdAt:new Date().toISOString(),status:'PAYMENT_CANCELLED',paymentMethod:'Razorpay',total:Number(quote?.total||payload?.total||0),items:quote?.items||[],quote,payload:{...payload,clientReference:payload.clientReference},razorpayOrderId,reason};
+const attempts=readPendingPaymentAttempts().filter(item=>item.localId!==attempt.localId);attempts.push(attempt);writePendingPaymentAttempts(attempts);return attempt.localId;
+}
+function removePendingPayment(localId){writePendingPaymentAttempts(readPendingPaymentAttempts().filter(item=>item.localId!==localId));}
+async function notifyPaymentInterrupted(razorpayOrderId, reason, localId){
+try{await fetch(`${BACKEND_BASE_URL}/api/orders/payment-failed`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpayOrderId,reason})});}catch{}
+if(localId){const attempts=readPendingPaymentAttempts();const index=attempts.findIndex(item=>item.localId===localId);if(index>=0){attempts[index].reason=reason;attempts[index].status=reason==='User closed Razorpay popup'?'PAYMENT_CANCELLED':'PAYMENT_FAILED';attempts[index].updatedAt=new Date().toISOString();writePendingPaymentAttempts(attempts);}}
+renderOrders();
+if(typeof switchPage==='function') switchPage('orders');
+}
 async function renderOrders() {
 const renderId = ++ordersRenderSeq;
 const loginReq = document.getElementById('orders-login-required'),
@@ -2164,8 +2226,9 @@ tbody.innerHTML = '';
 try {
 const fetchedOrders = await fetchMyOrders();
 if (renderId !== ordersRenderSeq) return;
+const pendingOrders = readPendingPaymentAttempts().map(attempt=>({...attempt,localPending:true,orderId:'',_id:attempt.localId}));
 const seenOrders = new Set();
-const orders = fetchedOrders.filter(order => {
+const orders = [...pendingOrders,...fetchedOrders].filter(order => {
 const key = String(order._id || order.orderId || order.razorpay_order_id || JSON.stringify(order));
 if (seenOrders.has(key)) return false;
 seenOrders.add(key);
@@ -2195,10 +2258,10 @@ const dateStr = new Date(dateVal).toLocaleString('en-IN', {
 dateStyle: 'medium',
 timeStyle: 'short'
 });
-const canRetry = ['PAYMENT_FAILED', 'FAILED', 'PENDING_PAYMENT'].includes(statusVal);
-const canCancel = ['PAID', 'ORDER_PLACED', 'PROCESSING', 'Processing', 'PENDING_PAYMENT', 'PAYMENT_FAILED'].includes(statusVal);
+const canRetry = order.localPending || ['PAYMENT_FAILED', 'FAILED', 'PENDING_PAYMENT'].includes(statusVal);
+const canCancel = order.localPending || ['PAID', 'ORDER_PLACED', 'PROCESSING', 'Processing', 'PENDING_PAYMENT', 'PAYMENT_FAILED'].includes(statusVal);
 tr.innerHTML = `
-<td class="p-3 text-sm font-semibold">${orderId}</td>
+<td class="p-3 text-sm font-semibold">${order.localPending ? '<span class="text-gray-400">Not generated</span>' : orderId}</td>
 <td class="p-3 text-xs text-gray-600">${dateStr}</td>
 <td class="p-3 text-sm font-bold">₹${Number(totalVal).toLocaleString('en-IN')}</td>
 <td class="p-3 text-xs text-gray-700">${paymentVal}</td>
@@ -2213,21 +2276,21 @@ ${statusVal}
 </span>
 </td>
 <td class="p-3 text-xs space-x-2">
-${canRetry ? `<button class="retry-btn px-2 py-1 bg-yellow-500 text-black text-[10px] font-bold rounded">Retry</button>` : ''}
-${canCancel ? `<button class="cancel-btn px-2 py-1 bg-red-500 text-white text-[10px] font-bold rounded">Cancel</button>` : ''}
+${canRetry ? `<button class="retry-btn px-2 py-1 bg-yellow-500 text-black text-[10px] font-bold rounded">Retry Payment</button>` : ''}
+${canCancel ? `<button class="cancel-btn px-2 py-1 bg-red-500 text-white text-[10px] font-bold rounded">${order.localPending?'Remove':'Cancel'}</button>` : ''}
 </td>
 `;
-tr.addEventListener('click', () => openOrderDetails(order));
+if (!order.localPending) tr.addEventListener('click', () => openOrderDetails(order));
 if (canRetry) {
 tr.querySelector('.retry-btn').addEventListener('click', e => {
 e.stopPropagation();
-retryPayment(order._id);
+retryPayment(order);
 });
 }
 if (canCancel) {
 tr.querySelector('.cancel-btn').addEventListener('click', e => {
 e.stopPropagation();
-cancelOrder(order._id);
+if(order.localPending){removePendingPayment(order.localId);renderOrders();}else cancelOrder(order._id);
 });
 }
 fragment.appendChild(tr);
@@ -2300,6 +2363,22 @@ setTimeout(()=>{ closeGuestOtpModal(); switchPage('cart'); },800);
 console.error('guest verify', err); msg.textContent = err.message || 'OTP verify failed.'; msg.className='text-xs text-red-600';
 }
 }
+function confirmCodOrder(quote) {
+return new Promise(resolve => {
+const existing = document.getElementById('cod-confirm-modal');
+if (existing) existing.remove();
+const items = (quote?.items || []).map(item => `<li class="flex justify-between gap-3 py-2 border-b"><span>${escapeHtml(item.name || 'Product')} <small class="text-gray-500">${escapeHtml(item.size || '')} × ${Number(item.qty || 1)}</small></span><b>₹${(Number(item.price || 0) * Number(item.qty || 1)).toLocaleString('en-IN')}</b></li>`).join('');
+const modal = document.createElement('div');
+modal.id = 'cod-confirm-modal';
+modal.className = 'fixed inset-0 z-[10001] bg-black/70 flex items-center justify-center p-4';
+modal.innerHTML = `<div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto"><div class="flex items-start justify-between gap-4"><div><p class="text-xs uppercase tracking-widest text-yellow-700 font-bold">Confirm COD order</p><h3 class="text-2xl font-bold mt-1">Ready to place this order?</h3></div><button type="button" class="text-2xl text-gray-500" data-cod-cancel aria-label="Close">×</button></div><ul class="mt-5">${items || '<li>No products selected.</li>'}</ul><div class="mt-4 rounded-lg bg-gray-50 border p-4 space-y-2 text-sm"><div class="flex justify-between"><span>Subtotal</span><b>₹${Number(quote?.subtotal || 0).toLocaleString('en-IN')}</b></div><div class="flex justify-between"><span>Discount</span><b>- ₹${Number(quote?.discount || 0).toLocaleString('en-IN')}</b></div><div class="flex justify-between"><span>Shipping + COD fee</span><b>₹${(Number(quote?.shipping || 0) + Number(quote?.codFee || 0)).toLocaleString('en-IN')}</b></div><div class="flex justify-between border-t pt-2 text-lg"><span>Total payable on delivery</span><b>₹${Number(quote?.total || 0).toLocaleString('en-IN')}</b></div></div><p class="text-xs text-gray-500 mt-4">You will pay this amount when the order is delivered. Please confirm that your shipping details and products are correct.</p><div class="flex gap-3 mt-5"><button type="button" data-cod-cancel class="flex-1 border rounded-lg py-3 font-bold">Go back</button><button type="button" data-cod-confirm class="flex-1 bg-black text-yellow-400 rounded-lg py-3 font-bold">Confirm COD order</button></div></div>`;
+document.body.appendChild(modal);
+const finish = value => { modal.remove(); resolve(value); };
+modal.querySelectorAll('[data-cod-cancel]').forEach(button => button.onclick = () => finish(false));
+modal.querySelector('[data-cod-confirm]').onclick = () => finish(true);
+modal.addEventListener('click', event => { if (event.target === modal) finish(false); });
+});
+}
 async function handleCheckout(){
 if (!currentUser || !authToken) {
 const che = document.getElementById('checkout-email')?.value?.trim().toLowerCase();
@@ -2361,6 +2440,7 @@ const quoteData = await quoteRes.json().catch(()=>({}));
 if (!quoteRes.ok || !quoteData.success) throw new Error(quoteData.error || 'Could not calculate the order total.');
 Object.assign(payload, quoteData.quote);
 if (payload.total <= 0) throw new Error('Invalid total amount.');
+if (!await confirmCodOrder(quoteData.quote)) return;
 const res = await fetch(`${BACKEND_BASE_URL}/api/orders/cod`, { method:'POST', headers, body: JSON.stringify(payload) });
 const d = await res.json().catch(()=>({}));
 if (!res.ok || !d.success) throw new Error(d.error || 'Could not place COD order.');
@@ -2374,12 +2454,13 @@ if (payload.total <= 0) throw new Error('Invalid total amount.');
 const res = await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`, { method:'POST', headers, body: JSON.stringify(payload) });
 const d = await res.json().catch(()=>({}));
 if (!res.ok || !d.success || !d.razorpayOrderId) throw new Error(d.error || 'Could not start online payment.');
+const pendingAttemptId=rememberPendingPayment(payload,d.quote||quoteData.quote,d.razorpayOrderId,'Payment started');
 const options = {
 key: d.keyId,
 amount: d.amount,
 currency: 'INR',
 name: 'Eternal Essence',
-description: `Order ${d.orderId}`,
+description: 'Eternal Essence order',
 image: 'ee.webp',
 order_id: d.razorpayOrderId,
 prefill: { name, email: buyerEmail, contact: phone },
@@ -2393,6 +2474,7 @@ razorpay_signature: response.razorpay_signature
 })});
 const verifyData = await verifyRes.json().catch(()=>({}));
 if (!verifyRes.ok || !verifyData.success) throw new Error(verifyData.error || 'Payment verification failed.');
+removePendingPayment(pendingAttemptId);
 cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(verifyData.deliveryEstimate);
 } catch (err) {
 console.error('Verification error', err); alert(err.message || 'Payment captured but verification failed. Contact support.');
@@ -2400,35 +2482,13 @@ console.error('Verification error', err); alert(err.message || 'Payment captured
 },
 modal: {
 ondismiss: async function () {
-try {
-await fetch(`${BACKEND_BASE_URL}/api/orders/payment-failed`, {
-method: 'POST',
-headers,
-body: JSON.stringify({
-razorpayOrderId: d.razorpayOrderId,
-reason: 'User closed Razorpay popup'
-})
-});
-} catch (err) {
-console.warn('Failed to mark payment failed');
-}
+await notifyPaymentInterrupted(d.razorpayOrderId,'User closed Razorpay popup',pendingAttemptId);
 }
 }
 };
 const rzp = new Razorpay(options); rzp.open();
 rzp.on('payment.failed', async function (response) {
-try {
-await fetch(`${BACKEND_BASE_URL}/api/orders/payment-failed`, {
-method: 'POST',
-headers,
-body: JSON.stringify({
-razorpayOrderId: d.razorpayOrderId,
-reason: response.error?.description || 'Payment failed'
-})
-});
-} catch (err) {
-console.warn('Failed to mark payment failed');
-}
+await notifyPaymentInterrupted(d.razorpayOrderId,response.error?.description || 'Payment failed',pendingAttemptId);
 alert('Payment failed. You can retry from My Orders.');
 });
 } catch (err) {
@@ -2478,6 +2538,16 @@ if (!currentUser) return;
 document.getElementById('profile-name-text').textContent = currentUser.name || '—';
 document.getElementById('profile-email-text').textContent = currentUser.email || '—';
 document.getElementById('profile-phone-text').textContent = currentUser.phone || '—';
+const profileActions = document.getElementById('profile-name-text')?.closest('.bg-white')?.querySelector('.mt-4.space-y-2');
+if (profileActions && !document.getElementById('profile-logout-btn')) {
+const logoutButton = document.createElement('button');
+logoutButton.id = 'profile-logout-btn';
+logoutButton.type = 'button';
+logoutButton.className = 'w-full border border-red-500 text-red-600 py-2 text-sm font-bold uppercase hover:bg-red-600 hover:text-white transition';
+logoutButton.innerHTML = '<i class="fas fa-right-from-bracket mr-2"></i>Log Out';
+logoutButton.onclick = handleLogout;
+profileActions.appendChild(logoutButton);
+}
 renderSavedAddressControls();
 renderProfileAddressList();
 }
@@ -2803,7 +2873,22 @@ msgEl.textContent = err.message || 'Could not send message.';
 msgEl.className = 'text-sm mt-2 text-red-600';
 }
 });
-function retryPayment(orderId) {
+async function retryPayment(orderOrId) {
+if (orderOrId?.localPending) {
+const pending=orderOrId;
+const payload={...(pending.payload||{}),clientReference:(globalThis.crypto?.randomUUID?.()||`checkout-${Date.now()}-${Math.random().toString(16).slice(2)}`)};
+try {
+removePendingPayment(pending.localId);
+const res=await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify(payload)});
+const data=await res.json().catch(()=>({}));
+if(!res.ok||!data.success||!data.razorpayOrderId)throw new Error(data.error||'Retry failed');
+const attemptId=rememberPendingPayment(payload,data.quote||pending.quote,data.razorpayOrderId,'Retry payment started');
+const options={key:data.keyId,amount:data.amount,currency:'INR',name:'Eternal Essence',description:'Eternal Essence order',order_id:data.razorpayOrderId,prefill:{name:payload.customer?.name,email:payload.customer?.email,contact:payload.customer?.phone},theme:{color:'#FFD700'},handler:async response=>{try{const verifyRes=await fetch(`${BACKEND_BASE_URL}/api/orders/verify-razorpay`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});const verify=await verifyRes.json().catch(()=>({}));if(!verifyRes.ok||!verify.success)throw new Error(verify.error||'Payment verification failed');removePendingPayment(attemptId);renderOrders();showDeliveryEstimateModal(verify.deliveryEstimate);}catch(error){alert(error.message||'Payment verification failed.');}},modal:{ondismiss:()=>notifyPaymentInterrupted(data.razorpayOrderId,'User closed Razorpay popup',attemptId)}};
+const rzp=new Razorpay(options);rzp.open();rzp.on('payment.failed',response=>{notifyPaymentInterrupted(data.razorpayOrderId,response.error?.description||'Payment failed',attemptId);alert('Payment failed. You can retry again from My Orders.');});
+} catch(err){writePendingPaymentAttempts([...readPendingPaymentAttempts(),pending]);alert(err.message||'Unable to retry payment right now.');}
+return;
+}
+const orderId=orderOrId?._id||orderOrId;
 fetch(`${BACKEND_BASE_URL}/api/orders/retry/${orderId}`, {
 method: 'POST',
 headers: {
@@ -3193,6 +3278,9 @@ return;
 }
 const isDelivered =
 String(order.status).toUpperCase().includes('DELIVERED');
+const detailStatus = String(order.status || '').toUpperCase();
+const canRetryPayment = ['PAYMENT_FAILED', 'FAILED', 'PENDING_PAYMENT'].includes(detailStatus);
+const canCancelOrder = ['PAID', 'ORDER_PLACED', 'PROCESSING', 'PENDING_PAYMENT', 'PAYMENT_FAILED'].includes(detailStatus);
 const trackingHtml = (order.deliveryPartner || order.awb || order.trackingOrderId) ? `
 <div class="bg-gray-50 border rounded p-3 text-sm mb-4">
 <div class="font-bold mb-1">Courier Details</div>
@@ -3213,6 +3301,8 @@ ${orderFlowHtml(order)}
 ${trackingHtml}
 ${supportHtml}
 <div class="flex flex-wrap gap-2 mb-4">
+${canRetryPayment ? `<button onclick="retryPayment('${order._id}')" class="px-3 py-2 bg-yellow-500 text-black text-xs font-bold rounded hover:bg-black hover:text-yellow-500">Retry Payment</button>` : ''}
+${canCancelOrder ? `<button onclick="cancelOrder('${order._id}')" class="px-3 py-2 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">Cancel Order</button>` : ''}
 <button onclick='openSupportModal(${JSON.stringify(order.orderId || order._id)}, ${JSON.stringify((order.items || []).map(item => item.name).filter(Boolean).join(', '))})' class="px-3 py-2 border border-yellow-500 text-yellow-700 text-xs font-bold rounded hover:bg-yellow-500 hover:text-black">Support Query</button>
 ${isDelivered ? `<button onclick="downloadOrderInvoice('${order._id || order.orderId}')" class="px-3 py-2 bg-black text-white text-xs font-bold rounded hover:bg-yellow-500 hover:text-black">Download Invoice</button>` : ''}
 </div>
@@ -3464,6 +3554,18 @@ groups[s].push(p);
 });
 function buildMenu(id){
 const el = document.getElementById(id);
+if (!el) return;
+const liveAttars = allProducts.filter(p => normalize(p.type || p.category) === 'attar');
+const liveGroups = {};
+liveAttars.forEach(p => {
+const series = getSeries(Number(p.price || 0));
+(liveGroups[series] ||= []).push(p);
+});
+const liveFacets = {
+"By Gender": { "For Him": liveAttars.filter(p=>p.gender==='Male'), "For Her": liveAttars.filter(p=>p.gender==='Female'), "Unisex": liveAttars.filter(p=>p.gender==='Unisex') },
+"By Season": { "Summer": liveAttars.filter(p=>p.season?.includes('Summer')), "Winter": liveAttars.filter(p=>p.season?.includes('Winter')), "All Season": liveAttars.filter(p=>normalize(p.season).includes('allseason')) },
+"By Time": { "Day": liveAttars.filter(p=>p.time==='Day'), "Night": liveAttars.filter(p=>p.time==='Night'), "Day / Night": liveAttars.filter(p=>p.time==='Day/Night') }
+};
 el.innerHTML = "";
 el.innerHTML += `
 <div onclick="goToCategory('Attar')"
@@ -3471,25 +3573,25 @@ class="px-4 py-2 bg-yellow-500 text-black font-bold cursor-pointer text-center">
 All Attars
 </div>
 `;
-for(const facet in attarFacets){
+for(const facet in liveFacets){
 el.innerHTML += `
 <div class="px-4 py-2 text-yellow-500 font-bold cursor-pointer"
-onclick="this.nextElementSibling.classList.toggle('hidden')">
+onmouseenter="showNestedMenu(this)" onmouseleave="scheduleNestedMenuClose(this)" onclick="showNestedMenu(this)">
 ${facet}
 </div>
 <div class="hidden">
-${Object.keys(attarFacets[facet]).map(key => `
+${Object.keys(liveFacets[facet]).map(key => `
 <div class="px-6 py-2 text-gray-300 font-semibold cursor-pointer"
-onclick="this.nextElementSibling.classList.toggle('hidden')">
+onmouseenter="showNestedMenu(this)" onmouseleave="scheduleNestedMenuClose(this)" onclick="showNestedMenu(this)">
 ${key}
 </div>
 <div class="hidden">
-${attarFacets[facet][key].map(p => `
+${liveFacets[facet][key].map(p => `
 <div class="px-8 py-2 hover:bg-yellow-500 hover:text-black cursor-pointer"
-onmouseenter="showAttarPreview(event, ${p.id})"
+onmouseenter='showAttarPreview(event, ${JSON.stringify(String(p.id || p._id))})'
 onmousemove="moveAttarPreview(event)"
 onmouseleave="hideAttarPreview()"
-onclick="event.stopPropagation(); openProduct(${p.id})"
+onclick='event.stopPropagation(); openProduct(${JSON.stringify(String(p.id || p._id))})'
 >
 ${p.name} — ₹${p.price}
 </div>
@@ -3499,19 +3601,19 @@ ${p.name} — ₹${p.price}
 </div>
 `;
 }
-for(const series in attarGroups){
+for(const series in liveGroups){
 el.innerHTML += `
 <div class="px-4 py-2 text-yellow-500 font-bold cursor-pointer"
-onclick="this.nextElementSibling.classList.toggle('hidden')">
+onmouseenter="showNestedMenu(this)" onmouseleave="scheduleNestedMenuClose(this)" onclick="showNestedMenu(this)">
 ${series}
 </div>
 <div class="hidden">
-${attarGroups[series].map(p => `
+${liveGroups[series].map(p => `
 <div class="px-6 py-2 hover:bg-yellow-500 hover:text-black cursor-pointer"
-onmouseenter="showAttarPreview(event, ${p.id})"
+onmouseenter='showAttarPreview(event, ${JSON.stringify(String(p.id || p._id))})'
 onmousemove="moveAttarPreview(event)"
 onmouseleave="hideAttarPreview()"
-onclick="event.stopPropagation(); openProduct(${p.id})"
+onclick='event.stopPropagation(); openProduct(${JSON.stringify(String(p.id || p._id))})'
 >
 ${p.name} — ₹${p.price}
 </div>
@@ -3557,9 +3659,9 @@ document.getElementById("time-filter").value = value;
 goToCategory("Perfume");
 }
 function showAttarPreview(e, id){
-const p = products.find(x => x.id === id);
+const p = findProductByAnyId(id);
 if(!p) return;
-document.getElementById("attar-preview-img").src = p.image;
+document.getElementById("attar-preview-img").src = getDefaultProductImage(p);
 document.getElementById("attar-preview-name").textContent = p.name;
 document.getElementById("attar-preview-family").textContent = p.family || "";
 document.getElementById("attar-preview-gender").textContent = p.gender || "";
@@ -3567,6 +3669,14 @@ document.getElementById("attar-preview-season").textContent = p.season || "";
 document.getElementById("attar-preview-time").textContent = p.time || "";
 document.getElementById("attar-preview-price").textContent = "₹" + p.price;
 const box = document.getElementById("attar-preview");
+let detail = document.getElementById('attar-preview-detail');
+if (!detail) {
+detail = document.createElement('div');
+detail.id = 'attar-preview-detail';
+detail.className = 'mt-2 border-t border-white/10 pt-2 text-[11px] text-gray-300';
+box.appendChild(detail);
+}
+detail.innerHTML = `${escapeHtml(p.description || '')}${p.accords?.length ? `<div class="mt-1 text-yellow-500">${p.accords.slice(0,4).map(escapeHtml).join(' · ')}</div>` : ''}`;
 box.classList.remove("hidden");
 moveAttarPreview(e);
 }
@@ -3598,6 +3708,13 @@ const perfumeFacets = {
 };
 function buildPerfumeMenu(id){
 const el = document.getElementById(id);
+if (!el) return;
+const livePerfumes = allProducts.filter(p => normalize(p.type || p.category) === 'perfume');
+const liveFacets = {
+"By Gender": { "For Him": livePerfumes.filter(p=>p.gender==='Male'), "For Her": livePerfumes.filter(p=>p.gender==='Female'), "Unisex": livePerfumes.filter(p=>p.gender==='Unisex') },
+"By Season": { "Summer": livePerfumes.filter(p=>p.season?.includes('Summer')), "Winter": livePerfumes.filter(p=>p.season?.includes('Winter')), "All Season": livePerfumes.filter(p=>normalize(p.season).includes('allseason')) },
+"By Time": { "Day": livePerfumes.filter(p=>p.time==='Day'), "Night": livePerfumes.filter(p=>p.time==='Night'), "Day / Night": livePerfumes.filter(p=>p.time==='Day/Night') }
+};
 el.innerHTML = "";
 el.innerHTML += `
 <div onclick="goToCategory('Perfume')"
@@ -3605,26 +3722,26 @@ class="px-4 py-2 bg-yellow-500 text-black font-bold cursor-pointer text-center">
 All Perfumes
 </div>
 `;
-for(const facet in perfumeFacets){
+for(const facet in liveFacets){
 el.innerHTML += `
 <div class="px-4 py-2 text-yellow-500 font-bold cursor-pointer"
-onclick="this.nextElementSibling.classList.toggle('hidden')">
+onmouseenter="showNestedMenu(this)" onmouseleave="scheduleNestedMenuClose(this)" onclick="showNestedMenu(this)">
 ${facet}
 </div>
 <div class="hidden">
-${Object.keys(perfumeFacets[facet]).map(key => `
+${Object.keys(liveFacets[facet]).map(key => `
 <div class="px-6 py-2 text-gray-300 font-semibold cursor-pointer"
-onclick="this.nextElementSibling.classList.toggle('hidden')">
+onmouseenter="showNestedMenu(this)" onmouseleave="scheduleNestedMenuClose(this)" onclick="showNestedMenu(this)">
 ${key}
 </div>
 <div class="hidden">
-${perfumeFacets[facet][key].map(p => `
+${liveFacets[facet][key].map(p => `
 <div
 class="px-8 py-2 hover:bg-yellow-500 hover:text-black cursor-pointer"
-onmouseenter="showAttarPreview(event, ${p.id})"
+onmouseenter='showAttarPreview(event, ${JSON.stringify(String(p.id || p._id))})'
 onmousemove="moveAttarPreview(event)"
 onmouseleave="hideAttarPreview()"
-onclick="event.stopPropagation(); openProduct(${p.id})">
+onclick='event.stopPropagation(); openProduct(${JSON.stringify(String(p.id || p._id))})'>
 ${p.name} — ₹${p.price}
 </div>
 `).join("")}
@@ -3634,10 +3751,14 @@ ${p.name} — ₹${p.price}
 `;
 }
 }
+function buildCollectionMenus(){
 buildMenu("attarMenu");
 buildMenu("attarMenuMobile");
 buildPerfumeMenu("perfumeMenu");
 buildPerfumeMenu("perfumeMenuMobile");
+}
+buildCollectionMenus();
+bindCollectionCategoryHover();
 function showMenu(el){
 if(!el) return;
 el.classList.remove("hidden");
@@ -3654,6 +3775,38 @@ function toggleMenu(el){
 if(!el) return;
 if(el.classList.contains("menu-hidden") || el.classList.contains("hidden")) showMenu(el);
 else hideMenu(el);
+}
+let nestedCollectionCloseTimer = null;
+function showNestedMenu(trigger){
+const child = trigger?.nextElementSibling;
+if(!child) return;
+clearTimeout(nestedCollectionCloseTimer);
+child.classList.remove('hidden','menu-hidden');
+child.classList.add('menu-visible');
+if (!child.dataset.eeHoverBound) {
+child.addEventListener('mouseenter', () => clearTimeout(nestedCollectionCloseTimer));
+child.addEventListener('mouseleave', () => scheduleNestedMenuClose(trigger));
+child.dataset.eeHoverBound = '1';
+}
+}
+function scheduleNestedMenuClose(trigger){
+const child = trigger?.nextElementSibling;
+if(!child) return;
+clearTimeout(nestedCollectionCloseTimer);
+nestedCollectionCloseTimer = setTimeout(() => hideMenu(child), 180);
+}
+function bindCollectionCategoryHover(){
+const collection = document.getElementById('collectionMenu');
+if(!collection || collection.dataset.eeNestedHoverBound) return;
+collection.querySelectorAll(':scope > .relative').forEach(wrapper => {
+const trigger = wrapper.firstElementChild;
+const submenu = wrapper.querySelector(':scope > [id$="Menu"]');
+if(!trigger || !submenu) return;
+trigger.addEventListener('mouseenter', () => { clearTimeout(collectionHoverCloseTimer); showMenu(submenu); });
+wrapper.addEventListener('mouseenter', () => { clearTimeout(collectionHoverCloseTimer); showMenu(submenu); });
+wrapper.addEventListener('mouseleave', () => { clearTimeout(nestedCollectionCloseTimer); nestedCollectionCloseTimer = setTimeout(() => hideMenu(submenu), 180); });
+});
+collection.dataset.eeNestedHoverBound = '1';
 }
 function openMobileMenu(e) {
 e?.stopPropagation();
@@ -3687,6 +3840,24 @@ const menu = document.getElementById("collectionMenu");
 closeCollectionSubmenus();
 toggleMenu(menu);
 };
+let collectionHoverCloseTimer = null;
+const collectionHoverWrap = document.getElementById("collectionMenu")?.parentElement;
+if (collectionHoverWrap) {
+collectionHoverWrap.addEventListener("mouseenter", () => {
+if (window.innerWidth < 768) return;
+clearTimeout(collectionHoverCloseTimer);
+showMenu(document.getElementById("collectionMenu"));
+});
+collectionHoverWrap.addEventListener("mouseleave", () => {
+if (window.innerWidth < 768) return;
+clearTimeout(collectionHoverCloseTimer);
+collectionHoverCloseTimer = setTimeout(() => {
+hideMenu(document.getElementById("collectionMenu"));
+closeCollectionSubmenus();
+hideAttarPreview();
+}, 180);
+});
+}
 function toggleAttarMenu(e){
 if(e) e.stopPropagation();
 const desktop = document.getElementById("attarMenu");

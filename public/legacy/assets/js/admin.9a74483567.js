@@ -1,6 +1,7 @@
 const normalizeAdminBackend = value => String(value || '').trim().replace(/\/+$/, '');
-const BACKEND_BASE_URL = normalizeAdminBackend(window.__EE_BACKEND_BASE_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://eternal-essence-backend-production.up.railway.app'));
-const BACKEND_FALLBACK_URL = normalizeAdminBackend(window.__EE_BACKEND_FALLBACK_URL__ || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://eternal-essence-backend.onrender.com'));
+const isLocalAdmin = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const BACKEND_BASE_URL = normalizeAdminBackend(isLocalAdmin ? (window.__EE_BACKEND_BASE_URL__ || 'http://localhost:5000') : location.origin);
+const BACKEND_FALLBACK_URL = normalizeAdminBackend(isLocalAdmin ? (window.__EE_BACKEND_FALLBACK_URL__ || '') : '');
 let activeAdminBackend = BACKEND_BASE_URL;
 const ADMIN_TOKEN_KEY = 'ee_admin_token_v1';
 const PRODUCT_CATALOGUE_PAGE = location.pathname.replace(/\/+$/, '') === '/admin/products';
@@ -30,6 +31,10 @@ let selectedOrder = null;
 let salesChart = null;
 let statusChart = null;
 let dailyOrdersChart = null;
+const ADMIN_PRICE_FACTORS = {
+Perfume:{'8ml':0.2985971943887776,'20ml':0.6993987,'30ml':1,'50ml':1.4008,'100ml':2.4028,'30mlgift':1.2,'50mlgift':1.601,'100mlgift':2.6032},
+Attar:{'3ml':1,'6ml':1.85,'8ml':2.3,'12ml':3.2}
+};
 let productPerformanceChart = null;
 let paymentMixChart = null;
 let orderValueChart = null;
@@ -138,7 +143,7 @@ throw err;
 }
 async function loadAdminCapabilities() {
 try {
-const { ok, body } = await adminFetch('/health');
+const { ok, body } = await adminFetch('/api/health');
 if (!ok) throw new Error('Health check failed');
 return {
 adminOffers: body.apiVersion >= 2 && body.features?.adminOffers === true,
@@ -150,7 +155,7 @@ return { adminOffers: false, adminCouponMutations: false };
 }
 }
 function outdatedBackendMessage() {
-return 'The backend currently running on port 5000 is an older build. Restart/deploy the current backend, then refresh this page.';
+return 'The admin API could not confirm offer support. Check the backend connection and refresh this page.';
 }
 function showOutdatedOffersNotice() {
 ensurePromotionAdminUI();
@@ -879,7 +884,7 @@ class="cursor-pointer hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none b
 <td class="p-3 font-bold">${formatINR(order.total)}</td>
 <td class="p-3 tiny">${escapeHtml(order.paymentMethod || '')}</td>
 <td class="p-3"><span class="px-2 py-1 rounded-full bg-gray-100 tiny font-semibold">${escapeHtml(adminStatusLabel(order.status))}</span></td>
-<td class="p-3 text-right text-gray-400"><i class="fas fa-chevron-right"></i></td>
+<td class="p-3"><div class="flex items-center justify-end gap-2"><button type="button" onclick="event.stopPropagation();retryEeerpSync('${escapeHtml(id)}',this,false)" class="px-2 py-1 border border-blue-300 text-blue-700 rounded tiny font-bold hover:bg-blue-50" title="Push the latest order data to EEERP"><i class="fas fa-rotate mr-1"></i>Resync</button><i class="fas fa-chevron-right text-gray-400"></i></div></td>
 </tr>`;
 }).join('') || `<tr><td colspan="7" class="p-8 text-center text-gray-500"><i class="fas fa-search text-2xl mb-2 block text-gray-300"></i>No orders match the current search or filter.</td></tr>`;
 document.getElementById('page-from').textContent = total ? start + 1 : 0;
@@ -1088,7 +1093,7 @@ ${escapeHtml(adminStatusLabel(currentStatus))}
 </div>
 <div class="mt-3 border-t pt-3">
 <span class="text-xs text-gray-500">EEERP sales sync</span>
-<div class="flex items-center gap-2 mt-1"><span class="inline-flex px-2 py-1 rounded tiny font-semibold ${selectedOrder.erpSyncState==='SYNCED'?'bg-green-100 text-green-700':selectedOrder.erpSyncState==='FAILED'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${escapeHtml(selectedOrder.erpSyncState||'PENDING')}</span>${selectedOrder.erpSyncState!=='SYNCED'?`<button onclick="retryEeerpSync('${orderId}')" class="px-2 py-1 border rounded tiny font-bold">Retry sync</button>`:''}</div>
+<div class="flex flex-wrap items-center gap-2 mt-1"><span class="inline-flex px-2 py-1 rounded tiny font-semibold ${selectedOrder.erpSyncState==='SYNCED'?'bg-green-100 text-green-700':selectedOrder.erpSyncState==='FAILED'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${escapeHtml(selectedOrder.erpSyncState||'PENDING')}</span><button type="button" onclick="retryEeerpSync('${orderId}',this,true)" class="px-2 py-1 border border-blue-300 text-blue-700 rounded tiny font-bold hover:bg-blue-50"><i class="fas fa-rotate mr-1"></i>${selectedOrder.erpSyncState==='SYNCED'?'Resync EEERP':'Retry EEERP sync'}</button></div>
 ${selectedOrder.erpSyncError?`<p class="tiny text-red-600 mt-1">${escapeHtml(selectedOrder.erpSyncError)}</p>`:''}
 </div>
 </div>
@@ -1680,7 +1685,21 @@ const index = orders.findIndex(order => String(order._id) === String(selectedOrd
 if (index >= 0) orders[index] = selectedOrder;
 openOrderModal(selectedOrder._id);
 }
-async function retryEeerpSync(orderId){const{ok,body}=await adminFetch(`/api/admin/orders/${encodeURIComponent(orderId)}/eeerp-sync`,{method:'POST'});if(!ok)return alert(body.error||'EEERP synchronization failed');const index=orders.findIndex(order=>String(order._id)===String(body.order?._id));if(index>=0)orders[index]=body.order;selectedOrder=body.order;openOrderModal(body.order._id);}
+async function retryEeerpSync(orderId,button=null,reopenModal=false){
+const original=button?.innerHTML;
+try{
+if(button){button.disabled=true;button.innerHTML='<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...';}
+const{ok,body}=await adminFetch(`/api/admin/orders/${encodeURIComponent(orderId)}/eeerp-sync`,{method:'POST'});
+if(!ok)throw new Error(body.error||'EEERP synchronization failed');
+const index=orders.findIndex(order=>String(order._id)===String(body.order?._id));
+if(index>=0)orders[index]=body.order;
+applyOrderFilters();
+renderCardOrdersTable();
+if(reopenModal){selectedOrder=body.order;openOrderModal(body.order._id);}
+else alert('The latest order data was synchronized with EEERP.');
+}catch(error){alert(error.message||'EEERP synchronization failed');}
+finally{if(button&&button.isConnected){button.disabled=false;button.innerHTML=original;}}
+}
 async function loadAdminProducts() {
 try {
 const { ok, body } = await adminFetch('/api/admin/products');
@@ -1692,24 +1711,28 @@ renderInventoryProducts();
 document.getElementById('products-tbody').innerHTML = `<tr><td colspan="7" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
 }
 }
+const ADMIN_FACTOR_SIZE_OPTIONS={Perfume:[['8ml','8 ml'],['20ml','20 ml'],['30ml','30 ml'],['50ml','50 ml'],['100ml','100 ml'],['30mlgift','30 ml Gift'],['50mlgift','50 ml Gift'],['100mlgift','100 ml Gift']],Attar:[['3ml','3 ml'],['6ml','6 ml'],['8ml','8 ml'],['12ml','12 ml']]};
+function syncSharedFactorSizes(resetToDefault=false){const category=document.getElementById('inventory-factor-category');const size=document.getElementById('inventory-factor-size');if(!category||!size)return;const options=ADMIN_FACTOR_SIZE_OPTIONS[category.value]||ADMIN_FACTOR_SIZE_OPTIONS.Perfume;const previous=size.value;size.innerHTML=options.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');size.value=!resetToDefault&&options.some(([value])=>value===previous)?previous:options[0][0];}
 function renderInventoryProducts() {
 ensureInventoryBulkControls();
 const rows=visibleInventoryRows();
 document.getElementById('inventory-selection-count').textContent=`${selectedInventoryIds.size} variant${selectedInventoryIds.size===1?'':'s'} selected`;
 document.getElementById('inventory-select-all').checked=!!rows.length&&rows.every(item=>selectedInventoryIds.has(String(item._id)));
 document.getElementById('products-tbody').innerHTML = rows.map(item => {
-const id=String(item._id),stock=Number(item.stock??12),available=Math.max(0,stock-Number(item.reserved||0));
+const id=String(item._id),stock=Number(item.stock??12),available=Math.max(0,stock-Number(item.reserved||0)),basePrice=Number(item.basePrice||0),priceFactor=Number(item.priceMultiplier||1),sellingPrice=Math.round(basePrice*priceFactor);
 const state=available===0?'<span class="inline-flex px-2 py-1 rounded bg-red-100 text-red-700 font-bold">OUT OF STOCK</span>':available<=Number(item.lowStockThreshold||4)?'<span class="inline-flex px-2 py-1 rounded bg-amber-100 text-amber-700 font-bold">LOW STOCK</span>':'<span class="inline-flex px-2 py-1 rounded bg-green-100 text-green-700 font-bold">IN STOCK</span>';
-return `<tr class="hover:bg-gray-50 border-b border-gray-100 ${selectedInventoryIds.has(id)?'bg-yellow-50':''}"><td class="p-3"><input type="checkbox" aria-label="Select ${escapeHtml(item.name)} ${escapeHtml(item.sizeLabel)}" ${selectedInventoryIds.has(id)?'checked':''} onchange="toggleInventorySelection('${id}',this.checked)"></td><td class="p-3"><img src="${productImage(item)}" class="w-12 h-12 object-contain rounded border bg-white" onerror="this.style.display='none'"></td><td class="p-3"><div class="font-semibold text-sm">${escapeHtml(item.name)}</div><div class="tiny text-gray-500">${escapeHtml(item.sizeLabel||'Default')} · ${escapeHtml(item.variantKey)}</div></td><td class="p-3 tiny">${escapeHtml(item.category||'')}</td><td class="p-3 tiny font-bold">${escapeHtml(item.sizeLabel||'Default')}</td><td class="p-3"><div class="flex items-center gap-2"><input id="stock-${id}" type="number" min="0" step="1" value="${stock}" class="w-20 p-1 border rounded tiny"><button onclick="saveInventoryStock('${id}')" class="px-2 py-1 border rounded tiny">Save one</button></div><div class="tiny text-gray-500 mt-1">${item.reserved||0} reserved · ${available} available</div></td><td class="p-3 tiny">${state}</td></tr>`;
-}).join('') || `<tr><td colspan="7" class="p-4 text-gray-500">No matching product variants.</td></tr>`;
+return `<tr class="hover:bg-gray-50 border-b border-gray-100 ${selectedInventoryIds.has(id)?'bg-yellow-50':''}"><td class="p-3"><input type="checkbox" aria-label="Select ${escapeHtml(item.name)} ${escapeHtml(item.sizeLabel)}" ${selectedInventoryIds.has(id)?'checked':''} onchange="toggleInventorySelection('${id}',this.checked)"></td><td class="p-3"><img src="${productImage(item)}" class="w-12 h-12 object-contain rounded border bg-white" onerror="this.style.display='none'"></td><td class="p-3"><div class="font-semibold text-sm">${escapeHtml(item.name)}</div><div class="tiny text-gray-500">${escapeHtml(item.sizeLabel||'Default')} · ${escapeHtml(item.variantKey)}</div></td><td class="p-3 tiny">${escapeHtml(item.category||'')}</td><td class="p-3 tiny font-bold">${escapeHtml(item.sizeLabel||'Default')}</td><td class="p-3"><label class="tiny text-gray-500">Base ₹<input id="base-price-${id}" type="number" min="1" step="1" value="${basePrice}" class="w-full p-1 border rounded text-black"></label><div class="tiny text-gray-500 mt-1">Shared factor: ${priceFactor}</div><div class="tiny font-bold text-green-700 mt-1">Selling price: ₹${sellingPrice.toLocaleString('en-IN')}</div></td><td class="p-3"><div class="flex items-center gap-2"><input id="stock-${id}" type="number" min="0" step="1" value="${stock}" class="w-20 p-1 border rounded tiny"><button onclick="saveInventoryStock('${id}')" class="px-2 py-1 border rounded tiny font-bold">Save</button></div><div class="tiny text-gray-500 mt-1">${item.reserved||0} reserved · ${available} available</div></td><td class="p-3 tiny">${state}</td></tr>`;
+}).join('') || `<tr><td colspan="8" class="p-4 text-gray-500">No matching product variants.</td></tr>`;
 }
 function inventoryAvailable(item){return Math.max(0,Number(item.stock??12)-Number(item.reserved||0));}
 function visibleInventoryRows(){const query=(document.getElementById('inventory-search')?.value||'').trim().toLowerCase(),status=document.getElementById('inventory-status-filter')?.value||'all',sort=document.getElementById('inventory-sort')?.value||'name';const rows=inventoryRows.filter(item=>{const available=inventoryAvailable(item),threshold=Number(item.lowStockThreshold||4),matchesQuery=!query||`${item.name} ${item.sizeLabel} ${item.category} ${item.variantKey}`.toLowerCase().includes(query),matchesStatus=status==='all'||(status==='out'&&available===0)||(status==='critical'&&available>0&&available<=2)||(status==='low'&&available>0&&available<=threshold)||(status==='in'&&available>threshold);return matchesQuery&&matchesStatus;});rows.sort((a,b)=>sort==='stock-asc'?inventoryAvailable(a)-inventoryAvailable(b)||a.name.localeCompare(b.name):sort==='stock-desc'?inventoryAvailable(b)-inventoryAvailable(a)||a.name.localeCompare(b.name):sort==='size'?String(a.sizeLabel).localeCompare(String(b.sizeLabel),undefined,{numeric:true})||a.name.localeCompare(b.name):a.name.localeCompare(b.name)||String(a.sizeLabel).localeCompare(String(b.sizeLabel),undefined,{numeric:true}));return rows;}
-function ensureInventoryBulkControls(){const table=document.getElementById('products-tbody')?.closest('.overflow-auto');if(!table||document.getElementById('inventory-bulk-controls'))return;table.insertAdjacentHTML('beforebegin',`<div id="inventory-bulk-controls" class="mb-4 p-4 border border-yellow-200 bg-yellow-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[auto_auto_minmax(220px,1fr)_180px_180px_auto] items-center gap-3"><label class="flex items-center gap-2 text-sm font-bold"><input id="inventory-select-all" type="checkbox" onchange="selectAllVisibleInventory(this.checked)"> Select all visible</label><button onclick="clearInventorySelection()" class="px-3 py-2 border bg-white rounded tiny font-bold">Clear selection</button><input id="inventory-search" oninput="renderInventoryProducts()" placeholder="Search product, category or size" class="p-2 border rounded min-w-0"><select id="inventory-status-filter" onchange="renderInventoryProducts()" class="p-2 border rounded bg-white"><option value="all">All stock statuses</option><option value="out">Out of stock</option><option value="critical">Only 1–2 left</option><option value="low">Low stock</option><option value="in">In stock</option></select><select id="inventory-sort" onchange="renderInventoryProducts()" class="p-2 border rounded bg-white"><option value="name">Sort: Product name</option><option value="stock-asc">Sort: Quantity low to high</option><option value="stock-desc">Sort: Quantity high to low</option><option value="size">Sort: Size</option></select><strong id="inventory-selection-count" class="text-sm whitespace-nowrap">0 variants selected</strong></div><div class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-yellow-200"><span class="tiny font-bold uppercase">Set selected variants to</span><input id="inventory-bulk-stock" type="number" min="0" step="1" value="12" placeholder="Stock quantity" class="p-2 border rounded w-36"><button onclick="applyBulkInventoryStock()" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold">Apply to selected</button><span class="tiny text-gray-600">Only checked size rows change. Unselected stock is preserved.</span></div></div>`);const head=table.querySelector('thead tr');if(head){head.innerHTML='<th class="p-3 w-10">Select</th><th class="p-3">Image</th><th class="p-3">Product / Variant</th><th class="p-3">Category</th><th class="p-3">Size</th><th class="p-3">Stock</th><th class="p-3">Status</th>';}}
+function ensureInventoryBulkControls(){const table=document.getElementById('products-tbody')?.closest('.overflow-auto');if(!table||document.getElementById('inventory-bulk-controls'))return;table.insertAdjacentHTML('beforebegin',`<div id="inventory-bulk-controls" class="mb-4 p-4 border border-yellow-200 bg-yellow-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[auto_auto_minmax(220px,1fr)_180px_180px_auto] items-center gap-3"><label class="flex items-center gap-2 text-sm font-bold"><input id="inventory-select-all" type="checkbox" onchange="selectAllVisibleInventory(this.checked)"> Select all visible</label><button onclick="clearInventorySelection()" class="px-3 py-2 border bg-white rounded tiny font-bold">Clear selection</button><input id="inventory-search" oninput="renderInventoryProducts()" placeholder="Search product, category or size" class="p-2 border rounded min-w-0"><select id="inventory-status-filter" onchange="renderInventoryProducts()" class="p-2 border rounded bg-white"><option value="all">All stock statuses</option><option value="out">Out of stock</option><option value="critical">Only 1–2 left</option><option value="low">Low stock</option><option value="in">In stock</option></select><select id="inventory-sort" onchange="renderInventoryProducts()" class="p-2 border rounded bg-white"><option value="name">Sort: Product name</option><option value="stock-asc">Sort: Quantity low to high</option><option value="stock-desc">Sort: Quantity high to low</option><option value="size">Sort: Size</option></select><strong id="inventory-selection-count" class="text-sm whitespace-nowrap">0 variants selected</strong></div><div class="mt-3 pt-3 border-t border-yellow-200 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 items-end"><label class="tiny font-bold">Shared factor category<select id="inventory-factor-category" onchange="syncSharedFactorSizes(true)" class="w-full p-2 border rounded bg-white"><option>Perfume</option><option>Attar</option></select></label><label class="tiny font-bold">Shared factor size<select id="inventory-factor-size" class="w-full p-2 border rounded bg-white"></select></label><label class="tiny font-bold">Factor<input id="inventory-shared-factor" type="number" min="0.000001" step="0.000001" placeholder="e.g. 0.29" class="w-full p-2 border rounded"></label><button onclick="applySharedInventoryFactor()" class="px-4 py-2 bg-yellow-500 text-black rounded font-bold">Apply factor to all</button></div><div class="mt-3 pt-3 border-t border-yellow-200 flex flex-wrap items-center gap-2"><span class="tiny font-bold uppercase">Selected stock</span><input id="inventory-bulk-stock" type="number" min="0" step="1" value="12" placeholder="Stock quantity" class="p-2 border rounded w-36"><button onclick="applyBulkInventoryStock()" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold">Apply stock</button><span class="tiny font-bold uppercase ml-2">Selected base price</span><input id="inventory-bulk-base-price" type="number" min="1" step="1" placeholder="e.g. 499" class="p-2 border rounded w-36"><button onclick="applyBulkInventoryBasePrice()" class="px-4 py-2 border border-black rounded font-bold">Apply price</button><span class="tiny text-gray-600">Factors are shared by category and size. Base price updates every size of each selected product.</span></div></div>`);syncSharedFactorSizes();const head=table.querySelector('thead tr');if(head){head.innerHTML='<th class="p-3 w-10">Select</th><th class="p-3">Image</th><th class="p-3">Product / Variant</th><th class="p-3">Category</th><th class="p-3">Size</th><th class="p-3">Pricing</th><th class="p-3">Stock</th><th class="p-3">Status</th>';}}
 function toggleInventorySelection(id,checked){if(checked)selectedInventoryIds.add(String(id));else selectedInventoryIds.delete(String(id));renderInventoryProducts();}
 function selectAllVisibleInventory(checked){visibleInventoryRows().forEach(item=>checked?selectedInventoryIds.add(String(item._id)):selectedInventoryIds.delete(String(item._id)));renderInventoryProducts();}
 function clearInventorySelection(){selectedInventoryIds.clear();renderInventoryProducts();}
 async function applyBulkInventoryStock(){const stock=Number(document.getElementById('inventory-bulk-stock')?.value);if(!selectedInventoryIds.size)return alert('Select at least one product size.');if(!Number.isInteger(stock)||stock<0)return alert('Enter a whole stock quantity of 0 or more.');if(!confirm(`Set stock to ${stock} for ${selectedInventoryIds.size} selected variant(s)?`))return;const{ok,body}=await adminFetch('/api/admin/inventory/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[...selectedInventoryIds],stock})});if(!ok)return alert(body.error||'Could not update selected stock');selectedInventoryIds.clear();await syncAndLoadInventory();renderInventoryProducts();}
+async function applyBulkInventoryBasePrice(){const basePrice=Number(document.getElementById('inventory-bulk-base-price')?.value);if(!selectedInventoryIds.size)return alert('Select at least one product size.');if(!Number.isFinite(basePrice)||basePrice<=0)return alert('Enter a valid base price.');if(!confirm(`Set base price to ₹${basePrice} for every size of ${selectedInventoryIds.size} selected product variant(s)?`))return;const{ok,body}=await adminFetch('/api/admin/inventory/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[...selectedInventoryIds],basePrice})});if(!ok)return alert(body.error||'Could not update selected prices');selectedInventoryIds.clear();await syncAndLoadInventory();renderInventoryProducts();}
+async function applySharedInventoryFactor(){const category=document.getElementById('inventory-factor-category')?.value;const variantKey=document.getElementById('inventory-factor-size')?.value;const priceMultiplier=Number(document.getElementById('inventory-shared-factor')?.value);if(!Number.isFinite(priceMultiplier)||priceMultiplier<=0)return alert('Enter a valid shared size factor.');if(!confirm(`Apply factor ${priceMultiplier} to every ${category} ${variantKey} product?`))return;const{ok,body}=await adminFetch('/api/admin/inventory/factor',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,variantKey,priceMultiplier})});if(!ok)return alert(body.error||'Could not update shared factor');await syncAndLoadInventory();renderInventoryProducts();alert(`Shared factor updated for ${body.updated||0} variants.`);}
 function productImage(product) {
 const img = product.images?.[0] || product.image || '';
 if (!img) return '';
@@ -1721,19 +1744,14 @@ return `${BACKEND_BASE_URL}/products/${img}`;
 }
 async function loadHardcodedProducts() {
 try {
-const res = await fetch('/legacy/assets/js/index.496a4899fd.js', { cache: 'no-store' });
-const sourceFile = await res.text();
-const start = sourceFile.indexOf('const products = [');
-if (start === -1) return;
-const arrayStart = sourceFile.indexOf('[', start);
-const nextFunction = sourceFile.indexOf('function getAttarSeries', arrayStart);
-const end = nextFunction === -1 ? -1 : sourceFile.lastIndexOf('];', nextFunction);
-if (arrayStart === -1 || end === -1) throw new Error('Product catalogue array boundary was not found.');
-const source = sourceFile.slice(arrayStart, end + 1);
-const parsed = Function(`"use strict"; return (${source});`)();
-hardcodedProducts = Array.isArray(parsed)
-? parsed.map(p => ({ ...p, category: p.type || p.category || 'Perfume', source: 'hardcoded' }))
-: [];
+const { ok, body } = await adminFetch('/api/products');
+if (!ok || !Array.isArray(body.products)) throw new Error(body.error || 'Catalogue API is unavailable.');
+hardcodedProducts = body.products.map(p => ({
+...p,
+id: p._id || p.id || p.legacyId,
+category: p.category || p.type || 'Perfume',
+source: 'hardcoded'
+}));
 } catch (err) {
 console.warn('Could not load hardcoded products for gift picker', err);
 hardcodedProducts = [];
@@ -1741,7 +1759,7 @@ hardcodedProducts = [];
 }
 async function syncAndLoadInventory() {
 const seenIds=new Set(),seenNames=new Set();
-const products=[...hardcodedProducts,...adminProducts.map(product=>({...product,id:product._id,source:'backend'}))].filter(product=>{const id=String(product.id||product._id),nameKey=`${product.category||product.type||'Perfume'}:${product.name||''}`.trim().toLowerCase();if(!id||seenIds.has(id)||seenNames.has(nameKey))return false;seenIds.add(id);seenNames.add(nameKey);return true;}).map(product=>({productId:String(product.id||product._id),name:product.name,category:product.category||product.type||'Perfume',image:product.images?.[0]||product.image||'',sharedStock:!!product.sharedStock,variants:adminInventoryVariants(product)}));
+const products=[...hardcodedProducts,...adminProducts.map(product=>({...product,id:product._id,source:'backend'}))].filter(product=>{const id=String(product.id||product._id),nameKey=`${product.category||product.type||'Perfume'}:${product.name||''}`.trim().toLowerCase();if(!id||seenIds.has(id)||seenNames.has(nameKey))return false;seenIds.add(id);seenNames.add(nameKey);return true;}).map(product=>({productId:String(product.id||product._id),name:product.name,category:product.category||product.type||'Perfume',image:product.images?.[0]||product.image||'',basePrice:Number(product.price||0),sharedStock:!!product.sharedStock,variants:adminInventoryVariants(product)}));
 try {
 if (products.length) {const sync=await adminFetch('/api/admin/inventory/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products }) });if(!sync.ok)throw new Error(sync.body.error||'Could not initialize product stock');}
 const { ok, body } = await adminFetch('/api/admin/inventory');
@@ -1756,13 +1774,16 @@ throw err;
 }
 async function saveInventoryStock(productId) {
 const stock = Number(document.getElementById(`stock-${productId}`)?.value);
+const basePrice = Number(document.getElementById(`base-price-${productId}`)?.value);
 if(!Number.isInteger(stock)||stock<0)return alert('Stock must be a whole number of 0 or more.');
-const { ok, body } = await adminFetch(`/api/admin/inventory/${encodeURIComponent(productId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stock }) });
-if (!ok) return alert(body.error || 'Could not save stock');
-const index=inventoryRows.findIndex(item=>String(item._id)===String(productId));if(index>=0)inventoryRows[index]=body.item;
+if(!Number.isFinite(basePrice)||basePrice<=0)return alert('Base price must be greater than zero.');
+const { ok, body } = await adminFetch(`/api/admin/inventory/${encodeURIComponent(productId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stock,basePrice }) });
+if (!ok) return alert(body.error || 'Could not save stock or pricing');
+await syncAndLoadInventory();
 renderInventoryProducts();
+alert('Stock and pricing saved. Storefront and checkout now use these values.');
 }
-function adminInventoryVariants(product){if(product.sharedStock)return[{sizeLabel:'Shared stock',variantKey:'shared',image:product.images?.[0]||product.image||''}];const category=String(product.category||product.type||'Perfume').toLowerCase(),images=product.images||[];const labels=category.includes('attar')?['3 ml','6 ml','8 ml','12 ml']:category.includes('perfume')?['8 ml','20 ml','30 ml','50 ml','100 ml','30 ml Gift','50 ml Gift','100 ml Gift']:['Default'];const indexes=category.includes('attar')?[0,0,0,0]:[1,2,3,4,5,6,7,8];return labels.map((sizeLabel,index)=>({sizeLabel,variantKey:sizeLabel==='Default'?'default':`${sizeLabel.match(/[\d.]+/)?.[0]}ml${/gift/i.test(sizeLabel)?'gift':''}`,image:images[indexes[index]]||images[0]||product.image||''}));}
+function adminInventoryVariants(product){const categoryName=String(product.category||product.type||'Perfume'),category=categoryName.toLowerCase(),images=product.images||[],supplied=new Map((product.sizes||[]).map(size=>[`${Number(size.value)}ml${/gift/i.test(size.unit||'')?'gift':''}`,Number(size.priceMultiplier)]));if(product.sharedStock)return[{sizeLabel:'Shared stock',variantKey:'shared',image:images[0]||product.image||'',priceMultiplier:1}];const labels=category.includes('attar')?['3 ml','6 ml','8 ml','12 ml']:category.includes('perfume')?['8 ml','20 ml','30 ml','50 ml','100 ml','30 ml Gift','50 ml Gift','100 ml Gift']:['Default'];const indexes=category.includes('attar')?[0,0,0,0]:[1,2,3,4,5,6,7,8];return labels.map((sizeLabel,index)=>{const variantKey=sizeLabel==='Default'?'default':`${sizeLabel.match(/[\d.]+/)?.[0]}ml${/gift/i.test(sizeLabel)?'gift':''}`;return{sizeLabel,variantKey,image:images[indexes[index]]||images[0]||product.image||'',priceMultiplier:supplied.get(variantKey)||ADMIN_PRICE_FACTORS[categoryName]?.[variantKey]||1};});}
 function getGiftProducts() {
 const dbProducts = (adminProducts || []).map(p => ({ ...p, source: 'backend' }));
 const seen = new Set();
@@ -1932,13 +1953,13 @@ toggleGiftPickerPanel();
 function setupProductCataloguePage(){
 if(!document.getElementById('admin-products-link')){const link=document.createElement('a');link.id='admin-products-link';link.href=PRODUCT_CATALOGUE_PAGE?'/admin':'/admin/products';link.className='px-3 py-2 border border-yellow-500 rounded text-sm font-bold text-yellow-400 hover:bg-yellow-500 hover:text-black';link.textContent=PRODUCT_CATALOGUE_PAGE?'Back to Dashboard':'Product Catalogue';btnLogout?.parentElement?.insertBefore(link,btnLogout);}
 const addCard=document.getElementById('btn-add-product')?.closest('.card'),stockCard=document.getElementById('products-tbody')?.closest('.card');
-if(!PRODUCT_CATALOGUE_PAGE){addCard?.classList.add('hidden');stockCard?.classList.add('hidden');if(!document.getElementById('product-catalogue-shortcut')){const shortcut=document.createElement('a');shortcut.id='product-catalogue-shortcut';shortcut.href='/admin/products';shortcut.className='card p-5 border-l-4 border-yellow-500 flex items-center justify-between gap-4 hover:bg-yellow-50 transition';shortcut.innerHTML='<div><b class="text-lg">Product Catalogue & Stock</b><p class="tiny text-gray-500 mt-1">Open the dedicated inventory workspace for product search, filters, sorting and bulk stock updates.</p></div><span class="px-4 py-2 bg-black text-yellow-400 rounded font-bold whitespace-nowrap">Open Catalogue →</span>';dashboardEl.insertBefore(shortcut,dashboardEl.children[1]||null);}return;}
+if(!PRODUCT_CATALOGUE_PAGE){addCard?.classList.add('hidden');stockCard?.classList.add('hidden');if(!document.getElementById('product-catalogue-shortcut')){const shortcut=document.createElement('a');shortcut.id='product-catalogue-shortcut';shortcut.href='/admin/products';shortcut.className='card p-5 border-l-4 border-yellow-500 flex items-center justify-between gap-4 hover:bg-yellow-50 transition';shortcut.innerHTML='<div><b class="text-lg">Product Catalogue, Stock & Pricing</b><p class="tiny text-gray-500 mt-1">Control product stock, base prices and shared size factors from one inventory workspace.</p></div><span class="px-4 py-2 bg-black text-yellow-400 rounded font-bold whitespace-nowrap">Open Catalogue →</span>';dashboardEl.insertBefore(shortcut,dashboardEl.children[1]||null);}return;}
 document.title='Product Catalogue — Eternal Essence Admin';
 if(!stockCard||document.getElementById('product-catalogue-page'))return;
 [...dashboardEl.children].forEach(child=>child.classList.add('hidden'));
-const page=document.createElement('section');page.id='product-catalogue-page';page.className='space-y-6';page.innerHTML='<div class="card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-yellow-500"><div><span class="tiny uppercase tracking-widest text-yellow-700 font-bold">Inventory workspace</span><h1 class="text-3xl font-bold mt-1">Product Catalogue & Stock</h1><p class="text-sm text-gray-500 mt-2">Search, filter, sort and update individual or selected product sizes without scrolling through the full dashboard.</p></div><a href="/admin" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold text-center">Back to Dashboard</a></div>';
+const page=document.createElement('section');page.id='product-catalogue-page';page.className='space-y-6';page.innerHTML='<div class="card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-yellow-500"><div><span class="tiny uppercase tracking-widest text-yellow-700 font-bold">Inventory workspace</span><h1 class="text-3xl font-bold mt-1">Product Catalogue, Stock & Pricing</h1><p class="text-sm text-gray-500 mt-2">Update stock, each product base price, and category-wide size factors from the same table.</p></div><a href="/admin" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold text-center">Back to Dashboard</a></div>';
 if(addCard){addCard.classList.remove('hidden','mt-8');page.appendChild(addCard);}
-stockCard.classList.remove('hidden','mt-8');const title=stockCard.querySelector('h3');if(title)title.textContent='Variant Stock Management';page.appendChild(stockCard);dashboardEl.appendChild(page);ensureInventoryBulkControls();
+stockCard.classList.remove('hidden','mt-8');const title=stockCard.querySelector('h3');if(title)title.textContent='Variant Stock & Pricing Management';page.appendChild(stockCard);dashboardEl.appendChild(page);ensureInventoryBulkControls();
 }
 setupProductCataloguePage();
 (function init() {
