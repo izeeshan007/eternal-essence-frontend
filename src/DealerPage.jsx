@@ -5,7 +5,7 @@ const TOKEN_KEY='ee_dealer_token_v1';
 const money=value=>`₹${Math.round(Number(value||0)).toLocaleString('en-IN')}`;
 const pdfMoney=value=>`Rs. ${Math.round(Number(value||0)).toLocaleString('en-IN')}`;
 const PERFUME_SIZES=[
-  {value:8,unit:'ml',priceMultiplier:.278557114228},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
+  {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
   {value:30,unit:'ml Gift',priceMultiplier:1.2},{value:50,unit:'ml Gift',priceMultiplier:1.601},{value:100,unit:'ml Gift',priceMultiplier:2.6032}
 ];
 const ATTAR_SIZES=[{value:3,unit:'ml',priceMultiplier:1},{value:6,unit:'ml',priceMultiplier:1.85},{value:8,unit:'ml',priceMultiplier:2.3},{value:12,unit:'ml',priceMultiplier:3.2}];
@@ -17,10 +17,22 @@ function getSizes(product){
   const canonical=productType(product)==='Attar'?ATTAR_SIZES:PERFUME_SIZES;
   const supplied=Array.isArray(product?.sizes)?product.sizes:[];
   const suppliedByKey=new Map(supplied.map(size=>[sizeKey(size),size]));
-  const merged=canonical.map(size=>({...size,...(suppliedByKey.get(sizeKey(size))||{})}));
+  const liveByKey=new Map((product?.inventoryPricing||[]).map(row=>[String(row.variantKey||''),row]));
+  const merged=canonical.map(size=>{
+    const key=sizeKey(size);
+    const suppliedSize=suppliedByKey.get(key)||{};
+    const live=liveByKey.get(key);
+    return {...size,...suppliedSize,...(live?{basePrice:Number(live.basePrice||0),priceMultiplier:Number(live.priceMultiplier||0)}:{})};
+  });
   const canonicalKeys=new Set(canonical.map(sizeKey));
   return[...merged,...supplied.filter(size=>!canonicalKeys.has(sizeKey(size)))];
 }
+function websitePrice(product,size){
+  const base=Number(size?.basePrice)>0?Number(size.basePrice):Number(product?.price||0);
+  const multiplier=Number(size?.priceMultiplier)>0?Number(size.priceMultiplier):1;
+  return Math.round(base*multiplier);
+}
+
 function imageUrl(name){
   if(!name)return'/products/placeholder.webp';
   if(String(name).startsWith('http'))return name;
@@ -107,48 +119,236 @@ export async function exportDealerCatalogue(products,dealer,setStatus=()=>{},opt
   const includePrices=options.includePrices!==false;
   const doc=new JsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
   const imageCache=new Map();
-  const pageWidth=297,pageHeight=210,marginX=6,top=13,bottom=204,gapX=3,gapY=3,columns=3,rowsPerPage=includePrices?2:3,perPage=columns*rowsPerPage;
-  const cardWidth=(pageWidth-marginX*2-gapX*(columns-1))/columns,cardHeight=(bottom-top-gapY*(rowsPerPage-1))/rowsPerPage,pageCount=Math.ceil(products.length/perPage);
+
+  // Clean, readable trade-catalogue layout:
+  // 2 products per row x 2 rows = 4 products/page.
+  // Each product uses ONE main image, then only family + accords, followed by
+  // a simple size/website/dealer price grid.
+  const pageWidth=297,pageHeight=210;
+  const marginX=8,top=15,bottom=202,gapX=5,gapY=5;
+  const columns=2,rowsPerPage=2,perPage=columns*rowsPerPage;
+  const cardWidth=(pageWidth-marginX*2-gapX*(columns-1))/columns;
+  const cardHeight=(bottom-top-gapY*(rowsPerPage-1))/rowsPerPage;
+  const pageCount=Math.ceil(products.length/perPage);
+
+  // The catalogue card should show the same primary/default perfume variant
+  // used by the dealer portal: 30 ml Gift for perfumes, first size for attars.
+  function mainImageSize(product){
+    const sizes=getSizes(product);
+    if(productType(product)==='Perfume'){
+      return sizes.find(size=>sizeKey(size)==='30mlgift')||sizes[0];
+    }
+    return sizes[0];
+  }
+
   for(let pageIndex=0;pageIndex<pageCount;pageIndex+=1){
     if(pageIndex)doc.addPage('a4','landscape');
-    doc.setFillColor(8,10,8);doc.rect(0,0,pageWidth,10,'F');
-    doc.setTextColor(226,184,57);doc.setFont('times','bold');doc.setFontSize(9);doc.text('ETERNAL ESSENCE',marginX,6.2);
-    doc.setTextColor(232,229,218);doc.setFont('helvetica','normal');doc.setFontSize(5.4);doc.text(`${String(dealer.displayName||'Authorised Dealer').toUpperCase()}  /  ${includePrices?'TRADE CATALOGUE':'FRAGRANCE CATALOGUE'}`,pageWidth-marginX,6.2,{align:'right'});
-    doc.setDrawColor(202,161,43);doc.setLineWidth(.35);doc.line(marginX,10,pageWidth-marginX,10);
+
+    // Page header
+    doc.setFillColor(8,10,8);
+    doc.rect(0,0,pageWidth,11,'F');
+    doc.setTextColor(226,184,57);
+    doc.setFont('times','bold');
+    doc.setFontSize(10);
+    doc.text('ETERNAL ESSENCE',marginX,7);
+    doc.setTextColor(235,232,222);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(5.8);
+    doc.text(
+      `${String(dealer.displayName||'AUTHORISED DEALER').toUpperCase()}  /  ${includePrices?'TRADE CATALOGUE':'FRAGRANCE CATALOGUE'}`,
+      pageWidth-marginX,7,{align:'right'}
+    );
+    doc.setDrawColor(202,161,43);
+    doc.setLineWidth(.35);
+    doc.line(marginX,11,pageWidth-marginX,11);
+
     for(let slot=0;slot<perPage;slot+=1){
-      const productIndex=pageIndex*perPage+slot,product=products[productIndex];if(!product)continue;
+      const productIndex=pageIndex*perPage+slot;
+      const product=products[productIndex];
+      if(!product)continue;
+
       setStatus(`Designing catalogue card ${productIndex+1} of ${products.length}: ${product.name}`);
-      const column=slot%columns,rowIndex=Math.floor(slot/columns),x=marginX+column*(cardWidth+gapX),cardTop=top+rowIndex*(cardHeight+gapY),innerX=x+2.2,innerWidth=cardWidth-4.4,sizes=getSizes(product);
-      const rows=sizes.map(size=>{const website=Math.round(Number(product.price||0)*Number(size.priceMultiplier||1));const factor=Number(dealer.priceFactors?.[factorKey(size)]??dealer.priceFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
-      const images=[];
-      for(let index=0;index<rows.length;index+=1){const sources=variantSources(product,rows[index],index),cacheKey=sources.join('|');let data=imageCache.get(cacheKey);if(data===undefined){data=await loadCatalogueImage(sources);imageCache.set(cacheKey,data);}images.push(data);}
-      doc.setDrawColor(215,205,178);doc.setFillColor(253,252,247);doc.roundedRect(x,cardTop,cardWidth,cardHeight,1.2,1.2,'FD');
-      doc.setFillColor(18,19,15);doc.rect(x,cardTop,cardWidth,8,'F');doc.setTextColor(227,186,61);doc.setFont('times','bold');doc.setFontSize(includePrices?7.4:6.7);doc.text(String(product.name||'Fragrance').toUpperCase(),innerX,cardTop+4.2,{maxWidth:innerWidth});doc.setTextColor(210,207,195);doc.setFont('helvetica','normal');doc.setFontSize(4);doc.text(`${productType(product).toUpperCase()} / ${(product.family||'SIGNATURE').toUpperCase()}`,innerX,cardTop+6.7,{maxWidth:innerWidth});
-      const imageRows=Math.max(1,Math.ceil(rows.length/4)),imageGap=.7,imageGridHeight=includePrices?(imageRows>1?39:25):(imageRows>1?29:20),thumbWidth=(innerWidth-imageGap*3)/4,thumbHeight=(imageGridHeight-imageGap*(imageRows-1))/imageRows,imageTop=cardTop+9.4;
-      rows.forEach((row,index)=>{const tx=innerX+(index%4)*(thumbWidth+imageGap),ty=imageTop+Math.floor(index/4)*(thumbHeight+imageGap);doc.setDrawColor(224,216,193);doc.rect(tx,ty,thumbWidth,thumbHeight,'S');if(images[index])doc.addImage(images[index],'JPEG',tx,ty,thumbWidth,thumbHeight,undefined,'FAST');doc.setFillColor(12,14,11);doc.rect(tx,ty+thumbHeight-3.2,thumbWidth,3.2,'F');doc.setTextColor(238,199,74);doc.setFont('helvetica','bold');doc.setFontSize(3.8);doc.text(sizeLabel(row).toUpperCase(),tx+thumbWidth/2,ty+thumbHeight-1.05,{align:'center',maxWidth:thumbWidth-1});});
-      let y=imageTop+imageGridHeight+2;
-      doc.setTextColor(38,37,32);doc.setFont('helvetica','normal');doc.setFontSize(includePrices?4.5:4.1);const description=product.description||product.inspiredBy||'Eternal Essence fragrance profile.';const descriptionLines=limitedLines(doc,description,innerWidth,includePrices?2:1);doc.text(descriptionLines,innerX,y);y+=descriptionLines.length*(includePrices?2.05:1.8)+.7;
-      const meta=[product.inspiredBy?`REFERENCE: ${product.inspiredBy}`:'',`PROFILE: ${product.gender||'Unisex'} / ${product.season||'All seasons'} / ${product.time||'Day/Night'}`].filter(Boolean);doc.setFontSize(includePrices?3.9:3.7);doc.setTextColor(91,86,74);for(const line of meta){doc.text(limitedLines(doc,line,innerWidth,1),innerX,y);y+=includePrices?1.85:1.65;}
-      const noteRows=[['TOP',product.top||product.topNotes],['HEART',product.mid||product.middle||product.heartNotes],['BASE',product.base||product.baseNotes],['ACCORDS',product.accords],['NOTES',product.notes||product.otherDetails]].filter(([,value])=>catalogueText(value));
-      doc.setDrawColor(224,217,199);doc.line(innerX,y,innerX+innerWidth,y);y+=includePrices?1.7:1.4;doc.setFontSize(includePrices?3.9:3.65);const detailBottom=includePrices?cardTop+cardHeight-19:cardTop+cardHeight-2;for(const[label,value]of noteRows){if(y>detailBottom)break;doc.setFont('helvetica','bold');doc.setTextColor(132,99,20);doc.text(`${label}:`,innerX,y);doc.setFont('helvetica','normal');doc.setTextColor(61,59,53);doc.text(limitedLines(doc,catalogueText(value),innerWidth-12,1),innerX+12,y);y+=includePrices?1.95:1.7;}
-      if(includePrices){const pricesY=cardTop+cardHeight-17.8;doc.setFillColor(20,22,18);doc.rect(innerX,pricesY,innerWidth,3.8,'F');doc.setTextColor(227,185,58);doc.setFont('helvetica','bold');doc.setFontSize(4);doc.text('SIZE',innerX+1.2,pricesY+2.6);doc.text('WEBSITE / DEALER',innerX+innerWidth-1.2,pricesY+2.6,{align:'right'});const priceColumnCount=rows.length>4?2:1,priceColumnWidth=innerWidth/priceColumnCount,priceRowHeight=3.45;rows.forEach((price,index)=>{const priceColumn=Math.floor(index/4),priceRow=index%4,px=innerX+priceColumn*priceColumnWidth,py=pricesY+3.8+priceRow*priceRowHeight;doc.setFillColor(priceRow%2?250:246,priceRow%2?248:243,priceRow%2?241:231);doc.rect(px,py,priceColumnWidth,priceRowHeight,'F');doc.setTextColor(51,50,45);doc.setFont('helvetica','normal');doc.setFontSize(3.65);doc.text(sizeLabel(price),px+.8,py+2.25);doc.setTextColor(130,94,7);doc.setFont('helvetica','bold');doc.text(`${pdfMoney(price.website)} / ${pdfMoney(price.dealer)}`,px+priceColumnWidth-.8,py+2.25,{align:'right'});});}
+
+      const column=slot%columns;
+      const rowIndex=Math.floor(slot/columns);
+      const x=marginX+column*(cardWidth+gapX);
+      const cardTop=top+rowIndex*(cardHeight+gapY);
+      const innerX=x+4;
+      const innerWidth=cardWidth-8;
+
+      const sizes=getSizes(product);
+      const rows=sizes.map(size=>{
+        const website=websitePrice(product,size);
+        const factor=Number(dealer.priceFactors?.[factorKey(size)]??dealer.priceFactor??1);
+        return{...size,website,dealer:Math.round(website*factor)};
+      });
+
+      // ONE main image only.
+      const mainSize=mainImageSize(product);
+      const imageSources=variantSources(product,mainSize,Math.max(0,sizes.indexOf(mainSize)));
+      const cacheKey=imageSources.join('|');
+      let mainImage=imageCache.get(cacheKey);
+      if(mainImage===undefined){
+        mainImage=await loadCatalogueImage(imageSources);
+        imageCache.set(cacheKey,mainImage);
+      }
+
+      // Card
+      doc.setDrawColor(215,205,178);
+      doc.setFillColor(253,252,247);
+      doc.roundedRect(x,cardTop,cardWidth,cardHeight,1.5,1.5,'FD');
+
+      // Product title bar
+      doc.setFillColor(18,19,15);
+      doc.roundedRect(x,cardTop,cardWidth,12,1.5,1.5,'F');
+      doc.rect(x,cardTop+6,cardWidth,6,'F');
+      doc.setTextColor(227,186,61);
+      doc.setFont('times','bold');
+      doc.setFontSize(9);
+      doc.text(String(product.name||'Fragrance').toUpperCase(),innerX,cardTop+5.5,{maxWidth:innerWidth-30});
+      doc.setTextColor(220,217,205);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(5);
+      doc.text(productType(product).toUpperCase(),x+cardWidth-4,cardTop+5.5,{align:'right'});
+
+      // Main image panel
+      const imageTop=cardTop+15;
+      const imageW=innerWidth;
+      const imageH=34;
+      doc.setFillColor(246,244,237);
+      doc.setDrawColor(224,216,193);
+      doc.roundedRect(innerX,imageTop,imageW,imageH,1,1,'FD');
+      if(mainImage){
+        // Keep the full product image visible; do not make a multi-image grid.
+        const imgProps=doc.getImageProperties(mainImage);
+        const scale=Math.min((imageW-4)/imgProps.width,(imageH-4)/imgProps.height);
+        const drawW=imgProps.width*scale,drawH=imgProps.height*scale;
+        doc.addImage(mainImage,'JPEG',innerX+(imageW-drawW)/2,imageTop+(imageH-drawH)/2,drawW,drawH,undefined,'FAST');
+      }
+      doc.setFillColor(18,19,15);
+      doc.rect(innerX,imageTop+imageH-5.5,imageW,5.5,'F');
+      doc.setTextColor(239,201,82);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(4.6);
+      doc.text(sizeLabel(mainSize).toUpperCase(),innerX+imageW/2,imageTop+imageH-1.8,{align:'center'});
+
+      // Only the requested product information: family + accords.
+      let y=imageTop+imageH+6;
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(5.2);
+      doc.setTextColor(132,99,20);
+      doc.text('FAMILY',innerX,y);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(55,53,47);
+      doc.text(limitedLines(doc,product.family||'Signature fragrance',innerWidth-18,1),innerX+18,y,{maxWidth:innerWidth-18});
+
+      y+=5;
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(132,99,20);
+      doc.text('ACCORDS',innerX,y);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(55,53,47);
+      doc.text(
+        limitedLines(doc,catalogueText(product.accords)||'—',innerWidth-18,2),
+        innerX+18,y,{maxWidth:innerWidth-18}
+      );
+      y+=8;
+
+      if(includePrices){
+        // Clear price grid
+        const tableX=innerX;
+        const tableW=innerWidth;
+        const headerH=6;
+        const rowH=4.25;
+        const colSize=tableW*.30;
+        const colWebsite=tableW*.35;
+        const colDealer=tableW-colSize-colWebsite;
+
+        doc.setFillColor(18,19,15);
+        doc.rect(tableX,y,tableW,headerH,'F');
+        doc.setTextColor(239,201,82);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(4.5);
+        doc.text('SIZE',tableX+2,y+4);
+        doc.text('WEBSITE',tableX+colSize+colWebsite/2,y+4,{align:'center'});
+        doc.text('DEALER',tableX+colSize+colWebsite+colDealer/2,y+4,{align:'center'});
+
+        rows.forEach((price,index)=>{
+          const py=y+headerH+index*rowH;
+          const fill=index%2===0?249:244;
+          doc.setFillColor(fill,fill-1,fill-5);
+          doc.rect(tableX,py,tableW,rowH,'F');
+          doc.setDrawColor(224,216,193);
+          doc.rect(tableX,py,tableW,rowH,'S');
+          doc.setTextColor(54,52,47);
+          doc.setFont('helvetica','normal');
+          doc.setFontSize(4.25);
+          doc.text(sizeLabel(price),tableX+2,py+2.8);
+          doc.setTextColor(70,68,61);
+          doc.text(pdfMoney(price.website),tableX+colSize+colWebsite/2,py+2.8,{align:'center'});
+          doc.setTextColor(132,96,8);
+          doc.setFont('helvetica','bold');
+          doc.text(pdfMoney(price.dealer),tableX+colSize+colWebsite+colDealer/2,py+2.8,{align:'center'});
+        });
+      }else{
+        doc.setDrawColor(224,217,199);
+        doc.line(innerX,y,innerX+innerWidth,y);
+        doc.setTextColor(105,101,91);
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(4.5);
+        doc.text('Prices intentionally omitted from this catalogue.',innerX,y+5);
+      }
     }
-    doc.setTextColor(103,100,89);doc.setFont('helvetica','normal');doc.setFontSize(4.3);doc.text(includePrices?'Private dealer rates - subject to current catalogue terms':'Customer catalogue - prices intentionally omitted',marginX,pageHeight-2.7);doc.text(`${pageIndex+1} / ${pageCount}`,pageWidth-marginX,pageHeight-2.7,{align:'right'});
+
+    doc.setTextColor(103,100,89);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(4.3);
+    doc.text(
+      includePrices?'Private dealer rates - subject to current catalogue terms':'Customer catalogue - prices intentionally omitted',
+      marginX,pageHeight-3
+    );
+    doc.text(`${pageIndex+1} / ${pageCount}`,pageWidth-marginX,pageHeight-3,{align:'right'});
   }
-  doc.setProperties({title:`${dealer.displayName} - Eternal Essence ${includePrices?'Trade':'Customer'} Catalogue`,subject:includePrices?'Filtered dealer price catalogue':'Filtered fragrance catalogue without prices',author:'Eternal Essence'});
+
+  doc.setProperties({
+    title:`${dealer.displayName} - Eternal Essence ${includePrices?'Trade':'Customer'} Catalogue`,
+    subject:includePrices?'Filtered dealer price catalogue':'Filtered fragrance catalogue without prices',
+    author:'Eternal Essence'
+  });
   const suffix=new Date().toISOString().slice(0,10);
   doc.save(`eternal-essence-${includePrices?'dealer-priced':'customer-no-prices'}-catalogue-${suffix}.pdf`);
 }
-function useProducts(ready){
+function useProducts(ready,backendBase){
   const[products,setProducts]=useState([]);
-  useEffect(()=>{const sync=()=>setProducts(window.EE?.getProducts?.()||[]);sync();const timer=setInterval(sync,500);return()=>clearInterval(timer);},[ready]);
+  useEffect(()=>{
+    let active=true;
+    const loadLivePricing=async()=>{
+      const current=window.EE?.getProducts?.()||[];
+      if(!current.length){if(active)setProducts([]);return;}
+      if(active)setProducts(current);
+      if(!backendBase)return;
+      const enriched=await Promise.all(current.map(async product=>{
+        const id=String(product?.id||product?._id||'').trim();
+        if(!id)return product;
+        try{
+          const response=await fetch(`${backendBase}/api/products/inventory?productId=${encodeURIComponent(id)}`);
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok||!data.success||!Array.isArray(data.inventory))return product;
+          return {...product,inventoryPricing:data.inventory};
+        }catch{return product;}
+      }));
+      if(active)setProducts(enriched);
+    };
+    loadLivePricing();
+    return()=>{active=false;};
+  },[ready,backendBase]);
   return products;
 }
 
 function RateCard({product,priceFactors,fallbackFactor,cardIndex}){
-  const[activeIndex,setActiveIndex]=useState(0);
+  const[activeIndex,setActiveIndex]=useState(productType(product)==='Perfume'?5:0);
   const sizes=getSizes(product);
-  const prices=sizes.map(size=>{const website=Math.round(Number(product.price||0)*Number(size.priceMultiplier||1));const factor=Number(priceFactors?.[factorKey(size)]??fallbackFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
+  const prices=sizes.map(size=>{const website=websitePrice(product,size);const factor=Number(priceFactors?.[factorKey(size)]??fallbackFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
   const lead=prices[activeIndex]||prices[0];
   return <article className="dealer-product-card">
     <VariantCarousel product={product} prices={prices} activeIndex={activeIndex} setActiveIndex={setActiveIndex} cardIndex={cardIndex}/>
@@ -167,7 +367,7 @@ export default function DealerPage({backendBase,legacyReady}){
   const[dealerId,setDealerId]=useState(''),[password,setPassword]=useState('');
   const[query,setQuery]=useState(''),[type,setType]=useState('all'),[gender,setGender]=useState('all');
   const[pdfBusy,setPdfBusy]=useState(false),[pdfStatus,setPdfStatus]=useState('');
-  const products=useProducts(legacyReady);
+  const products=useProducts(legacyReady,backendBase);
   const request=async(path,options={})=>{const response=await fetch(`${backendBase}${path}`,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok)throw Object.assign(new Error(data.error||'Request failed.'),{status:response.status});return data;};
   useEffect(()=>{if(!token){setLoading(false);setDealer(null);return;}let active=true;setLoading(true);request('/api/dealer/session').then(data=>{if(active){setDealer(data.dealer);setError('');}}).catch(err=>{if(active){if(err.status===401){sessionStorage.removeItem(TOKEN_KEY);setToken('');}setError(err.message);}}).finally(()=>active&&setLoading(false));return()=>{active=false};},[token]);
   const login=async event=>{event.preventDefault();setLoading(true);setError('');try{const response=await fetch(`${backendBase}/api/dealer/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId,password})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Sign in failed.');sessionStorage.setItem(TOKEN_KEY,data.token);setPassword('');setDealer(data.dealer);setToken(data.token);}catch(err){setError(err.message);}finally{setLoading(false);}};
