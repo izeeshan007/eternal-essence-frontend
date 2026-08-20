@@ -15,6 +15,7 @@ const legacyAdminSource=legacyAdminCandidates.find(candidate=>fs.existsSync(cand
 if(!legacyAdminSource)throw new Error('The existing admin dashboard shell could not be found.');
 // Cache before Vite clears its output directory during a production build.
 const legacyAdminMarkup=fs.readFileSync(legacyAdminSource,'utf8');
+const adminAssetVersion='20260820-9';
 
 function adminHtml(backendBase='',backendFallback=''){
   const primary=String(backendBase||'').trim().replace(/\/+$/, '');
@@ -23,8 +24,8 @@ function adminHtml(backendBase='',backendFallback=''){
   return legacyAdminMarkup
     .replace(/<script>window\.__EE_BACKEND_BASE_URL__=[\s\S]*?<\/script>/g,'')
     .replace('<head>','<head>'+runtimeConfig)
-    .replace(/(["'])\/?(?:\.\/)?assets\/css\/admin\.100012cefd\.css/g,'$1/legacy/assets/css/admin.100012cefd.css')
-    .replace(/(["'])\/?(?:\.\/)?assets\/js\/admin\.9a74483567\.js/g,'$1/legacy/assets/js/admin.9a74483567.js');
+    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/css\/admin\.100012cefd\.css(?:\?v=[^"']*)?/g,`$1/legacy/assets/css/admin.100012cefd.css?v=${adminAssetVersion}`)
+    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/js\/admin\.9a74483567\.js(?:\?v=[^"']*)?/g,`$1/legacy/assets/js/admin.9a74483567.js?v=${adminAssetVersion}`);
 }
 
 function restoreAdminDashboard(backendBase,backendFallback){
@@ -55,5 +56,10 @@ function restoreAdminDashboard(backendBase,backendFallback){
 
 export default defineConfig(({mode})=>{
   const env=loadEnv(mode,frontendDir,'');
-  return { plugins:[react(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'',env.VITE_BACKEND_FALLBACK_URL||'')] };
+  return {
+    plugins:[react(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'',env.VITE_BACKEND_FALLBACK_URL||'')],
+    // Vite's default production minifier is available in the bundled toolchain;
+    // keep source maps disabled without requiring a separate esbuild package.
+    build:{sourcemap:false}
+  };
 });

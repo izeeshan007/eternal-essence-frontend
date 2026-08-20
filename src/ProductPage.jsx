@@ -24,7 +24,7 @@ function imgUrl(name){
 }
 const SIZE_CACHE=new Map();
 const PERFUME_SIZE_SET=[
-  {value:8,unit:'ml',priceMultiplier:.278557114228},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
+  {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
   {value:30,unit:'ml Gift',priceMultiplier:1.2},{value:50,unit:'ml Gift',priceMultiplier:1.601},{value:100,unit:'ml Gift',priceMultiplier:2.6032}
 ];
 const ATTAR_SIZE_SET=[{value:3,unit:'ml',priceMultiplier:1},{value:6,unit:'ml',priceMultiplier:1.85},{value:8,unit:'ml',priceMultiplier:2.3},{value:12,unit:'ml',priceMultiplier:3.2}];
@@ -93,7 +93,7 @@ function displayHour(hours,max,isAfter=false){
 }
 function makeJourney(product){
   const top=splitNotes(product.top), heart=splitNotes(product.mid), base=splitNotes(product.base), acc=product.accords||[];
-  const longevity=longevityFor(product),max=longevity.max,timelineMax=max/.92,counts=[top.length,heart.length,base.length];
+  const longevity=longevityFor(product),max=longevity.max,timelineMax=max/.98,counts=[top.length,heart.length,base.length];
   const strength=Math.min(.94,.55+counts[0]*.03+counts[1]*.025+counts[2]*.025);
   const fresh=acc.some(a=>/citrus|fresh|aquatic|marine|green|aromatic/i.test(a));
   const woody=acc.some(a=>/oud|woody|leather|amber|smoky|musk/i.test(a));
@@ -107,7 +107,7 @@ function makeJourney(product){
     `${notes.slice(0,3).join(', ')} settle into a ${woody?'warm, lasting':'smooth'} finish.`
   ):`${phase} notes shape the fragrance as it evolves.`;
   const h=t=>displayHour(t,max);
-  const kf=[{t:0,v:.04,phase:'Opening',time:'Spray',feel:'The first impression begins.',proj:0,hours:0},{t:openingEnd*.32,v:peak*(fresh?.96:.83),phase:'Opening',time:h(openingEnd*.32),feel:feel('Opening',top),proj:Math.round(135*peak),hours:openingEnd*.32},{t:openingEnd,v:peak*(fresh?.78:.88),phase:'Opening',time:h(openingEnd),feel:feel('Opening',top),proj:Math.round(112*peak),hours:openingEnd},{t:heartEnd*.62,v:Math.min(.88,.52+heart.length*.04+(sweet?.1:0)),phase:'Heart',time:h(heartEnd*.62),feel:feel('Heart',heart),proj:Math.round(74*peak),hours:heartEnd*.62},{t:heartEnd,v:Math.min(.7,.40+heart.length*.035+(woody?.08:0)),phase:'Heart',time:h(heartEnd),feel:feel('Heart',heart),proj:Math.round(48*peak),hours:heartEnd},{t:max*.78,v:Math.min(.62,tail+.12),phase:'Dry-down',time:h(max*.78),feel:feel('Dry-down',base),proj:Math.round(25*peak),hours:max*.78},{t:max,v:.05,phase:'Dry-down',time:`${max} h`,feel:feel('Dry-down',base),proj:Math.max(3,Math.round(5*peak)),hours:max},{t:timelineMax,v:.03,phase:'Afterglow',time:`After ${max} h`,feel:'Only a faint 2–5% trace may remain beyond the estimated wear window.',proj:2,hours:timelineMax}];
+  const kf=[{t:0,v:.04,phase:'Opening',time:'Spray',feel:'The first impression begins.',proj:0,hours:0},{t:openingEnd*.32,v:peak*(fresh?.96:.83),phase:'Opening',time:h(openingEnd*.32),feel:feel('Opening',top),proj:Math.round(135*peak),hours:openingEnd*.32},{t:openingEnd,v:peak*(fresh?.78:.88),phase:'Opening',time:h(openingEnd),feel:feel('Opening',top),proj:Math.round(112*peak),hours:openingEnd},{t:heartEnd*.62,v:Math.min(.88,.52+heart.length*.04+(sweet?.1:0)),phase:'Heart',time:h(heartEnd*.62),feel:feel('Heart',heart),proj:Math.round(74*peak),hours:heartEnd*.62},{t:heartEnd,v:Math.min(.7,.40+heart.length*.035+(woody?.08:0)),phase:'Heart',time:h(heartEnd),feel:feel('Heart',heart),proj:Math.round(48*peak),hours:heartEnd},{t:max*.78,v:Math.min(.62,tail+.12),phase:'Dry-down',time:h(max*.78),feel:feel('Dry-down',base),proj:Math.round(25*peak),hours:max*.78},{t:max,v:.012,phase:'Dry-down',time:`${max} h`,feel:feel('Dry-down',base),proj:1,hours:max},{t:timelineMax,v:.005,phase:'Afterglow',time:`After ${max} h`,feel:'At most a near-zero 0.5% trace may remain when smelling very close to clothing.',proj:0,hours:timelineMax}];
   const notes=[
     {t:openingEnd/timelineMax,label:(top[0]||'Top note'),kind:'Opening'},
     {t:heartEnd/timelineMax,label:(heart[0]||'Heart note'),kind:'Heart'},
@@ -175,7 +175,7 @@ export function ScentJourney({product}){
       let i=kf.findIndex((k,j)=>t>=k.t&&t<=(kf[j+1]?.t??1)); if(i<0)i=kf.length-2;
       const a=kf[i],b=kf[Math.min(i+1,kf.length-1)],f=b.t>a.t?(t-a.t)/(b.t-a.t):0;
       const hours=t*timelineMax,isAfter=hours>longevity.max;
-      return {...a,v:lerp(a.v,b.v,f),proj:Math.round(lerp(a.proj,b.proj,f)),time:displayHour(Math.min(hours,longevity.max),longevity.max,isAfter),phase:isAfter?'Afterglow':(f<.5?a.phase:b.phase),feel:isAfter?'Only a faint 2–5% trace may remain beyond the estimated wear window.':(f<.5?a.feel:b.feel)};
+      return {...a,v:lerp(a.v,b.v,f),proj:Math.round(lerp(a.proj,b.proj,f)),time:displayHour(Math.min(hours,longevity.max),longevity.max,isAfter),phase:isAfter?'Afterglow':(f<.5?a.phase:b.phase),feel:isAfter?'At most a near-zero 0.5% trace may remain when smelling very close to clothing.':(f<.5?a.feel:b.feel)};
     };
     const draw=t=>{
       ctx.clearRect(0,0,W,H);
@@ -185,7 +185,7 @@ export function ScentJourney({product}){
       const ticks=[[0,'Spray'],...([.25,.5,.75,1].map(f=>[longevity.max*f/timelineMax,displayHour(longevity.max*f,longevity.max)]))];
       ticks.forEach(([tt,label])=>{const x=px(tt);ctx.strokeStyle='rgba(167,127,18,.28)';ctx.beginPath();ctx.moveTo(x,PT+cH);ctx.lineTo(x,PT+cH+4);ctx.stroke();ctx.fillStyle='#6d5a25';ctx.font='600 11px Lato,Arial';ctx.textAlign='center';ctx.fillText(label,x,PT+cH+17);});
       [['Opening',compact?.13:phases.openingEnd/2,'#d2ad36'],['Heart',compact?.45:(phases.openingEnd+phases.heartEnd)/2,'#54b96a'],['Dry-down',compact?.78:(phases.heartEnd+phases.maxEnd)/2,'#9d8c4c']].forEach(([label,x,c])=>{ctx.fillStyle=c;ctx.font=`700 ${compact?9:10}px Lato,Arial`;ctx.textAlign='center';ctx.fillText(label,px(x),PT+cH+34);});
-      ctx.fillStyle='#82785b';ctx.font=`700 ${W<520?7:9}px Lato,Arial`;ctx.textAlign='right';ctx.fillText(W<520?'TRACE':'AFTERGLOW · 2–5% TRACE',W-PR-3,PT+13);
+      ctx.fillStyle='#82785b';ctx.font=`700 ${W<520?7:9}px Lato,Arial`;ctx.textAlign='right';ctx.fillText(W<520?'TRACE':'AFTERGLOW · ~0.5% CLOSE TRACE',W-PR-3,PT+13);
       ctx.beginPath();ctx.moveTo(points[0][0],PT+cH);points.forEach(p=>ctx.lineTo(p[0],p[1]));ctx.lineTo(points.at(-1)[0],PT+cH);ctx.closePath();
       const fill=ctx.createLinearGradient(0,PT,0,PT+cH);fill.addColorStop(0,'rgba(58,127,63,.10)');fill.addColorStop(1,'rgba(252,196,41,.02)');ctx.fillStyle=fill;ctx.fill();
       ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle='#a77f12';ctx.lineWidth=2.6;ctx.shadowColor='rgba(167,127,18,.20)';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
@@ -208,17 +208,17 @@ export function ScentJourney({product}){
   const active=hover==null?null:(()=>{
     let i=kf.findIndex((k,j)=>hover>=k.t&&hover<=(kf[j+1]?.t??1));if(i<0)i=kf.length-2;
     const a=kf[i],b=kf[i+1],f=(hover-a.t)/(b.t-a.t);
-    const v=lerp(a.v,b.v,f),proj=Math.round(lerp(a.proj,b.proj,f)),hours=hover*timelineMax,isAfter=hours>longevity.max;return {phase:isAfter?'Afterglow':(f<.5?a.phase:b.phase),time:displayHour(Math.min(hours,longevity.max),longevity.max,isAfter),feel:isAfter?'Only a faint 2–5% trace may remain beyond the estimated wear window.':(f<.5?a.feel:b.feel),v,proj};
+    const v=lerp(a.v,b.v,f),proj=Math.round(lerp(a.proj,b.proj,f)),hours=hover*timelineMax,isAfter=hours>longevity.max;return {phase:isAfter?'Afterglow':(f<.5?a.phase:b.phase),time:displayHour(Math.min(hours,longevity.max),longevity.max,isAfter),feel:isAfter?'At most a near-zero 0.5% trace may remain when smelling very close to clothing.':(f<.5?a.feel:b.feel),v,proj};
   })();
 
   return <section className="ee-scent-journey">
     <div className="sj-kicker">{product.name?.toUpperCase()}</div>
     <h2>The life of this fragrance</h2>
-    <p className="sj-hint"><Sparkles size={13}/> Estimated wear: <b>{longevity.label}</b> · move across the curve to follow its evolution</p><p className="sj-disclaimer">* Wear time is an estimate, not a guarantee. It varies with skin, clothing, weather, storage and application. The afterglow represents only a faint 2–5% trace.</p>
+    <p className="sj-hint"><Sparkles size={13}/> Estimated wear: <b>{longevity.label}</b> · move across the curve to follow its evolution</p><p className="sj-disclaimer">* Wear time is an estimate, not a guarantee. It varies with skin, clothing, weather, storage and application. Beyond the limit, at most a near-zero 0.5% trace may remain very close to clothing.</p>
     <div className="sj-chart-wrap" ref={wrap}>
       <canvas ref={canvas} className="sj-canvas" onMouseEnter={e=>setT(e)} onMouseMove={e=>{if(dragging.current||e.buttons===0)setT(e)}} onMouseDown={e=>{dragging.current=true;setT(e)}} onMouseUp={()=>{dragging.current=false}} onMouseLeave={()=>{if(!dragging.current)setHover(null)}} onTouchStart={e=>setT({clientX:e.touches[0].clientX})} onTouchMove={e=>setT({clientX:e.touches[0].clientX})}/>
       {active && <div className="sj-tooltip" style={{left:`${Math.min(chartWidth<560?70:82,Math.max(chartWidth<560?30:18,((PL+(hover??0)*Math.max(1,(chartWidth||720)-PL-PR))/(chartWidth||720))*100))}%`}}>
-        <strong>{active.phase}</strong><b>{active.time} · {Math.round(active.v*100)}%</b><span>{active.feel}</span>
+        <strong>{active.phase}</strong><b>{active.time} · {active.v*100<1?`${(active.v*100).toFixed(1)}%`:`${Math.round(active.v*100)}%`}</b><span>{active.feel}</span>
       </div>}
     </div>
     <div className="sj-note-summary"><div><span>OPENING</span><b>{product.top||'—'}</b></div><div><span>HEART</span><b>{product.mid||'—'}</b></div><div><span>DRY-DOWN</span><b>{product.base||'—'}</b></div></div>
@@ -246,6 +246,7 @@ export default function ProductPage({product,route,onBack}){
   const [p,setP]=useState(()=>normalize(product)),[size,setSize]=useState(null),[qty,setQty]=useState(1),[img,setImg]=useState(0),[wish,setWish]=useState(false),[reviews,setReviews]=useState([]);
   const [variantNotice,setVariantNotice]=useState('');
   const [variantStock,setVariantStock]=useState({});
+  const [variantPricing,setVariantPricing]=useState({});
   const [viewerCount,setViewerCount]=useState(0);
   const [cartCount,setCartCount]=useState(readCartCount);
   const pendingSelection=window.__eePendingProductSelection;
@@ -258,7 +259,7 @@ export default function ProductPage({product,route,onBack}){
     return()=>{window.removeEventListener('ee:cart-updated',sync);clearInterval(timer);};
   },[]);
   useEffect(()=>{setP(normalize(product));},[product]);
-  useEffect(()=>{if(!p?.id)return;let active=true;const base=window.EE?.getBackendBase?.()||'http://localhost:5000';fetch(`${base}/api/products/inventory?productId=${encodeURIComponent(p.id)}`).then(response=>response.json()).then(data=>{if(active&&data.success)setVariantStock(Object.fromEntries((data.inventory||[]).map(item=>[item.variantKey,Number(item.available)])));}).catch(()=>{});return()=>{active=false};},[p?.id]);
+  useEffect(()=>{if(!p?.id)return;let active=true;const base=window.EE?.getBackendBase?.()||'http://localhost:5000';fetch(`${base}/api/products/inventory?productId=${encodeURIComponent(p.id)}`).then(response=>response.json()).then(data=>{if(active&&data.success){const rows=data.inventory||[];setVariantStock(Object.fromEntries(rows.map(item=>[item.variantKey,Number(item.available)])));setVariantPricing(Object.fromEntries(rows.map(item=>[item.variantKey,item])));}}).catch(()=>{});return()=>{active=false};},[p?.id]);
   useEffect(()=>{
     if(!p?.id)return;
     let active=true;
@@ -287,11 +288,12 @@ export default function ProductPage({product,route,onBack}){
   useEffect(()=>{
     if(p&&size){
       const idx=variantIndex(size);setImg(idx);
-      const pr=pricing(p.price,size.priceMultiplier);window.EE?.setSelection?.(p,`${size.value} ${size.unit}`,pr.selling,idx);
+      const live=variantPricing.shared||variantPricing[normalizeSizeLabel(`${size.value} ${size.unit}`)]||{};
+      const pr=pricing(Number(live.basePrice)>0?live.basePrice:p.price,Number(live.priceMultiplier)>0?live.priceMultiplier:size.priceMultiplier);window.EE?.setSelection?.(p,`${size.value} ${size.unit}`,pr.selling,idx);
     }
-  },[p,size]);
+  },[p,size,variantPricing]);
   if(!p)return <div className="ee-notfound"><h1>Fragrance not found</h1><button onClick={onBack}>Back to collection</button></div>;
-  const sizes=getSizes(p),selectedSize=size||sizes[0],pr=pricing(p.price,selectedSize?.priceMultiplier||1),gallery=p.images?.length?p.images:[p.image];
+  const sizes=getSizes(p),selectedSize=size||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1)),gallery=p.images?.length?p.images:[p.image];
   const selectedStock=variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
   const currentSources=img===selectedVariantIndex ? variantImages(p,selectedSize) : [imgUrl(gallery[img])];
@@ -313,7 +315,7 @@ export default function ProductPage({product,route,onBack}){
     <div className="ee-product-toolbar"><button onClick={()=>window.eeNavigateCollection?.(categorySlug(p))||onBack()}><ArrowLeft size={16}/> Collection</button><button className="ee-floating-cart" onClick={goCart}><ShoppingCart size={17}/><span>Cart</span><b>{cartCount}</b></button></div>
     <div className="ee-breadcrumb"><button type="button" onClick={()=>window.eeNavigateCollection?.('all')}>Products</button><b>/</b><button type="button" onClick={()=>window.eeNavigateCollection?.(categorySlug(p))}>{categorySlug(p)}</button><b>/</b><strong>{productSlug(p)}</strong></div>
     <div className="ee-product-hero">
-      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt=""/></button>)}</div><div className="ee-main-image"><button onClick={()=>setImg((img+gallery.length-1)%gallery.length)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><button onClick={()=>setImg((img+1)%gallery.length)}><ChevronRight/></button></div></div>
+      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>setImg((img+gallery.length-1)%gallery.length)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><button onClick={()=>setImg((img+1)%gallery.length)}><ChevronRight/></button></div></div>
       <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||'SIGNATURE FRAGRANCE').toUpperCase()}</div>{viewerCount>0&&<div className="ee-live-viewers" role="status"><Eye size={15}/><span><b>{viewerCount}</b> people are viewing this fragrance now</span><i/></div>}<div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div><div className="ee-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{variantNotice&&<div className="ee-variant-notice" role="status">{variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={s===size?'selected':''} onClick={()=>selectSize(s)}>{s.value} {s.unit}</button>)}</div><div className="ee-actions"><button className={'ee-icon '+(wish?'saved':'')} onClick={toggle}><Heart fill={wish?'currentColor':'none'}/></button><button className="ee-icon" onClick={share}><Share2/></button><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
     </div>
     <ScentJourney product={p}/>

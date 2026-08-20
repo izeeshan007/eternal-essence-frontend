@@ -142,7 +142,8 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
     async function mount(){
       if(!ref.current) return;
       try{
-        const r=await fetch('/legacy/legacy-body.html');
+        const legacyVersion='20260820-9';
+        const r=await fetch(`/legacy/legacy-body.html?v=${legacyVersion}`);
         const markup=(await r.text())
           .replace(/" onchange="applyFilters\(\)"><option value="">\s*$/,'')
           .replace(
@@ -198,7 +199,6 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         // The legacy files keep stable filenames for compatibility, so add a
         // release query when their contents change. This prevents Pages/browser
         // caches from serving an older bundle after a deployment.
-        const legacyVersion='20260820-3';
         for(const src of [`/legacy/assets/js/index.496a4899fd.js?v=${legacyVersion}`,`/legacy/assets/js/index.75993714cf.js?v=${legacyVersion}`,`/legacy/assets/js/index.3563c0bc19.js?v=${legacyVersion}`]){
           try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${src}`,e);}
         }
@@ -315,9 +315,11 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         };
         const profileButton=document.getElementById('nav-profile-btn');
         if(profileButton&&!profileButton.dataset.eeProfileBound){
-          profileButton.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();window.eeNavigatePage?.('profile');},true);
+          profileButton.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();const auth=window.EE?.getAuth?.();window.eeNavigatePage?.(auth?.token&&auth?.user?'profile':'account');},true);
           profileButton.dataset.eeProfileBound='1';
         }
+        if(page==='profile' && !window.EE?.getAuth?.()?.token) window.eeNavigatePage?.('account');
+        if(page==='account' && window.EE?.getAuth?.()?.token) window.eeNavigatePage?.('profile');
         window.eeNavigateToJournal=(slug)=>{const path=journalPath(slug);history.pushState({},'',path);window.scrollTo(0,0);window.dispatchEvent(new CustomEvent('ee:route',{detail:{path}}));};
         window.eeProductPath=(id)=>{const p=typeof id==='object'?id:window.EE?.findProduct?.(id); return p?productPath(p):'/';};
         onReady?.();
