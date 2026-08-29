@@ -174,10 +174,10 @@ const products = [
 ["Vanaffe","","Female","Autumn-Winter","Night","Sweet|Coffee|Vanilla","Candied Pear, Bubble Gum, Coffee, Vanilla.","Caramel, Jasmine, Tonka Bean, Coffee Blossom.","Rock Sugar, Vanilla, Sandalwood, Patchouli, Musk.",499,["vanaffe8.webp","Vanaffe20.webp","vanaffe3.webp"]],
 ["White OUD","White Oud","Unisex","Autumn-Winter","Night","Oud|Woody|Musky","Bergamot, Saffron, White Pepper.","Rose, Jasmine, White Woods.","White Oud, Musk, Amber, Sandalwood.",499,["white_oud8.webp","white_oud20.webp","white_oud3.webp"]],
  ["Symphoria","LV Symphony","Unisex","Spring-Summer","Day","Citrus|Fresh|Fruity","Grapefruit, Bergamot, Orange.","Ginger, Fresh Spices.","Amber, Musk.",799,["symphoria.webp"]],
-  ["Bakhoor Al Wadi","Al Wadi","Unisex","All Season","Day/Night","Woody|Amber|Smoky","Warm woods","Amber and resins","Soft smoke",450,["ee-brand-20260819.webp"],"Bakhoor",[{value:25,unit:"gm",priceMultiplier:1},{value:12.5,unit:"gm",priceMultiplier:0.5555555556}]],
-  ["Bakhoor Al Arab","Al Arab","Unisex","All Season","Day/Night","Oriental|Woody|Warm Spicy","Aromatic woods","Spices and resins","Warm amber",300,["ee-brand-20260819.webp"],"Bakhoor",[{value:25,unit:"gm",priceMultiplier:1},{value:12.5,unit:"gm",priceMultiplier:0.6}]],
-  ["Regular Bakhoor Burner","","Unisex","All Season","Day/Night","Bakhoor Accessory","","","",375,["ee-brand-20260819.webp"],"Bakhoor",[],499],
-  ["Automatic Bakhoor Burner with Timer","","Unisex","All Season","Day/Night","Bakhoor Accessory|Timer","","","",850,["ee-brand-20260819.webp"],"Bakhoor",[],1199]
+  ["Bakhoor Al Wadi","Al Wadi","Unisex","All Season","Day/Night","Woody|Amber|Smoky","Warm woods","Amber and resins","Soft smoke",450,["bakhoor_al_wadi.webp"],"Bakhoor",[{value:25,unit:"gm",priceMultiplier:1},{value:12.5,unit:"gm",priceMultiplier:0.5555555556}]],
+  ["Bakhoor Al Arab","Al Arab","Unisex","All Season","Day/Night","Oriental|Woody|Warm Spicy","Aromatic woods","Spices and resins","Warm amber",300,["bakhoor_al_arab.webp"],"Bakhoor",[{value:25,unit:"gm",priceMultiplier:1},{value:12.5,unit:"gm",priceMultiplier:0.6}]],
+  ["Regular Bakhoor Burner","","Unisex","All Season","Day/Night","Bakhoor Accessory","","","",375,["regular_bakhoor_burner.webp"],"Bakhoor",[],499],
+  ["Automatic Bakhoor Burner with Timer","","Unisex","All Season","Day/Night","Bakhoor Accessory|Timer","","","",850,["automatic_bakhoor_burner_with_timer.webp"],"Bakhoor",[],1199]
 ].map(([name, inspiredBy, gender, season, time, accords, top, mid, base, price, comboImages, category, sizeDefinitions, mrp], index) => {
 
     const imageBase = name
