@@ -20,12 +20,15 @@ const adminAssetVersion='20260820-9';
 function adminHtml(backendBase='',backendFallback=''){
   const primary=String(backendBase||'').trim().replace(/\/+$/, '');
   const fallback=String(backendFallback||'').trim().replace(/\/+$/, '');
-  const runtimeConfig=`<script>window.__EE_BACKEND_BASE_URL__=${JSON.stringify(primary).replace(/</g,'\\u003c')};window.__EE_BACKEND_FALLBACK_URL__=${JSON.stringify(fallback).replace(/</g,'\\u003c')};</script>`;
+  const runtimeConfig=`<link rel="preconnect" href="https://cdn.tailwindcss.com"><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><script>window.__EE_BACKEND_BASE_URL__=${JSON.stringify(primary).replace(/</g,'\\u003c')};window.__EE_BACKEND_FALLBACK_URL__=${JSON.stringify(fallback).replace(/</g,'\\u003c')};</script>`;
   return legacyAdminMarkup
     .replace(/<script>window\.__EE_BACKEND_BASE_URL__=[\s\S]*?<\/script>/g,'')
     .replace('<head>','<head>'+runtimeConfig)
+    .replace('</head>','<link rel="stylesheet" href="/admin-mobile.css"></head>')
+    .replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js@4\.4\.0\/dist\/chart\.umd\.min\.js"><\/script>/,'<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>')
     .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/css\/admin\.100012cefd\.css(?:\?v=[^"']*)?/g,`$1/legacy/assets/css/admin.100012cefd.css?v=${adminAssetVersion}`)
-    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/js\/admin\.9a74483567\.js(?:\?v=[^"']*)?/g,`$1/legacy/assets/js/admin.9a74483567.js?v=${adminAssetVersion}`);
+    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/js\/admin\.9a74483567\.js(?:\?v=[^"']*)?/g,`$1/legacy/assets/js/admin.9a74483567.js?v=${adminAssetVersion}`)
+    .replace(/<script src="(\/legacy\/assets\/js\/admin\.9a74483567\.js\?v=[^"]+)"><\/script>/,'<script defer src="$1"></script>');
 }
 
 function restoreAdminDashboard(backendBase,backendFallback){
@@ -58,6 +61,8 @@ export default defineConfig(({mode})=>{
   const env=loadEnv(mode,frontendDir,'');
   return {
     plugins:[react(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'',env.VITE_BACKEND_FALLBACK_URL||'')],
+    resolve:{dedupe:['react','react-dom']},
+    optimizeDeps:{include:['react','react-dom','react-dom/client','react/jsx-runtime']},
     // Vite's default production minifier is available in the bundled toolchain;
     // keep source maps disabled without requiring a separate esbuild package.
     build:{sourcemap:false}

@@ -7,8 +7,13 @@ import JournalPage from './JournalPage';
 import OfferPopup from './OfferPopup';
 import HomeEnhancements from './HomeEnhancements';
 import DealerPage from './DealerPage';
+import CartDrawer from './CartDrawer';
+import currentCatalog from '../../data/current-catalog.json';
 import './legacy.css';
 import './app.css';
+import './catalog.css';
+
+window.__EE_LOCAL_CATALOG__=currentCatalog;
 
 window.eeLoadPdfEngine=async()=>{
   if(window.jspdf?.jsPDF)return window.jspdf;
@@ -118,8 +123,12 @@ function slugify(value){
     .replace(/[^a-z0-9]+/g,'_')
     .replace(/^_+|_+$/g,'');
 }
+function categoryName(product){return String(product?.type||product?.category||'Perfume').trim()||'Perfume';}
 function categorySlug(product){
-  return String(product?.type||product?.category||'perfume').toLowerCase().includes('attar') ? 'attars' : 'perfumes';
+  const category=categoryName(product).toLowerCase();
+  if(category.includes('attar'))return 'attars';
+  if(category.includes('perfume'))return 'perfumes';
+  return slugify(category);
 }
 function productSlug(product){
   const base=slugify(product?.name||'product');
@@ -142,7 +151,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
     async function mount(){
       if(!ref.current) return;
       try{
-        const legacyVersion='20260820-9';
+        const legacyVersion='20260829-14';
         const r=await fetch(`/legacy/legacy-body.html?v=${legacyVersion}`);
         const markup=(await r.text())
           .replace(/" onchange="applyFilters\(\)"><option value="">\s*$/,'')
@@ -161,9 +170,44 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
           .replace(
             '<th class="p-4">Price</th>',
             '<th class="p-4">Quantity</th><th class="p-4">Price</th>'
+          )
+          .replace(
+            '<div class="container mx-auto px-6"><h1 class="text-3xl brand-font font-bold">Shopping Cart</h1></div>',
+            '<div class="container mx-auto px-6 flex flex-wrap items-center justify-between gap-4"><div><p class="text-[10px] uppercase tracking-[0.22em] text-yellow-700 font-bold mb-2">Your selection</p><h1 class="text-3xl brand-font font-bold">Shopping Cart</h1></div><button type="button" class="ee-cart-continue" onclick="continueShopping()"><i class="fas fa-arrow-left"></i> Continue shopping</button></div>'
           );
         if(cancelled)return;
         ref.current.innerHTML=markup;
+        // The legacy shell is fetched asynchronously. Hide catalog-only
+        // sections before the browser gets a chance to paint them on `/`.
+        // This prevents the collection grid from flashing before the home
+        // route finishes booting.
+        const initialCollectionRoute=/^\/collections(?:\/|$)/i.test(location.pathname) || location.pathname==='/collection';
+        const initialFloatingFilter=ref.current.querySelector('button[onclick="openFloatingFilters()"]');
+        if(initialFloatingFilter)initialFloatingFilter.id='catalog-floating-filter';
+        if(!initialCollectionRoute){
+          ref.current.querySelector('#filter-bar')?.classList.add('ee-catalog-hidden');
+          ref.current.querySelector('#collection-section')?.classList.add('ee-catalog-hidden');
+          initialFloatingFilter?.classList.add('ee-catalog-hidden');
+        }
+        const filterBar=ref.current.querySelector('#filter-bar');
+        const productGrid=ref.current.querySelector('#product-grid');
+        if(filterBar&&productGrid&&!ref.current.querySelector('.ee-catalog-view-toggle')){
+          const viewToggle=document.createElement('div');
+          viewToggle.className='ee-catalog-view-toggle';
+          viewToggle.setAttribute('aria-label','Product grid view');
+          viewToggle.innerHTML='<span>VIEW</span><button type="button" data-view="2">2 COL</button><button type="button" data-view="3">3 COL</button><button type="button" data-view="list">LIST</button>';
+          const storedView=localStorage.getItem('ee_catalog_view_v1')||'2';
+          const setCatalogView=view=>{
+            const normalized=['2','3','list'].includes(view)?view:'2';
+            productGrid.classList.toggle('ee-catalog-view-3',normalized==='3');
+            productGrid.classList.toggle('ee-catalog-view-list',normalized==='list');
+            viewToggle.querySelectorAll('button').forEach(button=>button.classList.toggle('active',button.dataset.view===normalized));
+            localStorage.setItem('ee_catalog_view_v1',normalized);
+          };
+          viewToggle.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>setCatalogView(button.dataset.view)));
+          filterBar.appendChild(viewToggle);
+          setCatalogView(storedView);
+        }
         const catalogueSearch=ref.current.querySelector('#search-input');
         if(catalogueSearch){
           catalogueSearch.type='search';catalogueSearch.name='ee_catalogue_query';catalogueSearch.autocomplete='off';
@@ -193,9 +237,17 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         const add=(src)=>new Promise((resolve,reject)=>{
           const s=document.createElement('script'); s.src=src; s.async=false; s.onload=resolve; s.onerror=reject; document.body.appendChild(s);
         });
-        // Payments are optional during initial catalogue boot; a blocked
-        // checkout CDN must never prevent products, admin or PDFs from loading.
-        add('https://checkout.razorpay.com/v1/checkout.js').catch(e=>console.warn('Payment widget unavailable until checkout.',e));
+        // Load the payment widget only when checkout actually needs it. This
+        // keeps Razorpay's iframe and sensor warnings out of normal browsing.
+        window.eeLoadRazorpay=window.eeLoadRazorpay||(()=>{
+          if(window.Razorpay)return Promise.resolve(window.Razorpay);
+          if(window.__eeRazorpayPromise)return window.__eeRazorpayPromise;
+          window.__eeRazorpayPromise=add('https://checkout.razorpay.com/v1/checkout.js').then(()=>{
+            if(!window.Razorpay)throw new Error('Payment widget did not initialise.');
+            return window.Razorpay;
+          }).catch(error=>{window.__eeRazorpayPromise=null;throw error});
+          return window.__eeRazorpayPromise;
+        });
         // The legacy files keep stable filenames for compatibility, so add a
         // release query when their contents change. This prevents Pages/browser
         // caches from serving an older bundle after a deployment.
@@ -305,7 +357,8 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
           window.__eeCategoryBridge=true;
         }
         window.eeNavigateCollection=(category='all')=>{
-          const normalized=String(category||'all').toLowerCase().includes('attar')?'Attar':String(category||'all').toLowerCase().includes('perfume')?'Perfume':'all';
+          const raw=String(category||'all').trim();
+          const normalized=/attar/i.test(raw)?'Attar':/perfume/i.test(raw)?'Perfume':raw||'all';
           history.pushState({},'',collectionPath(normalized,{}));
           document.getElementById('filter-bar')?.classList.remove('ee-catalog-hidden');
           document.getElementById('collection-section')?.classList.remove('ee-catalog-hidden');
@@ -318,6 +371,15 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
           profileButton.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();const auth=window.EE?.getAuth?.();window.eeNavigatePage?.(auth?.token&&auth?.user?'profile':'account');},true);
           profileButton.dataset.eeProfileBound='1';
         }
+        const navCartButton=document.getElementById('cart-count-badge')?.closest('button');
+        if(navCartButton&&!navCartButton.dataset.eeMiniCartBound){
+          navCartButton.removeAttribute('onclick');
+          navCartButton.setAttribute('aria-label','Open cart preview');
+          navCartButton.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();window.dispatchEvent(new Event('ee:mini-cart-open'))});
+          navCartButton.dataset.eeMiniCartBound='1';
+        }
+        const floatingFilter=document.querySelector('button[onclick="openFloatingFilters()"]');
+        if(floatingFilter)floatingFilter.id='catalog-floating-filter';
         if(page==='profile' && !window.EE?.getAuth?.()?.token) window.eeNavigatePage?.('account');
         if(page==='account' && window.EE?.getAuth?.()?.token) window.eeNavigatePage?.('profile');
         window.eeNavigateToJournal=(slug)=>{const path=journalPath(slug);history.pushState({},'',path);window.scrollTo(0,0);window.dispatchEvent(new CustomEvent('ee:route',{detail:{path}}));};
@@ -340,7 +402,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
 
 function productFromRoute(path){
   const cleanPath=String(path||'').split('?')[0];
-  const m=cleanPath.match(/^\/products\/(perfumes|attars)\/([^/]+)\/?$/i);
+  const m=cleanPath.match(/^\/products\/([^/]+)\/([^/]+)\/?$/i);
   if(m) return {category:m[1].toLowerCase(),slug:decodeURIComponent(m[2])};
   const old=cleanPath.match(/^\/product\/([^/]+)\/?$/i);
   if(old) return {legacyId:decodeURIComponent(old[1])};
@@ -364,7 +426,8 @@ function initialCategory(){
 }
 function collectionStateFromLocation(){
   const parts=location.pathname.split('/').filter(Boolean).map(v=>decodeURIComponent(v).toLowerCase());
-  const kind=parts[1]==='attar'?'Attar':parts[1]==='perfume'?'Perfume':'all';
+  const segment=parts[1]||'';
+  const kind=categoryFromCollectionSegment(segment);
   const facet=parts[2]||'';
   const state={gender:'',search:''};
   if(facet==='for-him')state.gender='Male';
@@ -375,8 +438,28 @@ function collectionStateFromLocation(){
   else if(facet==='sweet-musky')state.search='musk';
   return {...state,kind};
 }
+function categoryCollectionSegment(category='all'){
+  const raw=String(category||'all').trim();
+  const lower=raw.toLowerCase();
+  if(lower==='all')return '';
+  if(lower.includes('attar'))return 'attars';
+  if(lower.includes('perfume'))return 'perfumes';
+  const base=slugify(raw).replace(/_/g,'-');
+  return base.endsWith('s')?base:`${base}s`;
+}
+function categoryFromCollectionSegment(segment=''){
+  const value=String(segment||'').toLowerCase();
+  if(!value)return 'all';
+  if(value==='attar'||value==='attars')return 'Attar';
+  if(value==='perfume'||value==='perfumes')return 'Perfume';
+  const products=window.EE?.getProducts?.()||[];
+  const match=products.find(product=>categoryCollectionSegment(categoryName(product))===value);
+  if(match)return categoryName(match);
+  return value.replace(/s$/,'').replace(/[-_]+/g,' ');
+}
 function collectionPath(category='all',state={}){
-  const kind=String(category||state.kind||'all').toLowerCase().includes('attar')?'attar':String(category||state.kind||'').toLowerCase().includes('perfume')?'perfume':'';
+  const raw=String(category||state.kind||'all').trim();
+  const kind=categoryCollectionSegment(raw);
   if(!kind)return '/collections';
   if(state.gender)return `/collections/${kind}/${state.gender==='Male'?'for-him':state.gender==='Female'?'for-her':'unisex'}`;
   if(state.search)return `/collections/${kind}/${String(state.search).includes('oud')?'woody-oud':String(state.search).includes('musk')?'sweet-musky':'fresh-attars'}`;
@@ -429,6 +512,12 @@ function App(){
   const page=pageFromLocation();
   const isCollection=page==='collection' && !isProduct;
 
+  useEffect(()=>{
+    if(!legacyReady)return;
+    const visible=isCollection;
+    ['filter-bar','collection-section','catalog-floating-filter'].forEach(id=>document.getElementById(id)?.classList.toggle('ee-catalog-hidden',!visible));
+  },[legacyReady,isCollection,path]);
+
   // Once legacy data is ready, refresh product resolution so direct links work.
   useEffect(()=>{ if(legacyReady) setPath(location.pathname+location.search); },[legacyReady]);
 
@@ -438,16 +527,18 @@ function App(){
     setPath('/');
     window.dispatchEvent(new CustomEvent('ee:route',{detail:{path:'/'}}));
   };
-  return <>
+  return <div className="ee-route-view">
     <LegacyShell active={!isDealer} page={isProduct||isJournal?'home':(isCollection?'home':page)} collectionOnly={isCollection} productOnly={isProduct||isJournal||isDealer} onReady={handleLegacyReady}/>
     {!isProduct && !isJournal && !isCollection && !isDealer && legacyReady && document.getElementById('ee-home-react-mount') &&
       createPortal(<HomeEnhancements/>,document.getElementById('ee-home-react-mount'))}
     {isProduct && (legacyReady ? <ProductPage product={product} route={route} onBack={navigateHome}/> : <div className="ee-loading"><div className="spinner"></div><p>Loading fragrance…</p></div>)}
     {isJournal && (legacyReady ? <JournalPage slug={journalSlug} onBack={navigateHome}/> : <div className="ee-loading"><div className="spinner"></div><p>Loading journal...</p></div>)}
     {isDealer&&<DealerPage backendBase={backendUrl()} legacyReady={legacyReady}/>}
+    {!isDealer&&<CartDrawer/>}
     {!isDealer&&<OfferPopup/>}
-  </>;
+  </div>;
 }
 const rootElement=document.getElementById('root');
-const reactRoot=window.__eeReactRoot||(window.__eeReactRoot=createRoot(rootElement));
+const reactRoot=import.meta.hot?.data.reactRoot||createRoot(rootElement);
+if(import.meta.hot)import.meta.hot.data.reactRoot=reactRoot;
 reactRoot.render(<App/>);

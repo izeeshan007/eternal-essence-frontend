@@ -1,27 +1,32 @@
 import React,{useEffect,useMemo,useState} from 'react';
 
-// Backend variant arrays usually start with the transparent 8 ml bottle
-// (for example `million8.png`). Home/collection tiles should use the
-// established default gift-pack image instead. Prefer an explicit image or
-// index 6, then derive the un-suffixed product asset (`million.webp`) from a
-// size-suffixed filename. Product detail/variant views still use the original
-// array entries and are not affected by this presentation-only choice.
-const imageUrl=p=>{
+// Home tiles use the same canonical full-product image as collection cards.
+// Product detail/variant views still retain their complete gallery arrays.
+const imageCandidates=p=>{
   const images=Array.isArray(p?.images)?p.images:[];
+  const isAttar=typeOf(p).toLowerCase().includes('attar');
   let image=p?.image||images[6]||images[0]||'';
-  if(!p?.image&& !images[6] && image && !String(image).startsWith('http')){
+  if(!p?.image&&!images[6]&&image&&!String(image).startsWith('http')){
     const raw=String(image).split('/').pop();
     const match=raw.match(/^(.*?)(?:\d+)\.(png|jpe?g|webp)$/i);
     if(match) image=raw.replace(raw,`${match[1]}.${match[2]}`);
   }
-  return !image?'/products/placeholder.webp':String(image).startsWith('http')?image:`/products/${String(image).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
+  const candidates=isAttar
+    ? [images[0],images[1],images[2],image,p?.comboOverlayImages?.[8],p?.comboOverlayImages?.[20],images[6]]
+    : [image,images[6],images[3],images[2],images[1],images[0]];
+  return [...new Set(candidates.filter(Boolean).map(candidate=>{
+    let value=String(candidate);
+    if(value.split('/').pop().toLowerCase()==='eternal_white.webp')value='eternal white.webp';
+    return value.startsWith('http')?value:`/products/${value.split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
+  }).concat('/products/ee-brand-20260819.webp'))];
 };
-const typeOf=p=>String(p?.type||p?.category||'').toLowerCase().includes('attar')?'Attar':'Perfume';
+const typeOf=p=>String(p?.type||p?.category||'Perfume').trim()||'Perfume';
 function useProducts(){const [products,setProducts]=useState([]);useEffect(()=>{const sync=()=>setProducts(window.EE?.getProducts?.()||[]);sync();const timer=setInterval(sync,600);return()=>clearInterval(timer);},[]);return products;}
-function collectionRoute(type,filter={}){const kind=String(type||'all').toLowerCase().includes('attar')?'attar':'perfume';const gender=filter.gender;if(gender)return `/collections/${kind}/${gender==='Male'?'for-him':gender==='Female'?'for-her':'unisex'}`;const mood=filter.mood;if(mood)return `/collections/${kind}/${mood}`;return `/collections/${kind}`;}
+function collectionRoute(type,filter={}){const raw=String(type||'all').trim(),lower=raw.toLowerCase();let kind=lower.includes('attar')?'attars':lower.includes('perfume')?'perfumes':lower==='all'?'':raw.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');if(kind&&!kind.endsWith('s'))kind+='s';const gender=filter.gender;if(gender)return `/collections/${kind}/${gender==='Male'?'for-him':gender==='Female'?'for-her':'unisex'}`;const mood=filter.mood;if(mood)return `/collections/${kind}/${mood}`;return kind?`/collections/${kind}`:'/collections';}
 function applyLegacyFilters(){try{window.applyFilters?.();}catch(error){console.warn('Legacy filters skipped until catalog controls are ready',error);}}
 function goToCollection(type='all',filter={}){history.pushState({},'',type==='all'?'/collections':collectionRoute(type,filter));window.dispatchEvent(new CustomEvent('ee:route',{detail:{path:location.pathname}}));document.getElementById('filter-bar')?.classList.remove('ee-catalog-hidden');document.getElementById('collection-section')?.classList.remove('ee-catalog-hidden');window.setCategory?.(type,true);setTimeout(()=>{const search=document.getElementById('search-input');if(search)search.value='';for(const id of ['gender-filter','season-filter','time-filter','sort-filter']){const control=document.getElementById(id);if(control)control.value='';}if(filter.gender){const f=document.getElementById('gender-filter');if(f)f.value=filter.gender;}if(filter.mood&&search)search.value=filter.mood==='woody-oud'?'oud':filter.mood==='sweet-musky'?'musk':'fresh';applyLegacyFilters();window.scrollTo(0,0);},80);}
-function Tile({title,description,product,onClick,label}){return <button className="ee-collection-tile" onClick={onClick}><img src={imageUrl(product)} alt="" loading="lazy"/><span className="ee-collection-shade"/><span className="ee-collection-copy"><em>{label}</em><strong>{title}</strong><small>{description}</small><b>EXPLORE <i>→</i></b></span></button>;}
+function ProductArtwork({product,alt='',loading='lazy'}){const sources=imageCandidates(product),[index,setIndex]=useState(0);useEffect(()=>setIndex(0),[product?.id,product?._id,product?.name]);return <img src={sources[index]} alt={alt} loading={loading} onError={()=>setIndex(current=>Math.min(current+1,sources.length-1))}/>;}
+function Tile({title,description,product,onClick,label}){return <button className="ee-collection-tile" onClick={onClick}><ProductArtwork product={product}/><span className="ee-collection-shade"/><span className="ee-collection-copy"><em>{label}</em><strong>{title}</strong><small>{description}</small><b>EXPLORE <i>→</i></b></span></button>;}
 function Benefit({icon,title,copy}){return <div className="ee-benefit"><span>{icon}</span><strong>{title}</strong><small>{copy}</small></div>;}
 
 export default function HomeEnhancements(){
@@ -29,32 +34,42 @@ export default function HomeEnhancements(){
   useEffect(()=>{if(!new URLSearchParams(location.search).get('collection')){document.getElementById('filter-bar')?.classList.add('ee-catalog-hidden');document.getElementById('collection-section')?.classList.add('ee-catalog-hidden');}},[]);
   const perfumes=useMemo(()=>products.filter(p=>typeOf(p)==='Perfume'),[products]);
   const attars=useMemo(()=>products.filter(p=>typeOf(p)==='Attar'),[products]);
+  const customCategories=useMemo(()=>[...new Map(products.filter(p=>!['perfume','attar','combo'].includes(String(typeOf(p)).toLowerCase().replace(/\s+/g,''))).map(p=>[String(typeOf(p)).toLowerCase(),typeOf(p)])).values()],[products]);
+  const namedProduct=(list,names)=>names.map(name=>list.find(product=>String(product.name||'').toLowerCase()===name.toLowerCase())).find(Boolean);
+  const attarLead=namedProduct(attars,['Al Wadi','Mukhallat','Cool Tide'])||attars[0];
+  const freshAttar=namedProduct(attars,['Cool Tide','Aqua Wave','Iceberg'])||attars.find(p=>/fresh|citrus|marine|aquatic/i.test(`${p.accords} ${p.family}`));
+  const woodyAttar=namedProduct(attars,['Al Wadi','Mukhallat','Ameer Al OUD'])||attars.find(p=>/oud|wood|amber/i.test(`${p.accords} ${p.family}`));
+  const sweetAttar=namedProduct(attars,['Mukhallat','Pink Vanilla','Chocolate Musk'])||attars.find(p=>/sweet|gourmand|musk|vanilla/i.test(`${p.accords} ${p.family}`));
   const groups=[
     {title:'For Him',label:'PERFUMES',description:'Fresh, aromatic and statement profiles.',product:perfumes.find(p=>p.gender==='Male'),action:()=>goToCollection('Perfume',{gender:'Male'})},
     {title:'For Her',label:'PERFUMES',description:'Floral, luminous and softly sweet signatures.',product:perfumes.find(p=>p.gender==='Female'),action:()=>goToCollection('Perfume',{gender:'Female'})},
     {title:'Unisex',label:'PERFUMES',description:'Balanced blends made to be shared.',product:perfumes.find(p=>p.gender==='Unisex'),action:()=>goToCollection('Perfume',{gender:'Unisex'})},
-    {title:'Fresh Attars',label:'ATTARS',description:'Clean citrus, marine and aromatic oils.',product:attars.find(p=>/fresh|citrus|marine|aquatic/i.test(`${p.accords} ${p.family}`)),action:()=>goToCollection('Attar',{mood:'fresh-attars'})},
-    {title:'Woody & Oud',label:'ATTARS',description:'Deep woods, amber and lasting oud.',product:attars.find(p=>/oud|wood|amber/i.test(`${p.accords} ${p.family}`)),action:()=>goToCollection('Attar',{mood:'woody-oud'})},
-    {title:'Sweet & Musky',label:'ATTARS',description:'Warm gourmand and skin-close blends.',product:attars.find(p=>/sweet|gourmand|musk|vanilla/i.test(`${p.accords} ${p.family}`)),action:()=>goToCollection('Attar',{mood:'sweet-musky'})}
+    {title:'Fresh Attars',label:'ATTARS',description:'Clean citrus, marine and aromatic oils.',product:freshAttar,action:()=>goToCollection('Attar',{mood:'fresh-attars'})},
+    {title:'Woody & Oud',label:'ATTARS',description:'Deep woods, amber and lasting oud.',product:woodyAttar,action:()=>goToCollection('Attar',{mood:'woody-oud'})},
+    {title:'Sweet & Musky',label:'ATTARS',description:'Warm gourmand and skin-close blends.',product:sweetAttar,action:()=>goToCollection('Attar',{mood:'sweet-musky'})}
   ];
-  const featured=perfumes.slice(0,4);
+  const featuredNames=['Aventus','Eternal White','Cool Essence','Divine Essence','Al Wadi','Titanium'];
+  const featured=featuredNames.map(name=>{
+    const matches=products.filter(p=>String(p.name||'').toLowerCase()===name.toLowerCase());
+    return matches.find(p=>typeOf(p)==='Perfume'&&Number(p.price)>=400)||matches.find(p=>Number(p.price)>=400)||matches[0];
+  }).filter(Boolean);
   const lead=featured[0]||products[0], fresh=perfumes.find(p=>/fresh|aquatic|citrus|marine/i.test(`${p.accords} ${p.family}`))||perfumes[1], deep=products.find(p=>/oud|woody|amber|musk/i.test(`${p.accords} ${p.family}`))||attars[0];
   const notes=p=>[p?.top,p?.mid,p?.base].filter(Boolean).join(' → ')||'top, heart and base notes';
   const journal=[
-    {slug:'reading-a-fragrance',tag:'NOTE MAP',title:`${lead?.name||'A signature scent'} from opening to dry-down`,copy:`Read the profile as a journey: ${notes(lead)}. Learn how to compare the character of every blend.`,productId:lead?.id||lead?._id},
+    {slug:'reading-a-fragrance',tag:'NOTE MAP',title:'How to read any fragrance from opening to dry-down',copy:`Start with the opening, follow the heart and let the base settle. Use ${lead?.name||'your chosen fragrance'} as one example, then compare the character of every blend.`,productId:lead?.id||lead?._id},
     {slug:'fresh-fragrance-for-warm-weather',tag:'WARM WEATHER',title:`When to wear ${fresh?.name||'a fresh profile'}`,copy:`${fresh?.name||'Fresh profiles'} brings ${fresh?.top||'bright opening notes'} into focus, then settles through ${fresh?.mid||'a clean heart'} toward ${fresh?.base||'a smooth base'}.`,productId:fresh?.id||fresh?._id},
     {slug:'woods-oud-and-evening-wear',tag:'DEPTH & LASTING',title:`Layer your evening around ${deep?.name||'woods and oud'}`,copy:`${deep?.name||'Woody profiles'} is built around ${deep?.base||deep?.family||'richer base notes'}. Wear time varies with skin, clothing, weather and application.`,productId:deep?.id||deep?._id}
   ];
   return <>
     <section className="ee-home-collections">
       <div className="ee-home-intro"><span>THE COLLECTION</span><h2>Find the scent that feels like you.</h2><p>Start with a fragrance family, then refine it by mood, gender and the way you wear it.</p></div>
-      <div className="ee-main-collections"><Tile title="Perfumes" label="01 · EAU DE PARFUM" description="Signature sprays for everyday wear, evenings and statement moments." product={perfumes[0]} onClick={()=>goToCollection('Perfume')}/><Tile title="Attars" label="02 · CONCENTRATED OILS" description="Oil-rich blends built around oud, amber, musk, woods and florals." product={attars[0]} onClick={()=>goToCollection('Attar')}/></div>
-      <div className="ee-subcollection-head"><span/><b>SHOP BY MOOD & STYLE</b><span/></div><div className="ee-subcollection-grid">{groups.map(group=><Tile key={group.title} {...group} onClick={group.action}/>)}</div>
+      <div className="ee-main-collections"><Tile title="Perfumes" label="01 · EAU DE PARFUM" description="Signature sprays for everyday wear, evenings and statement moments." product={perfumes[0]} onClick={()=>goToCollection('Perfume')}/><Tile title="Attars" label="02 · CONCENTRATED OILS" description="Oil-rich blends built around oud, amber, musk, woods and florals." product={attarLead} onClick={()=>goToCollection('Attar')}/></div>
+      <div className="ee-subcollection-head"><span/><b>SHOP BY MOOD & STYLE</b><span/></div><div className="ee-subcollection-grid">{groups.map(group=><Tile key={group.title} {...group} onClick={group.action}/>)}{customCategories.map(category=><Tile key={category} title={category} label="COLLECTION" description={`Explore our ${category.toLowerCase()} collection.`} product={products.find(p=>typeOf(p)===category)} onClick={()=>goToCollection(category)}/>)}</div>
       <div className="ee-explore-more"><button onClick={()=>goToCollection('all')}>EXPLORE ALL PRODUCTS <span>→</span></button></div>
     </section>
-    <section className="ee-home-featured"><div className="ee-home-section-heading"><span>THE EDIT</span><h2>Begin with a point of view.</h2><p>Four signature perfumes selected from our current collection.</p><button onClick={()=>goToCollection('Perfume')}>VIEW ALL PERFUMES →</button></div><div className="ee-featured-grid">{featured.map(p=><button className="ee-featured-card" key={p.id||p._id||p.name} onClick={()=>window.eeNavigateToProduct?.(p)}><img src={imageUrl(p)} alt={p.name}/><span><small>{p.family||'SIGNATURE PROFILE'}</small><strong>{p.name}</strong><em>{Array.isArray(p.accords)?p.accords.slice(0,3).join(' · '):'Signature fragrance'}</em></span></button>)}</div></section>
+    <section className="ee-home-featured"><div className="ee-home-section-heading"><span>THE EDIT</span><h2>Begin with a point of view.</h2><p>Our most-loved signatures, selected from the current collection.</p><button onClick={()=>goToCollection('Perfume')}>VIEW ALL PERFUMES →</button></div><div className="ee-featured-grid">{featured.map(p=><button className="ee-featured-card" key={p.id||p._id||p.name} onClick={()=>window.eeNavigateToProduct?.(p)}><ProductArtwork product={p} alt={p.name}/><span><small>{p.family||'SIGNATURE PROFILE'}</small><strong>{p.name}</strong><em>{Array.isArray(p.accords)?p.accords.slice(0,3).join(' · '):'Signature fragrance'}</em></span></button>)}</div></section>
     <section className="ee-why-home"><div className="ee-home-section-heading centered"><span>WHY ETERNAL ESSENCE</span><h2>Thoughtful fragrance, made transparent.</h2><p>Everything you need to choose confidently, from the first note to the final dry-down.</p></div><div className="ee-benefit-grid"><Benefit icon="✦" title="Curated profiles" copy="Every blend is organised by notes, mood and wear occasion."/><Benefit icon="◌" title="Clear disclosure" copy="See the top, heart and base notes before you make a choice."/><Benefit icon="◇" title="Made for gifting" copy="Create custom sets and perfume cards for meaningful moments."/><Benefit icon="✓" title="Reliable service" copy="Secure checkout, India-wide shipping and quality assurance."/></div></section>
-    <section className="ee-home-compare"><div className="ee-home-section-heading centered"><span>THE DIFFERENCE</span><h2>How Eternal Essence compares.</h2><p>Luxury details should be clear, not hidden.</p></div><div className="ee-compare-card"><div className="ee-compare-row head"><b>DETAIL</b><strong>ETERNAL ESSENCE</strong><em>OTHERS</em></div>{[['Ingredient quality','Luxury-grade oils','Often undisclosed'],['Oil concentration','35% extrait','15–20%'],['Longevity','6–10+ hours*','3–5 hours'],['Formula transparency','Full disclosure','Not always'],['COD available','Yes','Rarely']].map(row=><div className="ee-compare-row" key={row[0]}><b>{row[0]}</b><strong>{row[1]}</strong><em>{row[2]}</em></div>)}</div></section>
+    <section className="ee-home-compare"><div className="ee-home-section-heading centered"><span>THE DIFFERENCE</span><h2>How Eternal Essence compares.</h2><p>Luxury details should be clear, not hidden.</p></div><div className="ee-compare-card"><div className="ee-compare-row head"><b>DETAIL</b><strong>ETERNAL ESSENCE</strong><em>OTHERS</em></div>{[['Ingredient quality','Luxury-grade oils','Often undisclosed'],['Oil concentration','35–45% extrait','15–20%'],['Longevity','6–10+ hours*','3–5 hours'],['Formula transparency','Full disclosure','Not always']].map(row=><div className="ee-compare-row" key={row[0]}><b>{row[0]}</b><strong>{row[1]}</strong><em>{row[2]}</em></div>)}</div></section>
     <section className="ee-home-journal"><div className="ee-home-section-heading centered"><span>THE JOURNAL</span><h2>Ideas for wearing fragrance well.</h2><p>Product-led notes, seasonal edits and practical guidance from the collection.</p></div><div className="ee-journal-grid">{journal.map(item=><article key={item.slug}><span>{item.tag}</span><h3>{item.title}</h3><p>{item.copy}</p><button onClick={()=>window.eeNavigateToJournal?.(item.slug)}>READ THE ARTICLE →</button></article>)}</div></section>
     <section className="ee-home-trust"><Benefit icon="♢" title="Free shipping" copy="Pan India delivery"/><Benefit icon="▣" title="Secure payment" copy="Safe and encrypted checkout"/><Benefit icon="◫" title="Authenticity assured" copy="Made for repeat wear"/><Benefit icon="◉" title="Online support" copy="We are here when you need us"/></section>
   </>;
