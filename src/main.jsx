@@ -8,7 +8,6 @@ import OfferPopup from './OfferPopup';
 import HomeEnhancements from './HomeEnhancements';
 import DealerPage from './DealerPage';
 import CartDrawer from './CartDrawer';
-import currentCatalog from '../../data/current-catalog.json';
 import currentCatalog from "../data/current-catalog.json";
 import './legacy.css';
 import './app.css';
