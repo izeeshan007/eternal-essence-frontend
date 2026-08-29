@@ -1,0 +1,4548 @@
+[
+  {
+    "legacyId": "1",
+    "catalogOrder": 0,
+    "name": "Purple OUD",
+    "description": "A deep, luxurious oud blended with warm amber and exotic spices.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Purple Oud (Dior)",
+    "family": "Amber Woody",
+    "season": "Autumn-Winter",
+    "time": "Day/Night",
+    "accords": [
+      "Woody",
+      "Spicy",
+      "Citrus",
+      "Oud"
+    ],
+    "notes": {
+      "top": "Mandarin Orange",
+      "mid": "Pink Pepper, Saffron",
+      "base": "Oud (Agarwood)"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "purple_oud.webp",
+      "purple_oud1.webp",
+      "purple_oud2.webp",
+      "purple_oud3.webp",
+      "purple_oud4.webp",
+      "purple_oud5.webp",
+      "purple_oud6.webp",
+      "purple_oud7.webp",
+      "purple_oud100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "2",
+    "catalogOrder": 1,
+    "name": "Pulse Royale",
+    "description": "Fresh aromatic notes with a smooth woody and masculine finish.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "CR-7",
+    "family": "Aromatic Fougère",
+    "season": "All Season",
+    "time": "Day",
+    "accords": [
+      "Aromatic",
+      "Woody",
+      "Powdery",
+      "Warm Spicy"
+    ],
+    "notes": {
+      "top": "Lavender, Cardamom, Artemisia, Bergamot",
+      "mid": "Tobacco, Cinnamon, Cedar, Iris",
+      "base": "Vanilla, Musk, Sandalwood, Amber"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "pulse_royale.webp",
+      "pulse_royale1.webp",
+      "pulse_royale2.webp",
+      "pulse_royale3.webp",
+      "pulse_royale4.webp",
+      "pulse_royale5.webp",
+      "pulse_royale6.webp",
+      "pulse_royale7.webp",
+      "pulse_royale100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "3",
+    "catalogOrder": 2,
+    "name": "Aqua Wave",
+    "description": "A fresh aquatic fragrance with citrus and marine notes. Clean, crisp and refreshing.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Acqua Di Gio",
+    "family": "Aromatic Aquatic",
+    "season": "Spring-Summer",
+    "time": "Day/Night",
+    "accords": [
+      "Citrus",
+      "Aromatic",
+      "Marine",
+      "Fresh Spicy"
+    ],
+    "notes": {
+      "top": "Lime, Lemon, Bergamot, Jasmine, Orange, Mandarin",
+      "mid": "Sea Notes, Jasmine, Calone, Peach, Freesia",
+      "base": "White Musk, Cedar, Oakmoss, Patchouli, Amber"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "aqua_wave.webp",
+      "aqua_wave1.webp",
+      "aqua_wave2.webp",
+      "aqua_wave3.webp",
+      "aqua_wave4.webp",
+      "aqua_wave5.webp",
+      "aqua_wave6.webp",
+      "aqua_wave7.webp",
+      "aqua_wave100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "4",
+    "catalogOrder": 3,
+    "name": "Eternal Elixir",
+    "description": "An intense spicy aromatic scent with powerful depth. Perfect for bold evenings.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Dior Sauvage Elixir",
+    "family": "Aromatic Spicy",
+    "season": "All Season",
+    "time": "Night",
+    "accords": [
+      "Warm Spicy",
+      "Fresh Spicy",
+      "Woody",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Nutmeg, Cinnamon, Cardamom, Grapefruit",
+      "mid": "Lavender",
+      "base": "Licorice, Sandalwood, Amber, Patchouli, Vetiver"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "eternal_elixir.webp",
+      "eternal_elixir1.webp",
+      "eternal_elixir2.webp",
+      "eternal_elixir3.webp",
+      "eternal_elixir4.webp",
+      "eternal_elixir5.webp",
+      "eternal_elixir6.webp",
+      "eternal_elixir7.webp",
+      "eternal_elixir100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "5",
+    "catalogOrder": 4,
+    "name": "Golden Blush",
+    "description": "Soft florals with creamy vanilla and almond sweetness. Elegant and feminine.",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "Good Girl Blush",
+    "family": "Chypre Floral",
+    "season": "All Season",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Vanilla",
+      "Citrus",
+      "Powdery",
+      "Almond"
+    ],
+    "notes": {
+      "top": "Bergamot, Bitter Almond",
+      "mid": "Peony, Ylang-Ylang",
+      "base": "Vanilla, Coumarin (Tonka)"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "golden_blush.webp",
+      "golden_blush1.webp",
+      "golden_blush2.webp",
+      "golden_blush3.webp",
+      "golden_blush4.webp",
+      "golden_blush5.webp",
+      "golden_blush6.webp",
+      "golden_blush7.webp",
+      "golden_blush100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "6",
+    "catalogOrder": 5,
+    "name": "Intense Suede",
+    "description": "Warm spicy sweetness with smooth suede and vanilla. Sensual and addictive.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Stronger With You Intensely",
+    "family": "Oriental Fougère",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Warm Spicy",
+      "Amber",
+      "Vanilla",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Pink Pepper, Juniper, Violet",
+      "mid": "Toffee, Cinnamon, Lavender, Sage",
+      "base": "Vanilla, Tonka Bean, Amber, Suede"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "intense_suede.webp",
+      "intense_suede1.webp",
+      "intense_suede2.webp",
+      "intense_suede3.webp",
+      "intense_suede4.webp",
+      "intense_suede5.webp",
+      "intense_suede6.webp",
+      "intense_suede7.webp",
+      "intense_suede100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "7",
+    "catalogOrder": 6,
+    "name": "Cool Essence",
+    "description": "Crisp green freshness with citrus and woods. Sporty, clean and refreshing.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Polo Sport",
+    "family": "Aromatic Green",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Aromatic",
+      "Fresh Spicy",
+      "Green",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Mint, Aldehydes, Lavender, Bergamot, Mandarin, Lemon",
+      "mid": "Seagrass, Ginger, Jasmine, Geranium, Rosewood",
+      "base": "Musk, Sandalwood, Cedar, Guaiac Wood, Amber"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "cool_essence.webp",
+      "cool_essence1.webp",
+      "cool_essence2.webp",
+      "cool_essence3.webp",
+      "cool_essence4.webp",
+      "cool_essence5.webp",
+      "cool_essence6.webp",
+      "cool_essence7.webp",
+      "cool_essence100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "8",
+    "catalogOrder": 7,
+    "name": "Divine Essence",
+    "description": "A luxurious vanilla-forward fragrance with aromatic warmth. Comforting yet powerful.",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "Burberry Goddess",
+    "family": "Aromatic Gourmand",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": [
+      "Vanilla",
+      "Aromatic",
+      "Sweet",
+      "Lavender"
+    ],
+    "notes": {
+      "top": "Vanilla Infusion, Lavender, Cacao, Ginger",
+      "mid": "Vanilla Caviar",
+      "base": "Vanilla Absolute"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "divine_essence.webp",
+      "divine_essence1.webp",
+      "divine_essence2.webp",
+      "divine_essence3.webp",
+      "divine_essence4.webp",
+      "divine_essence5.webp",
+      "divine_essence6.webp",
+      "divine_essence7.webp",
+      "divine_essence100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "9",
+    "catalogOrder": 8,
+    "name": "Vanilla Blossom",
+    "description": "Sweet vanilla blended with florals and amber. Cozy, warm and irresistible.",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "Kayali Vanilla 28",
+    "family": "Amber Vanilla",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Vanilla",
+      "Sweet",
+      "Amber",
+      "Powdery",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Vanilla Orchid, Jasmine",
+      "mid": "Brown Sugar, Tonka Bean",
+      "base": "Amber, Amberwood, Musk, Patchouli"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "vanilla_blossom.webp",
+      "vanilla_blossom1.webp",
+      "vanilla_blossom2.webp",
+      "vanilla_blossom3.webp",
+      "vanilla_blossom4.webp",
+      "vanilla_blossom5.webp",
+      "vanilla_blossom6.webp",
+      "vanilla_blossom7.webp",
+      "vanilla_blossom100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "10",
+    "catalogOrder": 9,
+    "name": "Eternal Sauvage",
+    "description": "Fresh spicy citrus with aromatic woods. Powerful, masculine and long-lasting.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Dior Sauvage (EDT)",
+    "family": "Aromatic Fougère",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": [
+      "Fresh Spicy",
+      "Amber",
+      "Citrus",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Calabrian Bergamot, Pepper",
+      "mid": "Sichuan Pepper, Lavender, Pink Pepper, Vetiver, Patchouli",
+      "base": "Ambroxan, Cedar, Labdanum"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "eternal_sauvage.webp",
+      "eternal_sauvage1.webp",
+      "eternal_sauvage2.webp",
+      "eternal_sauvage3.webp",
+      "eternal_sauvage4.webp",
+      "eternal_sauvage5.webp",
+      "eternal_sauvage6.webp",
+      "eternal_sauvage7.webp",
+      "eternal_sauvage100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "11",
+    "catalogOrder": 10,
+    "name": "Invictus",
+    "description": "Fresh aquatic scent with salty marine notes. Energetic, youthful and bold.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Invictus Aqua",
+    "family": "Woody Aquatic",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Marine",
+      "Aquatic",
+      "Salty"
+    ],
+    "notes": {
+      "top": "Yuzu, Grapefruit, Pink Pepper",
+      "mid": "Sea Water, Violet Leaf",
+      "base": "Ambergris, Amberwood, Guaiac Wood"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "invictus.webp",
+      "invictus1.webp",
+      "invictus2.webp",
+      "invictus3.webp",
+      "invictus4.webp",
+      "invictus5.webp",
+      "invictus6.webp",
+      "invictus7.webp",
+      "invictus100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "12",
+    "catalogOrder": 11,
+    "name": "Bleu Voyage",
+    "description": "Citrus freshness balanced with woody incense notes. Sophisticated and timeless.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Bleu de Chanel",
+    "family": "Woody Aromatic",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": [
+      "Citrus",
+      "Woody",
+      "Warm Spicy",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Grapefruit, Lemon, Mint, Pink Pepper",
+      "mid": "Ginger, Nutmeg, Jasmine, Iso E Super",
+      "base": "Incense, Vetiver, Cedar, Sandalwood, Patchouli"
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "bleu_voyage.webp",
+      "bleu_voyage1.webp",
+      "bleu_voyage2.webp",
+      "bleu_voyage3.webp",
+      "bleu_voyage4.webp",
+      "bleu_voyage5.webp",
+      "bleu_voyage6.webp",
+      "bleu_voyage7.webp",
+      "bleu_voyage100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "13",
+    "catalogOrder": 12,
+    "name": "Aventus",
+    "description": "Iconic fruity-smoky fragrance with woods and musk. Confident and commanding.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Creed Aventus",
+    "family": "Chypre Fruity",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": [
+      "Fruity",
+      "Sweet",
+      "Leather",
+      "Woody",
+      "Smoky"
+    ],
+    "notes": {
+      "top": "Pineapple, Bergamot, Black Currant, Apple",
+      "mid": "Birch, Patchouli, Moroccan Jasmine, Rose",
+      "base": "Musk, Oakmoss, Ambergris, Vanilla"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "aventus.webp",
+      "aventus1.webp",
+      "aventus2.webp",
+      "aventus3.webp",
+      "aventus4.webp",
+      "aventus5.webp",
+      "aventus6.webp",
+      "aventus7.webp",
+      "aventus100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "14",
+    "catalogOrder": 13,
+    "name": "Golden Flora",
+    "description": "Bright floral bouquet with fruity sweetness. Soft, joyful and elegant.",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "Gucci Flora Gorgeous Gardenia",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "White Floral",
+      "Sweet",
+      "Fruity",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Pear Blossom, Red Berries, Italian Mandarin",
+      "mid": "Gardenia, Jasmine, Frangipani",
+      "base": "Brown Sugar, Patchouli"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "golden_flora.webp",
+      "golden_flora1.webp",
+      "golden_flora2.webp",
+      "golden_flora3.webp",
+      "golden_flora4.webp",
+      "golden_flora5.webp",
+      "golden_flora6.webp",
+      "golden_flora7.webp",
+      "golden_flora100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "15",
+    "catalogOrder": 14,
+    "name": "Fresh Impact",
+    "description": "Sparkling citrus with aromatic spice and woods. Clean, uplifting and modern.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Louis Vuitton Imagination",
+    "family": "Citrus Aromatic",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Aromatic",
+      "Fresh Spicy",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Citron, Calabrian Bergamot, Sicilian Orange",
+      "mid": "Tunisian Neroli, Nigerian Ginger, Ceylon Cinnamon",
+      "base": "Chinese Black Tea, Ambroxan, Guaiac Wood, Olibanum"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "fresh_impact.webp",
+      "fresh_impact1.webp",
+      "fresh_impact2.webp",
+      "fresh_impact3.webp",
+      "fresh_impact4.webp",
+      "fresh_impact5.webp",
+      "fresh_impact6.webp",
+      "fresh_impact7.webp",
+      "fresh_impact100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "15",
+    "catalogOrder": 15,
+    "name": "Chocolate Musk",
+    "description": "A rich gourmand attar blending creamy chocolate with soft musk and powdery warmth, creating a comforting and addictive aroma.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Gourmand",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Gourmand",
+      "Musky",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Milk Chocolate, Cinnamon, Vanilla",
+      "mid": "Spicy Notes, Rose",
+      "base": "White Musk, Sandalwood, Myrrh, Amber"
+    },
+    "price": 49,
+    "sizes": [],
+    "images": [
+      "sweet chocolate gourmond.webp",
+      "chocolatem1.webp",
+      "chocolatem2.webp",
+      "info.webpa"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "17",
+    "catalogOrder": 16,
+    "name": "Iceberg",
+    "description": "A concentrated attar version of a fresh citrus floral fragrance, offering enhanced longevity and smooth clarity.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Fresh Citrus",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Fresh",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Galbanum, Bergamot, Basil, Orange Blossom, Lemon, Peach",
+      "mid": "Lily, Lily-of-the-Valley, Jasmine, Orris Root, Rose, Ylang-Ylang",
+      "base": "Oakmoss, Cedar, Vetiver, Sandalwood, Musk, Amber"
+    },
+    "price": 49,
+    "sizes": [],
+    "images": [
+      "fresh_auqatic.webp",
+      "iceberga1.webp",
+      "iceberga2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "18",
+    "catalogOrder": 17,
+    "name": "Dubai Gold",
+    "description": "A luxurious Middle Eastern attar where rich oud meets warm amber and exotic spices, ideal for bold evening wear.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oud",
+      "Amber",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Saffron, Bitter Orange, Brandy",
+      "mid": "Cedarwood, Guaiac Wood, Juniper",
+      "base": "Patchouli, Sandalwood, Musk, Amber"
+    },
+    "price": 59,
+    "sizes": [],
+    "images": [
+      "sweet gourmond.webp",
+      "dubaig1.webp",
+      "dubaig2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "20",
+    "catalogOrder": 18,
+    "name": "Cool Tide",
+    "description": "A long-lasting attar interpretation of a classic aquatic fragrance with cooling freshness and floral depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Davidoff CoolWater",
+    "family": "Aquatic Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Floral",
+      "Aquatic"
+    ],
+    "notes": {
+      "top": "Melon, Lotus, Lemon, Pineapple, Quince, Calone, Lily",
+      "mid": "Lotus, Water Lily, Lily-of-the-Valley, Jasmine, Honey, Hawthorn, Rose",
+      "base": "Musk, Vetiver, Raspberry, Blackberry, Violet Root, Peach, Sandalwood"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fresh marine.webp",
+      "coolta1.webp",
+      "coolta2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "21",
+    "catalogOrder": 19,
+    "name": "Red Musk",
+    "description": "A deep and sensual musky attar accented with warm spices and tobacco nuances for evening wear.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Musky",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Musky",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Pepper",
+      "mid": "Cinnamon",
+      "base": "Tobacco, Musk"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "alln.webp",
+      "redma1.webp",
+      "redma2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "23",
+    "catalogOrder": 20,
+    "name": "Chrome Breeze",
+    "description": "A concentrated attar version of a fresh woody citrus fragrance with enhanced smoothness and longevity.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Azzaro Chrome",
+    "family": "Fresh Woody",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Woody",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Lemon, Rosemary, Bergamot, Neroli, Pineapple",
+      "mid": "Jasmine, Cyclamen, Oakmoss, Coriander",
+      "base": "Musk, Cedar, Oakmoss, Sandalwood, Cardamom, Tonka Bean, Rosewood"
+    },
+    "price": 59,
+    "sizes": [],
+    "images": [
+      "breeze.webp",
+      "chromeba1.webp",
+      "chromeba2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "24",
+    "catalogOrder": 21,
+    "name": "Luminous Veil",
+    "description": "A luminous floral-fruity perfume with soft powdery tones, expressing elegance, femininity, and charm.",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "Dior J'adore",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Fruity",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Pear, Melon, Magnolia, Peach, Mandarin Orange, Bergamot",
+      "mid": "Jasmine, Lily-of-the-Valley, Tuberose, Freesia, Rose, Orchid, Plum, Violet",
+      "base": "Musk, Vanilla, Blackberry, Cedar"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "luminous_veil.webp",
+      "luminous_veil1.webp",
+      "luminous_veil2.webp",
+      "luminous_veil3.webp",
+      "luminous_veil4.webp",
+      "luminous_veil5.webp",
+      "luminous_veil6.webp",
+      "luminous_veil7.webp",
+      "luminous_veil100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "25",
+    "catalogOrder": 22,
+    "name": "Luminous Veil",
+    "description": "A refined attar rendition of a floral bouquet enriched with fruity sweetness and powdery elegance.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "Dior J'adore",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Fruity",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Pear, Melon, Magnolia, Peach, Mandarin Orange, Bergamot",
+      "mid": "Jasmine, Lily-of-the-Valley, Tuberose, Freesia, Rose, Orchid, Plum, Violet",
+      "base": "Musk, Vanilla, Blackberry, Cedar"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "norm1.webp",
+      "luminousva1.webp",
+      "luminousva2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "26",
+    "catalogOrder": 23,
+    "name": "Golden Flora",
+    "description": "A bright and elegant floral-fruity attar with fresh citrus nuances, radiating youthful femininity and charm.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "Gucci Flora",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Fruity",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Peony, Citrus Fruits, Mandarin Orange",
+      "mid": "Osmanthus, Rose",
+      "base": "Sandalwood, Patchouli, Pink Pepper"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "female floral.webp",
+      "goldenfa1.webp",
+      "goldenfa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "27",
+    "catalogOrder": 24,
+    "name": "Cool Essence",
+    "description": "A sporty and energetic fresh aromatic fragrance inspired by outdoor vitality and aquatic freshness.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Polo Sports",
+    "family": "Fresh Aromatic",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Aromatic",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Mint, Aldehydes, Lavender, Bergamot, Mandarin Orange, Lemon, Artemisia, Neroli",
+      "mid": "Seagrass, Jasmine, Ginger, Geranium, Rose, Cyclamen, Brazilian Rosewood",
+      "base": "Musk, Sandalwood, Cedar, Guaiac Wood, Amber"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "coolea.webp",
+      "coolea1.webp",
+      "coolea2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "28",
+    "catalogOrder": 25,
+    "name": "Majmua",
+    "description": "A classic traditional attar blending floral, herbal, and musky tones, deeply rooted in Indo-Arabic perfumery.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Floral",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Floral",
+      "Herbal",
+      "Musky"
+    ],
+    "notes": {
+      "top": "Kewda (Screw Pine), Green Notes",
+      "mid": "Rose (Ruh Gulab), Hina (Henna)",
+      "base": "Vetiver (Khus), Sandalwood"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "norm2.webp",
+      "majmuaa1.webp",
+      "majmuaa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "29",
+    "catalogOrder": 26,
+    "name": "Majmua Premium",
+    "description": "A richer and more refined version of Majmua with enhanced depth, smoothness, and lasting power.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Floral",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Floral",
+      "Herbal",
+      "Musky"
+    ],
+    "notes": {
+      "top": "Kewda (Screw Pine), Green Notes",
+      "mid": "Rose (Ruh Gulab), Hina (Henna)",
+      "base": "Vetiver (Khus), Sandalwood"
+    },
+    "price": 999,
+    "sizes": [],
+    "images": [
+      "prem5.webp",
+      "majmuapap1.webp",
+      "majmuapap2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "30",
+    "catalogOrder": 27,
+    "name": "Mukhallat",
+    "description": "A bold oriental attar combining oud, amber, and spices for a warm and luxurious evening presence.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oriental",
+      "Amber",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Oud (Agarwood)",
+      "mid": "Saffron",
+      "base": "Musk, Amber, Woody Notes"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "smoky, oudy, spicy.webp",
+      "mukhallata1.webp",
+      "mukhallata2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "31",
+    "catalogOrder": 28,
+    "name": "Mukhallat Premium",
+    "description": "A premium interpretation of Mukhallat offering deeper oud richness and smoother amber warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oriental",
+      "Amber",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Oud (Agarwood)",
+      "mid": "Saffron",
+      "base": "Musk, Amber, Woody Notes"
+    },
+    "price": 999,
+    "sizes": [],
+    "images": [
+      "all.webp",
+      "mukhallatpa1.webp",
+      "mukhallatpa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "32",
+    "catalogOrder": 29,
+    "name": "Ameer Al OUD",
+    "description": "A sweet woody oud fragrance with vanilla warmth, balancing richness and smooth gourmand undertones.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Sweet",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Oud, Woody Notes",
+      "mid": "Vanilla, Sugar",
+      "base": "Agarwood (Oud), Sandalwood, Herbal Notes"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "smoky, oudy, spicy.webp",
+      "ameeraa1.webp",
+      "ameeraa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "33",
+    "catalogOrder": 30,
+    "name": "Ameer Al OUD Premium",
+    "description": "A premium and smoother oud blend with intensified sweetness and long-lasting woody depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Sweet",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Oud, Woody Notes",
+      "mid": "Vanilla, Sugar",
+      "base": "Agarwood (Oud), Sandalwood, Herbal Notes"
+    },
+    "price": 249,
+    "sizes": [],
+    "images": [
+      "oudyspicyfresh.webp",
+      "ameerapa1.webp",
+      "ameerapa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "34",
+    "catalogOrder": 31,
+    "name": "Shay Oud",
+    "description": "A warm oriental oud fragrance enriched with honeyed sweetness and smoky incense accents.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Honey"
+    ],
+    "notes": {
+      "top": "Frankincense (Luban)",
+      "mid": "Honey",
+      "base": "Agarwood (Oud), Musk"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "smoky.webp",
+      "shayoa1.webp",
+      "shayoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "35",
+    "catalogOrder": 32,
+    "name": "Shay Oud Premium",
+    "description": "A deeper and more refined version of Shay Oud with enhanced honeyed warmth and resinous oud.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Honey"
+    ],
+    "notes": {
+      "top": "Frankincense (Luban)",
+      "mid": "Honey",
+      "base": "Agarwood (Oud), Musk"
+    },
+    "price": 239,
+    "sizes": [],
+    "images": [
+      "oudshay.webp",
+      "shayopa1.webp",
+      "shayopa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "36",
+    "catalogOrder": 33,
+    "name": "Jannatul Ferdous",
+    "description": "A fresh herbal-floral attar with green and spicy undertones, traditionally worn for daytime serenity.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Herbal Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Herbal",
+      "Floral",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Lotus, Gardenia, Green Notes",
+      "mid": "Rose, Grass",
+      "base": "Herbal Notes, Woody Notes"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "norm7.webp",
+      "jannatulfa1.webp",
+      "jannatulfa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "37",
+    "catalogOrder": 34,
+    "name": "Zam Zam",
+    "description": "A clean and uplifting fresh aromatic attar with watery florals and gentle musky warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Fresh Aromatic",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Bergamot, Mint, Watercress",
+      "mid": "Lilies, Iris, Jasmine",
+      "base": "Woody Notes, Musk, Apricot"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "breeze.webp",
+      "zamza1.webp",
+      "zamza2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "38",
+    "catalogOrder": 35,
+    "name": "Magnet",
+    "description": "A complex floral-woody fragrance with fruity sweetness and resinous warmth, bold yet elegant.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Floral",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Floral",
+      "Woody",
+      "Mossy"
+    ],
+    "notes": {
+      "top": "Red Berries, Black Currant, Cassia, Litchi, Pineapple, Melon",
+      "mid": "Green Leaves, Basil, Almond Blossom, Iris, Freesia, Jasmine, Rose",
+      "base": "Caramel, Vanilla, Patchouli, Benzoin, Musk, Sandalwood, Amber, Vetiver"
+    },
+    "price": 49,
+    "sizes": [],
+    "images": [
+      "smoky.webp",
+      "magneta1.webp",
+      "magneta2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "39",
+    "catalogOrder": 36,
+    "name": "Aqua Wave",
+    "description": "A marine-fresh fragrance inspired by ocean air, blending citrus brightness with salty aquatic notes.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Aqua De Gio",
+    "family": "Marine Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Marine",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Lime, Lemon, Bergamot, Jasmine, Orange, Mandarin Orange, Neroli",
+      "mid": "Sea Notes, Jasmine, Calone, Rosemary, Peach, Freesia, Cyclamen",
+      "base": "White Musk, Cedar, Oakmoss, Patchouli, Amber"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "aqua fresh.webp",
+      "aquawa1.webp",
+      "aquawa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "40",
+    "catalogOrder": 37,
+    "name": "Blue Wave",
+    "description": "A light and refreshing citrus-aquatic attar designed for everyday summer freshness.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "",
+    "family": "Fresh Citrus",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Citrus",
+      "Fruity"
+    ],
+    "notes": {
+      "top": "Bergamot, Mandarin Orange",
+      "mid": "Aquatic Accords, Lavender",
+      "base": "Amber, Woody Notes, Musk"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fresh_auqatic.webp",
+      "bluewa1.webp",
+      "bluewa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "41",
+    "catalogOrder": 38,
+    "name": "Blue Water",
+    "description": "A clean and refreshing aromatic aquatic attar with marine freshness and woody undertones.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "",
+    "family": "Fresh Aromatic",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Sea Water, Citrus, Green Notes",
+      "mid": "Neroli, Geranium",
+      "base": "Oakmoss, Cedar"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "norm6.webp",
+      "bluewa1.webp",
+      "bluewa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "42",
+    "catalogOrder": 39,
+    "name": "Velour Si",
+    "description": "A sophisticated fruity-floral fragrance with warm vanilla undertones, elegant and feminine.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "Armani Si",
+    "family": "Floral Fruity",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Floral",
+      "Fruity",
+      "Warm"
+    ],
+    "notes": {
+      "top": "Cassis (Blackcurrant Syrup)",
+      "mid": "May Rose, Freesia",
+      "base": "Vanilla, Patchouli, Ambroxan, Woody Notes"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "female floral.webp",
+      "veloursa1.webp",
+      "veloursa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "44",
+    "catalogOrder": 40,
+    "name": "Captain’s Ember",
+    "description": "A concentrated attar version delivering warm amber sweetness and woody sensuality.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Le Male Elixir",
+    "family": "Amber Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Sweet",
+      "Amber",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Lavender, Mint",
+      "mid": "Vanilla, Benzoin",
+      "base": "Honey, Tonka Bean, Tobacco"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "norm5.webp",
+      "captainsea1.webp",
+      "captainsea2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "45",
+    "catalogOrder": 41,
+    "name": "Sabaya",
+    "description": "A light and airy floral attar with herbal freshness, ideal for warm daytime wear.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Herbal"
+    ],
+    "notes": {
+      "top": "Citrus",
+      "mid": "Green Notes",
+      "base": "Rose"
+    },
+    "price": 59,
+    "sizes": [],
+    "images": [
+      "sabaya.webp",
+      "sabyaa1.webp",
+      "sabyaa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "46",
+    "catalogOrder": 42,
+    "name": "Purple OUD",
+    "description": "A spicy oriental oud fragrance with saffron warmth and woody depth for night-time wear.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Dior Purple Oud",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oriental",
+      "Woody",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Pink Pepper, Orange",
+      "mid": "Saffron",
+      "base": "Agarwood (Oud)"
+    },
+    "price": 79,
+    "sizes": [],
+    "images": [
+      "norm4.webp",
+      "purpleoa1.webp",
+      "purpleoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "47",
+    "catalogOrder": 43,
+    "name": "Pulse Royale",
+    "description": "A modern marine-sweet fragrance with spicy tobacco undertones, energetic and youthful.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "CR-7",
+    "family": "Aromatic Sweet",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Sweet",
+      "Marine",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Lavender, Cardamom, Artemisia, Bergamot",
+      "mid": "Tobacco, Cinnamon, Cedar, Iris",
+      "base": "Vanilla, Musk, Sandalwood, Amber"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "norm6.webp",
+      "pulsera1.webp",
+      "pulsera2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "48",
+    "catalogOrder": 44,
+    "name": "Invictus",
+    "description": "A powerful fresh-marine fragrance with citrus brightness and woody amber depth.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Paco Rabanne Invictus",
+    "family": "Marine Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Marine",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Sea Notes, Grapefruit, Mandarin Orange",
+      "mid": "Bay Leaf, Jasmine",
+      "base": "Ambergris, Guaiac Wood, Oakmoss, Patchouli"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fresh marine.webp",
+      "invictusa1.webp",
+      "invictusa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "49",
+    "catalogOrder": 45,
+    "name": "Aseel",
+    "description": "A balanced woody-floral attar with herbal nuances and soft musky depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Floral",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Woody",
+      "Floral",
+      "Herbal"
+    ],
+    "notes": {
+      "top": "Red Rose, Saffron",
+      "mid": "Sandalwood, Mint",
+      "base": "Agarwood (Oud), Musk"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "norm1.webp",
+      "aseela1.webp",
+      "aseela2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "50",
+    "catalogOrder": 46,
+    "name": "Fasli Gulab",
+    "description": "A soft and powdery rose attar capturing the freshness of blooming garden roses.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Rose",
+      "mid": "",
+      "base": ""
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fasli gulab.webp",
+      "fasliga1.webp",
+      "fasliga2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "51",
+    "catalogOrder": 47,
+    "name": "Aventus",
+    "description": "A bold fruity-chypre fragrance with smoky woods and fresh pineapple character.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Creed Aventus",
+    "family": "Chypre Fruity",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Fruity-Chypre",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Pineapple, Bergamot, Blackcurrant, Apple",
+      "mid": "Birch, Patchouli, Moroccan Jasmine, Rose",
+      "base": "Musk, Oakmoss, Ambergris, Vanille"
+    },
+    "price": 85,
+    "sizes": [],
+    "images": [
+      "creed aventus.webp",
+      "aventusa1.webp",
+      "aventusa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "52",
+    "catalogOrder": 48,
+    "name": "Golden Blush",
+    "description": "A delicate floral gourmand fragrance with creamy sweetness and soft freshness.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "Carolina Herrrera Good Girl Blush",
+    "family": "Floral Gourmand",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Gourmand",
+      "Fresh"
+    ],
+    "notes": {
+      "top": "Bergamot, Bitter Almond",
+      "mid": "Peony, Ylang-Ylang",
+      "base": "Vanilla, Coumarin"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "female floral.webp",
+      "goldenba1.webp",
+      "goldenba2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "54",
+    "catalogOrder": 49,
+    "name": "Fresh Horizon",
+    "description": "A long-lasting attar version delivering sweet woody warmth with fresh aromatic highlights.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Versace Eros",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Mint, Green Apple, Lemon",
+      "mid": "Tonka Bean, Ambroxan, Geranium",
+      "base": "Vanilla, Cedar, Vetiver, Oakmoss"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fresh eros.webp",
+      "freshha1.webp",
+      "freshha2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "56",
+    "catalogOrder": 50,
+    "name": "Velvet Night",
+    "description": "A concentrated attar version of a rich gourmand-oriental scent with coffee sweetness and creamy vanilla depth.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "YSL Black Opium",
+    "family": "Oriental Gourmand",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Gourmand",
+      "Oriental",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Pear, Pink Pepper, Orange Blossom",
+      "mid": "Coffee, Jasmine, Bitter Almond, Licorice",
+      "base": "Vanilla, Patchouli, Cedar, Cashmere Wood"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "sweet gourmond.webp",
+      "velvetna1.webp",
+      "velvetna2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "57",
+    "catalogOrder": 51,
+    "name": "Titanium",
+    "description": "A fresh aromatic-fruity fragrance offering a clean, energetic profile suitable for everyday wear.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "",
+    "family": "Aromatic Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Aromatic",
+      "Marine",
+      "Aquatic"
+    ],
+    "notes": {
+      "top": "Pineapple,Mandrin orange",
+      "mid": "Marine note, Patchouli & Dry Amber",
+      "base": "Oakmoss & Musk "
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "titanium.webp",
+      "titanium1.webp",
+      "titanium2.webp",
+      "titanium3.webp",
+      "titanium4.webp",
+      "titanium5.webp",
+      "titanium6.webp",
+      "titanium7.webp",
+      "titanium100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "58",
+    "catalogOrder": 52,
+    "name": "Titanium",
+    "description": "A long-lasting attar version of a crisp aromatic fragrance with fruity freshness and woody warmth.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Titanium Ajmal",
+    "family": "Aromatic Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Aromatic",
+      "Fruity"
+    ],
+    "notes": {
+      "top": "Citrus, Fruity Notes",
+      "mid": "Fresh Spicy Notes",
+      "base": "Woody Notes, Musk"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "fresh marine.webp",
+      "titaniuma1.webp",
+      "titaniuma2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "59",
+    "catalogOrder": 53,
+    "name": "White OUD",
+    "description": "A refined oud fragrance softened by fresh florals and subtle tobacco warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Floral",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Fresh",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Artemisia, Lemon, Orange",
+      "mid": "Freesia, Patchouli, Black Currant",
+      "base": "Tobacco, Amber, Musk"
+    },
+    "price": 79,
+    "sizes": [],
+    "images": [
+      "norm2.webp",
+      "whiteoa1.webp",
+      "whiteoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "61",
+    "catalogOrder": 54,
+    "name": "Most Wanted",
+    "description": "A concentrated attar interpretation delivering intense sweetness and woody amber richness.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "AZ The Most Wanted",
+    "family": "Amber Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Amber",
+      "Woody",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Cardamom",
+      "mid": "Toffee",
+      "base": "Amberwood"
+    },
+    "price": 79,
+    "sizes": [],
+    "images": [
+      "norm2.webp",
+      "mostwa1.webp",
+      "mostwa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "63",
+    "catalogOrder": 55,
+    "name": "BLU Ember",
+    "description": "A long-lasting attar version offering aquatic freshness balanced with aromatic warmth.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Ajmal BLU",
+    "family": "Fresh Aquatic",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Aquatic",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Watermelon, Bergamot, Lavender",
+      "mid": "Lotus, Jasmine",
+      "base": "Musk, Amber, Sandalwood"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fresh_auqatic.webp",
+      "bluea1.webp",
+      "bluea2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "65",
+    "catalogOrder": 56,
+    "name": "Caramel OUD",
+    "description": "A rich attar version offering intense caramel sweetness balanced with smoky oud depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Gourmand Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Gourmand",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Chocolate, Honey",
+      "mid": "Rose, Oud, Amber",
+      "base": "Vanilla, Powdery Notes"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "sweet chocolate gourmond.webp",
+      "carameloa1.webp",
+      "carameloa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "66",
+    "catalogOrder": 57,
+    "name": "Shanaya",
+    "description": "A graceful woody-floral fragrance accented with amber warmth and soft sweetness.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "",
+    "family": "Woody Floral",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Woody",
+      "Floral",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Rose, Saffron, Pimento",
+      "mid": "Agarwood (Oud), Caramel, Floral Notes",
+      "base": "Resins, Amber, Musk"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "norm4.webp",
+      "shanaya1.webp",
+      "shanaya2.webp",
+      "info.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "67",
+    "catalogOrder": 58,
+    "name": "Fresh Impact",
+    "description": "A vibrant citrus-spicy fragrance with green freshness and refined woody depth.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "LV Imagination",
+    "family": "Fresh Spicy",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Fresh-Spicy",
+      "Green"
+    ],
+    "notes": {
+      "top": "Citron, Calabrian Bergamot, Orange",
+      "mid": "Ginger, Tunisian Neroli, Cinnamon",
+      "base": "Tea, Ambroxan, Guaiac Wood, Olibanum"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "fresh marine.webp",
+      "freshia1.webp",
+      "freshia2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "70",
+    "catalogOrder": 59,
+    "name": "br 540",
+    "description": "A luxurious ambery fragrance with saffron warmth, airy sweetness, and radiant depth.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "MFK Baccarat Rouge 540",
+    "family": "Amber Woody",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Amber",
+      "Sweet",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Saffron, Jasmine",
+      "mid": "Amberwood, Ambergris",
+      "base": "Fir Resin, Cedar"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "br 540.webp",
+      "br 5401.webp",
+      "br 5402.webp",
+      "br 5403.webp",
+      "br 5404.webp",
+      "br 5405.webp",
+      "br 5406.webp",
+      "br 5407.webp",
+      "br 540100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "71",
+    "catalogOrder": 60,
+    "name": "BR 540",
+    "description": "A concentrated attar version of a radiant ambery fragrance with airy sweetness and luxurious warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "MFK Baccarat Rouge 540",
+    "family": "Amber Woody",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Amber",
+      "Sweet",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Saffron, Jasmine",
+      "mid": "Amberwood, Ambergris",
+      "base": "Fir Resin, Cedar"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "smoky.webp",
+      "br540a1.webp",
+      "br540a2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "73",
+    "catalogOrder": 61,
+    "name": "Qahwa",
+    "description": "A long-lasting attar rendition delivering bold coffee warmth blended with sweet spices.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Khamra Qahwa",
+    "family": "Oriental Gourmand",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Spicy",
+      "Coffee",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Ginger, Cinnamon, Cardamom",
+      "mid": "Praline, Candied Fruits",
+      "base": "Coffee, Tonka Bean, Vanilla"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "sweet gourmond.webp",
+      "qahwaa1.webp",
+      "qahwaa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "75",
+    "catalogOrder": 62,
+    "name": "Obsidian OUD",
+    "description": "A concentrated attar version offering intense fruity sweetness layered over smoky oud.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Oud maracuja",
+    "family": "Fruity Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Fruity-Chypre",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Passionfruit, Saffron, Turkish Rose",
+      "mid": "Oud, Patchouli, Benzoin",
+      "base": "Leather, Amber, Vanilla"
+    },
+    "price": 79,
+    "sizes": [],
+    "images": [
+      "smoky.webp",
+      "obsidianoa1.webp",
+      "obsidianoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "76",
+    "catalogOrder": 63,
+    "name": "Dark Rebel",
+    "description": "A dark woody-spicy fragrance with smoky oud and warm amber undertones.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "TF OUD wood",
+    "family": "Woody Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Spicy",
+      "Oriental"
+    ],
+    "notes": {
+      "top": "Cardamom, Sichuan Pepper",
+      "mid": "Vanilla",
+      "base": "Tonka Bean, Oud, Vetiver, Amber"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "dark_rebel.webp",
+      "darkra1.webp",
+      "darkra2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "77",
+    "catalogOrder": 64,
+    "name": "Woody OUD",
+    "description": "A powerful woody-oriental attar with spicy warmth and deep resinous oud character.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Spicy",
+      "Oriental"
+    ],
+    "notes": {
+      "top": "Cardamom, Sichuan Pepper",
+      "mid": "Vanilla",
+      "base": "Tonka Bean, Oud, Vetiver, Amber"
+    },
+    "price": 279,
+    "sizes": [],
+    "images": [
+      "woodyoudp.webp",
+      "woodyoa1.webp",
+      "woodyoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "78",
+    "catalogOrder": 65,
+    "name": "Musk Abiyad",
+    "description": "A soft and clean white musk fragrance with powdery floral nuances for everyday wear.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Musky",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Musky",
+      "Powdery",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Rose, White Musk",
+      "mid": "Balsamic, Powdery Notes",
+      "base": "Musk, Sandalwood"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "norm1.webp",
+      "muskaa1.webp",
+      "muskaa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "79",
+    "catalogOrder": 66,
+    "name": "Midnight",
+    "description": "A fresh spicy-woody fragrance with citrus brightness and aromatic warmth for evening wear.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "",
+    "family": "Woody Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Fresh Spicy",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Bergamot, Lavender",
+      "mid": "Geranium, Orange Blossom",
+      "base": "Patchouli, Woody Notes"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "smoky, oudy, spicy.webp",
+      "midnighta1.webp",
+      "midnighta2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "80",
+    "catalogOrder": 67,
+    "name": "Musk Safi",
+    "description": "A clean musky fragrance balanced with soft florals and smooth woody undertones.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Musky Floral",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Musky",
+      "Woody",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Lily of the Valley",
+      "mid": "White Musk",
+      "base": "Sandalwood, Amber"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "musk.webp",
+      "musksa1.webp",
+      "musksa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "81",
+    "catalogOrder": 68,
+    "name": "Eternal Sauvage",
+    "description": "A fresh spicy fragrance with aromatic herbs and ambroxan depth, powerful and versatile.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Dior Sauvage",
+    "family": "Fresh Spicy",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Fresh",
+      "Spicy-Oriental"
+    ],
+    "notes": {
+      "top": "Calabrian Bergamot, Pepper",
+      "mid": "Sichuan Pepper, Lavender, Vetiver",
+      "base": "Ambroxan, Cedar, Labdanum"
+    },
+    "price": 69,
+    "sizes": [],
+    "images": [
+      "dior sauvage.webp",
+      "eternalsa1.webp",
+      "eternalsa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "82",
+    "catalogOrder": 69,
+    "name": "Dahnal OUD",
+    "description": "A raw and powerful oud attar with honeyed warmth and deep woody intensity.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Honey",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Oud",
+      "mid": "",
+      "base": ""
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "dahnaloud.webp",
+      "dahnaloa1.webp",
+      "dahnaloa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "83",
+    "catalogOrder": 70,
+    "name": "Eternal White",
+    "description": "A clean citrus-woody fragrance with aromatic freshness and smooth leather undertones.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Lacoste White",
+    "family": "Fresh Woody",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Woody",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Grapefruit, Rosemary, Cardamom",
+      "mid": "Ylang-Ylang, Tuberose",
+      "base": "Suede, Cedar, Leather, Vetiver"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "eternal white.webp",
+      "eternal white1.webp",
+      "eternal white2.webp",
+      "eternal white3.webp",
+      "eternal white4.webp",
+      "eternal white5.webp",
+      "eternal white6.webp",
+      "eternal_white7.webp",
+      "eternal white100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "84",
+    "catalogOrder": 71,
+    "name": "Eternal White",
+    "description": "A long-lasting attar version delivering crisp citrus freshness and woody elegance.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Lacoste White",
+    "family": "Fresh Woody",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Woody",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Grapefruit, Rosemary, Cardamom",
+      "mid": "Ylang-Ylang, Tuberose",
+      "base": "Suede, Cedar, Leather, Vetiver"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "lacoste w.webp",
+      "eternalwa1.webp",
+      "eternalwa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "87",
+    "catalogOrder": 72,
+    "name": "Intense Suede",
+    "description": "A rich vanilla-amber fragrance with suede softness and warm spicy accents for intense evening wear.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Armani SWY intensely",
+    "family": "Amber Vanilla",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Vanilla",
+      "Sweet",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Pink Pepper, Juniper, Violet",
+      "mid": "Toffee, Cinnamon, Lavender, Sage",
+      "base": "Vanilla, Amber, Tonka Bean, Suede"
+    },
+    "price": 79,
+    "sizes": [],
+    "images": [
+      "spicy.webp",
+      "intensesa1.webp",
+      "intensesa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "89",
+    "catalogOrder": 73,
+    "name": "Aurum",
+    "description": "A concentrated attar version offering creamy white florals with soft fruity sweetness.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Floral, Fresh",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "White Floral",
+      "Fruity",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Raspberry, Lemon",
+      "mid": "Orange Blossom, Gardenia, Jasmine",
+      "base": "Vanilla, Amber, Musk"
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "aurum.webp",
+      "auruma1.webp",
+      "auruma2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "90",
+    "catalogOrder": 74,
+    "name": "Blue OUD",
+    "description": "A bold oud-leather fragrance with smoky depth and earthy patchouli richness.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oud",
+      "Leather",
+      "Patchouli"
+    ],
+    "notes": {
+      "top": "Blue Lily, Oud",
+      "mid": "Patchouli, Leather",
+      "base": "Amber, Tobacco"
+    },
+    "price": 699,
+    "sizes": [],
+    "images": [
+      "blueoud.webp",
+      "blue_oud1.webp",
+      "blue_oud2.webp",
+      "blue_oud3.webp",
+      "blue_oud4.webp",
+      "blue_oud5.webp",
+      "blue_oud6.webp",
+      "blue_oud7.webp",
+      "blue_oud100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "91",
+    "catalogOrder": 75,
+    "name": "Blue OUD",
+    "description": "A concentrated attar delivering intense oud-leather richness with smoky warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oud",
+      "Leather",
+      "Patchouli"
+    ],
+    "notes": {
+      "top": "Blue Lily, Oud",
+      "mid": "Patchouli, Leather",
+      "base": "Amber, Tobacco"
+    },
+    "price": 175,
+    "sizes": [],
+    "images": [
+      "blueoud.webp",
+      "blueoa1.webp",
+      "blueoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "92",
+    "catalogOrder": 76,
+    "name": "Musk Rijali",
+    "description": "A refined musky fragrance with subtle sweetness and gentle floral warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Musky",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Musky",
+      "Subtle Sweet",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Musk, Bergamot",
+      "mid": "Jasmine, Saffron",
+      "base": "Oud, Amber, Vanilla"
+    },
+    "price": 115,
+    "sizes": [],
+    "images": [
+      "muskrijali.webp",
+      "muskr1.webp",
+      "muskr2.webp",
+      "info.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "93",
+    "catalogOrder": 77,
+    "name": "Musk Rijali Premium",
+    "description": "A premium musky attar with enhanced smoothness, sweetness, and long-lasting warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Musky",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Musky",
+      "Subtle Sweet",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Musk, Bergamot",
+      "mid": "Jasmine, Saffron",
+      "base": "Oud, Amber, Vanilla"
+    },
+    "price": 199,
+    "sizes": [],
+    "images": [
+      "muskrijp.webp",
+      "muskrpa1.webp",
+      "muskrpa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "94",
+    "catalogOrder": 78,
+    "name": "OUD Al Shams",
+    "description": "A warm spicy-vanilla oud fragrance with amber richness and smooth woody depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Spicy",
+      "Vanilla",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Rosemary, Spicy Notes",
+      "mid": "Amber, Blackberry",
+      "base": "Cashmere Wood, Vanilla"
+    },
+    "price": 199,
+    "sizes": [],
+    "images": [
+      "ouodalshams.webp",
+      "oudasa1.webp",
+      "oudasa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "97",
+    "catalogOrder": 79,
+    "name": "Black OUD",
+    "description": "A smoky woody oud fragrance with leathery depth and earthy warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Smoky",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Smoky"
+    ],
+    "notes": {
+      "top": "Lemon, Mandarin, Oud, Saffron",
+      "mid": "Rose, Patchouli",
+      "base": "Leather, Sandalwood, White Musk, Guaiacwood"
+    },
+    "price": 149,
+    "sizes": [],
+    "images": [
+      "black.webp",
+      "blackoa1.webp",
+      "blackoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "98",
+    "catalogOrder": 80,
+    "name": "Mukhallat OUD",
+    "description": "A floral-woody oud blend with spicy warmth and smooth musky undertones.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Floral",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Floral",
+      "Woody",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Floral Notes, Spicy Notes",
+      "mid": "Fruity Notes, Musk",
+      "base": "Musk, Woody Notes"
+    },
+    "price": 249,
+    "sizes": [],
+    "images": [
+      "prem7.webp",
+      "mukhallatoa1.webp",
+      "mukhallatoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "99",
+    "catalogOrder": 81,
+    "name": "Mukhallat Rashid",
+    "description": "A complex leathery-woody fragrance with floral spices and earthy depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Leathery",
+      "Woody",
+      "Spicy Floral"
+    ],
+    "notes": {
+      "top": "Saffron, Clove, Sage",
+      "mid": "Rose, Geranium, Henna",
+      "base": "Oud, Vetiver, Soil Tincture, Patchouli"
+    },
+    "price": 249,
+    "sizes": [],
+    "images": [
+      "prem1.webp",
+      "mukhallatra1.webp",
+      "mukhallatra2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "102",
+    "catalogOrder": 82,
+    "name": "Mukhallat Maliky",
+    "description": "A warm woody-amber fragrance enriched with spices and smooth oriental depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Amber",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Warm Spicy",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Warm Spices, Soft Florals",
+      "mid": "Oud, Amber, Floral Accords",
+      "base": "Musk, Woods, Resinous Warmth"
+    },
+    "price": 249,
+    "sizes": [],
+    "images": [
+      "oudshay.webp",
+      "mukhallatma1.webp",
+      "mukhallatma2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "103",
+    "catalogOrder": 83,
+    "name": "Musk Tahara",
+    "description": "A pure and clean white musk fragrance with soft powdery freshness, ideal for daily wear.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Musky Clean",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Musky",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "White Musk",
+      "mid": "",
+      "base": ""
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "musktahara.webp",
+      "muskt1.webp",
+      "muskt2.webp",
+      "info.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "106",
+    "catalogOrder": 84,
+    "name": "Kuwaiti OUD",
+    "description": "A rich and spicy oud fragrance with earthy warmth and smooth vanilla undertones.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Spicy",
+      "Earthy"
+    ],
+    "notes": {
+      "top": "Rosemary, Cardamom, Ginger",
+      "mid": "Saffron, Jasmine, Tonka Bean",
+      "base": "Amber, Sandalwood, Vanilla, Oud, Patchouli, Musk"
+    },
+    "price": 149,
+    "sizes": [],
+    "images": [
+      "kuwaitioud.webp",
+      "kuwaitioa1.webp",
+      "kuwaitioa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "107",
+    "catalogOrder": 85,
+    "name": "Kuwaiti OUD Premium",
+    "description": "A premium and more intense interpretation of Kuwaiti Oud with enhanced depth and longevity.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Spicy",
+      "Earthy"
+    ],
+    "notes": {
+      "top": "Rosemary, Cardamom, Ginger",
+      "mid": "Saffron, Jasmine, Tonka Bean",
+      "base": "Amber, Sandalwood, Vanilla, Oud, Patchouli, Musk"
+    },
+    "price": 279,
+    "sizes": [],
+    "images": [
+      "kuwatioudp.webp",
+      "kuwaitiopa1.webp",
+      "kuwaitiopa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "108",
+    "catalogOrder": 86,
+    "name": "Mysore Sandal",
+    "description": "A pure and creamy sandalwood fragrance sourced from Mysore, smooth, meditative, and timeless.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Woody",
+      "Vanilla",
+      "Musky"
+    ],
+    "notes": {
+      "top": "Sandalwood from Mysore",
+      "mid": "",
+      "base": ""
+    },
+    "price": 279,
+    "sizes": [],
+    "images": [
+      "mysandalp.webp",
+      "mysorea1.webp",
+      "mysorea2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "109",
+    "catalogOrder": 87,
+    "name": "Seufi OUD",
+    "description": "A floral-woody oriental fragrance with musky softness and rich Indian oud depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Floral",
+      "Woody",
+      "Oriental"
+    ],
+    "notes": {
+      "top": "Mitti",
+      "mid": "Musk",
+      "base": "Agarwood (Indian Oud)"
+    },
+    "price": 299,
+    "sizes": [],
+    "images": [
+      "seufioudp.webp",
+      "seufioa1.webp",
+      "seufioa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "110",
+    "catalogOrder": 88,
+    "name": "Indian OUD",
+    "description": "A raw and intense Indian oud fragrance with smoky depth and earthy richness.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Smoky",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Smoky"
+    ],
+    "notes": {
+      "top": "Agarwood (Indian Oud)",
+      "mid": "",
+      "base": ""
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "oudindiap.webp",
+      "indianoa1.webp",
+      "indianoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "111",
+    "catalogOrder": 89,
+    "name": "Thailand OUD",
+    "description": "A refined Thai oud fragrance with spicy warmth and subtle sweetness.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental Spicy",
+      "Subtle Sweet"
+    ],
+    "notes": {
+      "top": "Agarwood (Thailand Oud)",
+      "mid": "",
+      "base": ""
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "oudthaip.webp",
+      "thailandoa1.webp",
+      "thailandoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "112",
+    "catalogOrder": 90,
+    "name": "Cambodian OUD",
+    "description": "A smooth Cambodian oud with mossy undertones and rich oriental warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Mossy"
+    ],
+    "notes": {
+      "top": "Agarwood (Cambodian Oud)",
+      "mid": "",
+      "base": ""
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "oudcombodip.webp",
+      "cambodianoa1.webp",
+      "cambodianoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "114",
+    "catalogOrder": 91,
+    "name": "Sandaliya",
+    "description": "A deep sandalwood-centric fragrance with earthy spice and woody warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Earthy",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Citrus Spicy",
+      "Earthy",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Sandalwood",
+      "mid": "",
+      "base": ""
+    },
+    "price": 999,
+    "sizes": [],
+    "images": [
+      "sandaliyap.webp",
+      "sandaliyaa1.webp",
+      "sandaliyaa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "115",
+    "catalogOrder": 92,
+    "name": "Dehnal OUD Combodi Qadim",
+    "description": "An aged Cambodian oud attar offering deep honeyed richness and elegant woody warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Honey",
+      "Spicy",
+      "Elegant"
+    ],
+    "notes": {
+      "top": "Aged Cambodian Oud",
+      "mid": "",
+      "base": ""
+    },
+    "price": 999,
+    "sizes": [],
+    "images": [
+      "daocombodip.webp",
+      "dehnalca1.webp",
+      "dehnalca2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "116",
+    "catalogOrder": 93,
+    "name": "Dahnal OUD Hindi Qadim",
+    "description": "An aged Indian oud fragrance showcasing deep woody intensity with honeyed warmth and natural spice.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Honey",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Aged Indian Oud",
+      "mid": "",
+      "base": ""
+    },
+    "price": 999,
+    "sizes": [],
+    "images": [
+      "daoindianp.webp",
+      "dehnalha1.webp",
+      "dehnalha2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "117",
+    "catalogOrder": 94,
+    "name": "Fire OUD",
+    "description": "A bold woody-leather fragrance with aromatic freshness and smoky warmth.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Leather",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Geranium, Leather",
+      "mid": "Cedar, Patchouli",
+      "base": "Moss, Musk, Amber"
+    },
+    "price": 699,
+    "sizes": [],
+    "images": [
+      "fire oud.webp",
+      "fire_oud1.webp",
+      "fire_oud2.webp",
+      "fire_oud3.webp",
+      "fire_oud4.webp",
+      "fire_oud5.webp",
+      "fire_oud6.webp",
+      "fire_oud7.webp",
+      "fire_oud100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "118",
+    "catalogOrder": 95,
+    "name": "Fire OUD",
+    "description": "A concentrated attar version delivering intense leather-woody richness with smoky depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Leather",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Geranium, Leather",
+      "mid": "Cedar, Patchouli",
+      "base": "Moss, Musk, Amber"
+    },
+    "price": 149,
+    "sizes": [],
+    "images": [
+      "fireoud.webp",
+      "fireoa1.webp",
+      "fireoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "119",
+    "catalogOrder": 96,
+    "name": "Ruh Khus",
+    "description": "A pure vetiver fragrance offering earthy freshness, green herbal tones, and cooling depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Green Earthy",
+    "season": "Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Green Herbal",
+      "Earthy"
+    ],
+    "notes": {
+      "top": "Vetiver (Khus)",
+      "mid": "",
+      "base": ""
+    },
+    "price": 699,
+    "sizes": [],
+    "images": [
+      "ruhkhusp.webp",
+      "ruhkhusa1.webp",
+      "ruhkhusa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "120",
+    "catalogOrder": 97,
+    "name": "Fume Vanille",
+    "description": "A warm oriental gourmand fragrance blending tobacco spice with creamy vanilla sweetness.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Tobacco Vanille",
+    "family": "Oriental Gourmand",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oriental",
+      "Gourmand",
+      "Smoky"
+    ],
+    "notes": {
+      "top": "Tobacco Leaf, Spicy Notes",
+      "mid": "Vanilla, Cacao, Tonka Bean, Tobacco Blossom",
+      "base": "Dried Fruits, Woody Notes"
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "fume vanille.webp",
+      "fume vanille1.webp",
+      "fume vanille2.webp",
+      "fume vanille3.webp",
+      "fume vanille4.webp",
+      "fume vanille5.webp",
+      "fume vanille6.webp",
+      "fume_vanille7.webp",
+      "fume vanille100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "121",
+    "catalogOrder": 98,
+    "name": "Fume Vanille",
+    "description": "A rich attar version delivering deep vanilla sweetness and smoky tobacco warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Tobacco Vanille",
+    "family": "Oriental Gourmand",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oriental",
+      "Gourmand",
+      "Smoky"
+    ],
+    "notes": {
+      "top": "Tobacco Leaf, Spicy Notes",
+      "mid": "Vanilla, Cacao, Tonka Bean, Tobacco Blossom",
+      "base": "Dried Fruits, Woody Notes"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "smokysweet.webp",
+      "fumeva1.webp",
+      "fumeva2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "122",
+    "catalogOrder": 99,
+    "name": "Al Dahab",
+    "description": "A luxurious fruity-floral fragrance with woody sweetness and golden warmth.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "Wisal Dahab",
+    "family": "Floral Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Dark Wood",
+      "Sweet",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Pear, Apple, Peach, Grapefruit, Mandarin Orange",
+      "mid": "Rose, Orchid, Jasmine, Geranium",
+      "base": "Sandalwood, Musk, Cedar, Patchouli"
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "aldahab.webp",
+      "aldahaba1.webp",
+      "aldahaba2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "123",
+    "catalogOrder": 100,
+    "name": "Eternal Elixir",
+    "description": "A bold spicy-woody fragrance with aromatic lavender and rich resinous warmth.",
+    "category": "Attar",
+    "gender": "Male",
+    "inspiredBy": "Sauvage Elixir",
+    "family": "Woody Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Floral",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Nutmeg, Cinnamon, Cardamom, Grapefruit",
+      "mid": "Lavender",
+      "base": "Licorice, Sandalwood, Amber, Patchouli, Haitian Vetiver"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "spicy.webp",
+      "eternalela1.webp",
+      "eternalela2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "127",
+    "catalogOrder": 101,
+    "name": "Rose OUD",
+    "description": "A concentrated attar version highlighting the richness of rose layered over oud.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "OUD And Roses",
+    "family": "Oriental Floral",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Citrus"
+    ],
+    "notes": {
+      "top": "Rose",
+      "mid": "Rose",
+      "base": "Agarwood (Oud)"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "roseoud.webp",
+      "roseouda1.webp",
+      "roseouda2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "128",
+    "catalogOrder": 102,
+    "name": "Mafia Oud",
+    "description": "A dark smoky oud fragrance with earthy woods and subtle fruity undertones.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Mafia OUD",
+    "family": "Woody Smoky",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Oriental",
+      "Smoky"
+    ],
+    "notes": {
+      "top": "Oud, Musk, Patchouli",
+      "mid": "Sandalwood, Vetiver, Vanilla",
+      "base": "Woody, Smoky, Fruity, Earthy"
+    },
+    "price": 149,
+    "sizes": [],
+    "images": [
+      "blueoud.webp",
+      "mafiaouda1.webp",
+      "mafiaouda2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "129",
+    "catalogOrder": 103,
+    "name": "Badee Al OUD",
+    "description": "A modern spicy-oud fragrance blending aromatic freshness with warm woody richness.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Badee Al OUD",
+    "family": "Woody Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Warm Spicy",
+      "Fresh Spicy"
+    ],
+    "notes": {
+      "top": "Saffron, Nutmeg, Lavender",
+      "mid": "Oud, Patchouli",
+      "base": "Oud, Patchouli, Musk"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "all.webp",
+      "badeeoa1.webp",
+      "badeeoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "130",
+    "catalogOrder": 104,
+    "name": "Arabian Tonka",
+    "description": "A rich gourmand-oriental fragrance with sweet tonka bean and warm amber depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Arabian Tonka",
+    "family": "Oriental Gourmand",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oriental",
+      "Gourmand",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Saffron, Bergamot",
+      "mid": "Oud, Bulgarian Rose",
+      "base": "Tonka Bean, Sugar Cane, Amber, White Musk, Oakmoss"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "oudriz.webp",
+      "arabiantonka1.webp",
+      "arabiantonka2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "131",
+    "catalogOrder": 105,
+    "name": "Musk Rose",
+    "description": "A romantic floral-musky fragrance where fresh roses blend with soft spices and creamy woods.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Musk Rose",
+    "family": "Floral Musky",
+    "season": "All seasons",
+    "time": "Day",
+    "accords": [
+      "Floral",
+      "Spicy",
+      "Musky"
+    ],
+    "notes": {
+      "top": "Bergamot, Peach, Apple, Pear",
+      "mid": "Cyclamen, Freesia, Rose",
+      "base": "Sandalwood, Cedarwood, Vanilla, Amber, Musk"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "muskrose.webp",
+      "muskrosea1.webp",
+      "muskrosea2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "133",
+    "catalogOrder": 106,
+    "name": "Al Lail",
+    "description": "A sensual fruity-floral fragrance with oud richness and incense warmth, elegant and mysterious.",
+    "category": "Attar",
+    "gender": "Female",
+    "inspiredBy": "Wisal Lail",
+    "family": "Floral Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Fruity",
+      "Floral",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Blackcurrant, Apricot, Freesia",
+      "mid": "Rose, Patchouli, Osmanthus",
+      "base": "Musk, Oud, Frankincense"
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "prem9.webp",
+      "allaila1.webp",
+      "allaila2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "134",
+    "catalogOrder": 107,
+    "name": "Rooh Gulab",
+    "description": "A pure and natural rose distillation capturing the essence of fresh blooming roses.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "Rooh Gulab",
+    "family": "Floral",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Rose Floral"
+    ],
+    "notes": {
+      "top": "Rose",
+      "mid": "",
+      "base": ""
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "rooh gulab.webp",
+      "roohgula1.webp",
+      "roohgula2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "135",
+    "catalogOrder": 108,
+    "name": "Tobacco OUD",
+    "description": "A dark and intense blend of tobacco smoke and oud with spicy warmth and resinous sweetness.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody Smoky",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Leathery",
+      "Tobacco"
+    ],
+    "notes": {
+      "top": "Whiskey",
+      "mid": "Spicy Notes, Cinnamon, Coriander",
+      "base": "Tobacco, Oud, Incense, Sandalwood, Patchouli, Benzoin, Vanilla, Cedar"
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "black.webp",
+      "tobaccoouda1.webp",
+      "tobaccoouda2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "136",
+    "catalogOrder": 109,
+    "name": "Arabian OUD",
+    "description": "A smooth and powdery oud fragrance with warm spices and oriental depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Powdery",
+      "Warm Spicy"
+    ],
+    "notes": {
+      "top": "",
+      "mid": "",
+      "base": ""
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "prem1.webp",
+      "arabianouda1.webp",
+      "arabianouda2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "137",
+    "catalogOrder": 110,
+    "name": "Bin Sheikh",
+    "description": "A rich amber-oud fragrance with floral sweetness and smoky oriental warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "AM BIN SHEIKH",
+    "family": "Amber Oriental",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Amber",
+      "Oud",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Saffron, Rose, Oakmoss, Lavender, Citruses",
+      "mid": "Sugar, Bakhoor, Jasmine, Orchid, Violet",
+      "base": "Oud, Amber, Ambroxan, Patchouli, White Musk"
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "prem8.webp",
+      "binsheikha1.webp",
+      "binsheikha2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "140",
+    "catalogOrder": 111,
+    "name": "Silk Oud",
+    "description": "A refined floral-woody oud fragrance with herbal softness and smooth resinous depth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "MFK Silk OUD",
+    "family": "Woody Floral",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Herbal",
+      "Woody",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Bulgarian Rose, Chamomile, Bergamot",
+      "mid": "Guaiac Wood, Hedione",
+      "base": "Oud, Papyrus"
+    },
+    "price": 99,
+    "sizes": [],
+    "images": [
+      "silkoud.webp",
+      "silkouda1.webp",
+      "silkouda2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "141",
+    "catalogOrder": 112,
+    "name": "Shamama",
+    "description": "A traditional complex attar blending woods, florals, and powdery warmth with deep heritage character.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Oriental Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Floral",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Grass, Mint",
+      "mid": "Floral notes, Honey, Sea notes",
+      "base": "Smoke, Sandalwood"
+    },
+    "price": 249,
+    "sizes": [],
+    "images": [
+      "prem9.webp",
+      "shamamaa1.webp",
+      "shamamaa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "142",
+    "catalogOrder": 113,
+    "name": "Al Wadi",
+    "description": "A powerful aromatic-leather fragrance with oud richness and spicy freshness.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather Aromatic",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Aromatic",
+      "Leather"
+    ],
+    "notes": {
+      "top": "Sicilian Bergamot, Pink Pepper, Davana",
+      "mid": "Oud, White Amber, Rosemary",
+      "base": "Leather, Musk, Haitian Vetiver"
+    },
+    "price": 129,
+    "sizes": [],
+    "images": [
+      "prem6.webp",
+      "ruhalwadia1.webp",
+      "ruhalwadia2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "144",
+    "catalogOrder": 114,
+    "name": "Ombre",
+    "description": "A deep and intense attar version with smoky oud, amber richness, and spicy warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leathry Spicy",
+    "season": "All seasons",
+    "time": "Night",
+    "accords": [
+      "Leather",
+      "Warm spicy",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Cardamom",
+      "mid": "Leather, Jasmine",
+      "base": "Amber, Moss, Patchouli"
+    },
+    "price": 139,
+    "sizes": [],
+    "images": [
+      "blueoud.webp",
+      "ombrea1.webp",
+      "ombrea2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "146",
+    "catalogOrder": 115,
+    "name": "Satin OUD",
+    "description": "A concentrated attar version of a luxurious rose-oud composition with creamy vanilla and amber warmth.",
+    "category": "Attar",
+    "gender": "Unisex",
+    "inspiredBy": "MFK oud Satin Mood",
+    "family": "Oriental Floral",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Rose",
+      "Floral",
+      "Oud",
+      "Amber",
+      "Vanilla",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Bulgarian Rose, Violet, Strawberry",
+      "mid": "Turkish Rose",
+      "base": "Oud (Agarwood), Vanilla, Amber, Benzoin, Caramel, Cedar"
+    },
+    "price": 89,
+    "sizes": [],
+    "images": [
+      "prem7.webp",
+      "satinoa1.webp",
+      "satinoa2.webp",
+      "infoa.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_1",
+    "catalogOrder": 116,
+    "name": "Afternoon Dive",
+    "description": "Fresh, Citrus, Aquatic fragrance inspired by LV Afternoon Swim.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "LV Afternoon Swim",
+    "family": "Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Citrus",
+      "Aquatic"
+    ],
+    "notes": {
+      "top": "Mandarin Orange, Sicilian Orange, Bergamot.",
+      "mid": "Ginger.",
+      "base": "Ambergris."
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "afternoon_dive.webp",
+      "afternoon_dive1.webp",
+      "afternoon_dive2.webp",
+      "afternoon_dive3.webp",
+      "afternoon_dive4.webp",
+      "afternoon_dive5.webp",
+      "afternoon_dive.webp",
+      "afternoon_dive7.webp",
+      "afternoon_dive100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_2",
+    "catalogOrder": 117,
+    "name": "Al Wadi",
+    "description": "Woody, Spicy, Amber fragrance inspired by Imperial Valley Gissah.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Imperial Valley Gissah",
+    "family": "Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Spicy",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Pink Pepper, Bergamot, Davana.",
+      "mid": "Leather, White Amber, Rosemary.",
+      "base": "Oud, Musk, Vetiver."
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "al_wadi.webp",
+      "al_wadi1.webp",
+      "al_wadi2.webp",
+      "al_wadi3.webp",
+      "al_wadi4.webp",
+      "al_wadi5.webp",
+      "al_wadi.webp",
+      "al_wadi7.webp",
+      "al_wadi100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_3",
+    "catalogOrder": 118,
+    "name": "Alpha Blue",
+    "description": "Aromatic, Woody, Spicy fragrance inspired by YSL Y Le Parfum.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "YSL Y Le Parfum",
+    "family": "Aromatic",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Aromatic",
+      "Woody",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Grapefruit, Apple, Ginger.",
+      "mid": "Lavender, Sage, Geranium.",
+      "base": "Tonka Bean, Cedar, Patchouli, Olibanum."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "alpha_blue.webp",
+      "alpha_blue1.webp",
+      "alpha_blue2.webp",
+      "alpha_blue3.webp",
+      "alpha_blue4.webp",
+      "alpha_blue5.webp",
+      "alpha_blue.webp",
+      "alpha_blue7.webp",
+      "alpha_blue100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_4",
+    "catalogOrder": 119,
+    "name": "Azure Tide",
+    "description": "Fresh, Aquatic, Fruity fragrance inspired by Kaaf Ahmed Al Maghribi.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Kaaf Ahmed Al Maghribi",
+    "family": "Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Aquatic",
+      "Fruity"
+    ],
+    "notes": {
+      "top": "Watermelon, Red Fruits, Lavender.",
+      "mid": "Jasmine, Lotus, Marine Notes.",
+      "base": "White Musk, Sandalwood, Ambroxan."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "azure_tide.webp",
+      "azure_tide1.webp",
+      "azure_tide2.webp",
+      "azure_tide3.webp",
+      "azure_tide4.webp",
+      "azure_tide5.webp",
+      "azure_tide.webp",
+      "azure_tide7.webp",
+      "azure_tide100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_5",
+    "catalogOrder": 120,
+    "name": "Caramel OUD",
+    "description": "Sweet, Oud, Amber fragrance inspired by Caramel OUD.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Caramel OUD",
+    "family": "Sweet",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Sweet",
+      "Oud",
+      "Amber"
+    ],
+    "notes": {
+      "top": "Caramel, Saffron.",
+      "mid": "Rose, Amber, Praline.",
+      "base": "Oud, Vanilla, Musk."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "caramel_oud.webp",
+      "caramel_oud1.webp",
+      "caramel_oud2.webp",
+      "caramel_oud3.webp",
+      "caramel_oud4.webp",
+      "caramel_oud5.webp",
+      "caramel_oud.webp",
+      "caramel_oud7.webp",
+      "caramel_oud100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_6",
+    "catalogOrder": 121,
+    "name": "Dark Rebel",
+    "description": "Oud, Floral, Spicy fragrance inspired by LV Myriad.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "LV Myriad",
+    "family": "Oud",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oud",
+      "Floral",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Saffron.",
+      "mid": "Bulgarian Rose, Grasse Rose.",
+      "base": "Assam Oud, Cacao, Ambrette, White Musk."
+    },
+    "price": 699,
+    "sizes": [],
+    "images": [
+      "dark_rebel.webp",
+      "dark_rebel1.webp",
+      "dark_rebel2.webp",
+      "dark_rebel3.webp",
+      "dark_rebel4.webp",
+      "dark_rebel5.webp",
+      "dark_rebel.webp",
+      "dark_rebel7.webp",
+      "dark_rebel100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_7",
+    "catalogOrder": 122,
+    "name": "Ember",
+    "description": "Fruity, Musky, Woody fragrance inspired by .",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Fruity",
+    "season": "All seasons",
+    "time": "Day/Night",
+    "accords": [
+      "Fruity",
+      "Musky",
+      "Woody"
+    ],
+    "notes": {
+      "top": "mandarin orange, grapefruit, bergamot, apple, blue orchids",
+      "mid": "jasmine, lily of the valley, white orchid, pineapple",
+      "base": "sandalwood, amber, musk, and vanilla"
+    },
+    "price": 699,
+    "sizes": [],
+    "images": [
+      "ember.webp",
+      "ember1.webp",
+      "ember2.webp",
+      "ember3.webp",
+      "ember4.webp",
+      "ember5.webp",
+      "ember.webp",
+      "ember7.webp",
+      "ember100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_8",
+    "catalogOrder": 123,
+    "name": "Golden Aura",
+    "description": "Fruity, Floral, Sweet fragrance inspired by Ajmal Aurum.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Ajmal Aurum",
+    "family": "Fruity",
+    "season": "Spring-Summer",
+    "time": "Day/Night",
+    "accords": [
+      "Fruity",
+      "Floral",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Lemon, Raspberry, Fruity Notes.",
+      "mid": "Gardenia, Jasmine, Orange Blossom.",
+      "base": "Vanilla, Amber, Musk, Woody Notes."
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "golden_aura.webp",
+      "golden_aura1.webp",
+      "golden_aura2.webp",
+      "golden_aura3.webp",
+      "golden_aura4.webp",
+      "golden_aura5.webp",
+      "golden_aura.webp",
+      "golden_aura7.webp",
+      "golden_aura100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_9",
+    "catalogOrder": 124,
+    "name": "Intus",
+    "description": "Woody, Citrus, Spicy fragrance inspired by Terre D'Hermes.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Terre D'Hermes",
+    "family": "Woody",
+    "season": "Spring-Autumn",
+    "time": "Day",
+    "accords": [
+      "Woody",
+      "Citrus",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Orange, Grapefruit.",
+      "mid": "Pepper, Geranium.",
+      "base": "Vetiver, Cedar, Patchouli, Benzoin."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "intus.webp",
+      "intus1.webp",
+      "intus2.webp",
+      "intus3.webp",
+      "intus4.webp",
+      "intus5.webp",
+      "intus.webp",
+      "intus7.webp",
+      "intus100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_10",
+    "catalogOrder": 125,
+    "name": "Melior",
+    "description": "Sweet, Tobacco, Aromatic fragrance inspired by Xerjoff Naxos.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Xerjoff Naxos",
+    "family": "Sweet",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Sweet",
+      "Tobacco",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Lavender, Bergamot, Lemon.",
+      "mid": "Honey, Cinnamon, Cashmeran, Jasmine Sambac.",
+      "base": "Tobacco Leaf, Vanilla, Tonka Bean."
+    },
+    "price": 599,
+    "sizes": [],
+    "images": [
+      "melior.webp",
+      "melior1.webp",
+      "melior2.webp",
+      "melior3.webp",
+      "melior4.webp",
+      "melior5.webp",
+      "melior.webp",
+      "melior7.webp",
+      "melior100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_11",
+    "catalogOrder": 126,
+    "name": "Million",
+    "description": "Spicy, Citrus, Leather fragrance inspired by Paco Rabanne 1 Million.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Paco Rabanne 1 Million",
+    "family": "Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Spicy",
+      "Citrus",
+      "Leather"
+    ],
+    "notes": {
+      "top": "Blood Mandarin, Grapefruit, Mint.",
+      "mid": "Cinnamon, Spicy Notes, Rose.",
+      "base": "Amber, Leather, Woody Notes, Patchouli."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "million.webp",
+      "million1.webp",
+      "million2.webp",
+      "million3.webp",
+      "million4.webp",
+      "million5.webp",
+      "million.webp",
+      "million7.webp",
+      "million100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_12",
+    "catalogOrder": 127,
+    "name": "Mukhallat",
+    "description": "Woody, Amber, Spicy fragrance inspired by .",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Woody",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Woody",
+      "Amber",
+      "Spicy"
+    ],
+    "notes": {
+      "top": "Bergamot, Cardamom, Cinnamon, Fruity Notes.",
+      "mid": "Lavender, Tobacco, Rose, Spicy Notes.",
+      "base": "Amber, Vanilla, Musk, Sandalwood, Oud."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "mukhallat.webp",
+      "mukhallat1.webp",
+      "mukhallat2.webp",
+      "mukhallat3.webp",
+      "mukhallat4.webp",
+      "mukhallat5.webp",
+      "mukhallat.webp",
+      "mukhallat7.webp",
+      "mukhallat100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_13",
+    "catalogOrder": 128,
+    "name": "Noble",
+    "description": "Oud, Spicy, Aromatic fragrance inspired by Initio Oud for Greatness.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Initio Oud for Greatness",
+    "family": "Oud",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oud",
+      "Spicy",
+      "Aromatic"
+    ],
+    "notes": {
+      "top": "Saffron, Nutmeg, Lavender.",
+      "mid": "Oud.",
+      "base": "Patchouli, Musk."
+    },
+    "price": 799,
+    "sizes": [],
+    "images": [
+      "noble.webp",
+      "noble1.webp",
+      "noble2.webp",
+      "noble3.webp",
+      "noble4.webp",
+      "noble5.webp",
+      "noble.webp",
+      "noble7.webp",
+      "noble100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_14",
+    "catalogOrder": 129,
+    "name": "Ombre",
+    "description": "Leather, Smoky, Floral fragrance inspired by .",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "",
+    "family": "Leather",
+    "season": "All Seasons",
+    "time": "Night",
+    "accords": [
+      "Leather",
+      "Smoky",
+      "Floral"
+    ],
+    "notes": {
+      "top": "Cardamom.",
+      "mid": "Leather, Jasmine Sambac.",
+      "base": "Amber, Moss, Patchouli."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "ombre.webp",
+      "ombre1.webp",
+      "ombre2.webp",
+      "ombre3.webp",
+      "ombre4.webp",
+      "ombre5.webp",
+      "ombre.webp",
+      "ombre7.webp",
+      "ombre100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_15",
+    "catalogOrder": 130,
+    "name": "Pink Vanilla",
+    "description": "Sweet, Vanilla, Fruity fragrance inspired by Kayali Vanilla Candy Rock Sugar.",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "Kayali Vanilla Candy Rock Sugar",
+    "family": "Sweet",
+    "season": "Spring-Autumn",
+    "time": "Day/Night",
+    "accords": [
+      "Sweet",
+      "Vanilla",
+      "Fruity"
+    ],
+    "notes": {
+      "top": "Candied Pear, Bubble Gum, Vanilla, Violet Leaf.",
+      "mid": "Caramel, Jasmine, Tonka Bean, Ylang-Ylang, Labdanum.",
+      "base": "Rock Sugar, Patchouli, Sandalwood, Cashmere Wood."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "pink_vanilla.webp",
+      "pink_vanilla1.webp",
+      "pink_vanilla2.webp",
+      "pink_vanilla3.webp",
+      "pink_vanilla4.webp",
+      "pink_vanilla5.webp",
+      "pink_vanilla.webp",
+      "pink_vanilla7.webp",
+      "pink_vanilla100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_16",
+    "catalogOrder": 131,
+    "name": "Qahwa",
+    "description": "Spicy, Coffee, Sweet fragrance inspired by Lattafa Khamrah Qahwa.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Lattafa Khamrah Qahwa",
+    "family": "Spicy",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Spicy",
+      "Coffee",
+      "Sweet"
+    ],
+    "notes": {
+      "top": "Cinnamon, Cardamom, Ginger.",
+      "mid": "Praline, Candied Fruits, White Flowers.",
+      "base": "Coffee, Vanilla, Tonka Bean, Benzoin, Musk."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "qahwa.webp",
+      "qahwa1.webp",
+      "qahwa2.webp",
+      "qahwa3.webp",
+      "qahwa4.webp",
+      "qahwa5.webp",
+      "qahwa.webp",
+      "qahwa7.webp",
+      "qahwa100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_17",
+    "catalogOrder": 132,
+    "name": "Tao Mist",
+    "description": "Woody, Aromatic, Powdery fragrance inspired by Diptyque Tam Dao.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "Diptyque Tam Dao",
+    "family": "Woody",
+    "season": "Spring-Autumn",
+    "time": "Day/Night",
+    "accords": [
+      "Woody",
+      "Aromatic",
+      "Powdery"
+    ],
+    "notes": {
+      "top": "Rose, Myrtle, Italian Cypress.",
+      "mid": "Sandalwood, Cedar.",
+      "base": "Spices, Amber, White Musk, Brazilian Rosewood."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "tao_mist.webp",
+      "tao_mist1.webp",
+      "tao_mist2.webp",
+      "tao_mist3.webp",
+      "tao_mist4.webp",
+      "tao_mist5.webp",
+      "tao_mist.webp",
+      "tao_mist7.webp",
+      "tao_mist100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_18",
+    "catalogOrder": 133,
+    "name": "Urban Icon",
+    "description": "Fresh, Citrus, Woody fragrance inspired by Dunhill Icon.",
+    "category": "Perfume",
+    "gender": "Male",
+    "inspiredBy": "Dunhill Icon",
+    "family": "Fresh",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Fresh",
+      "Citrus",
+      "Woody"
+    ],
+    "notes": {
+      "top": "Neroli, Bergamot, Black Pepper, Petitgrain.",
+      "mid": "Lavender, Cardamom, Juniper Berries, Sage.",
+      "base": "Vetiver, Oakmoss, Leather, Oud, Iris."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "urban_icon.webp",
+      "urban_icon1.webp",
+      "urban_icon2.webp",
+      "urban_icon3.webp",
+      "urban_icon4.webp",
+      "urban_icon5.webp",
+      "urban_icon.webp",
+      "urban_icon7.webp",
+      "urban_icon100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_19",
+    "catalogOrder": 134,
+    "name": "Vanaffe",
+    "description": "Sweet, Coffee, Vanilla fragrance inspired by .",
+    "category": "Perfume",
+    "gender": "Female",
+    "inspiredBy": "",
+    "family": "Sweet",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Sweet",
+      "Coffee",
+      "Vanilla"
+    ],
+    "notes": {
+      "top": "Candied Pear, Bubble Gum, Coffee, Vanilla.",
+      "mid": "Caramel, Jasmine, Tonka Bean, Coffee Blossom.",
+      "base": "Rock Sugar, Vanilla, Sandalwood, Patchouli, Musk."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "vanaffe.webp",
+      "vanaffe1.webp",
+      "vanaffe2.webp",
+      "vanaffe3.webp",
+      "vanaffe4.webp",
+      "vanaffe5.webp",
+      "vanaffe.webp",
+      "vanaffe7.webp",
+      "vanaffe100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_20",
+    "catalogOrder": 135,
+    "name": "White OUD",
+    "description": "Oud, Woody, Musky fragrance inspired by White Oud.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "White Oud",
+    "family": "Oud",
+    "season": "Autumn-Winter",
+    "time": "Night",
+    "accords": [
+      "Oud",
+      "Woody",
+      "Musky"
+    ],
+    "notes": {
+      "top": "Bergamot, Saffron, White Pepper.",
+      "mid": "Rose, Jasmine, White Woods.",
+      "base": "White Oud, Musk, Amber, Sandalwood."
+    },
+    "price": 499,
+    "sizes": [],
+    "images": [
+      "white_oud.webp",
+      "white_oud1.webp",
+      "white_oud2.webp",
+      "white_oud3.webp",
+      "white_oud4.webp",
+      "white_oud5.webp",
+      "white_oud.webp",
+      "white_oud7.webp",
+      "white_oud100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "frontend_21",
+    "catalogOrder": 136,
+    "name": "Symphoria",
+    "description": "Citrus, Fresh, Fruity fragrance inspired by LV Symphony.",
+    "category": "Perfume",
+    "gender": "Unisex",
+    "inspiredBy": "LV Symphony",
+    "family": "Citrus",
+    "season": "Spring-Summer",
+    "time": "Day",
+    "accords": [
+      "Citrus",
+      "Fresh",
+      "Fruity"
+    ],
+    "notes": {
+      "top": "Grapefruit, Bergamot, Orange.",
+      "mid": "Ginger, Fresh Spices.",
+      "base": "Amber, Musk."
+    },
+    "price": 799,
+    "sizes": [],
+    "images": [
+      "symphoria.webp",
+      "symphoria1.webp",
+      "symphoria2.webp",
+      "symphoria3.webp",
+      "symphoria4.webp",
+      "symphoria5.webp",
+      "symphoria.webp",
+      "symphoria7.webp",
+      "symphoria100.webp"
+    ],
+    "isActive": true
+  },
+  {
+    "legacyId": "bakhoor-al-wadi",
+    "catalogOrder": 137,
+    "name": "Bakhoor Al Wadi",
+    "description": "Warm woody bakhoor with a rich amber trail for welcoming spaces and evening gatherings.",
+    "category": "Bakhoor",
+    "gender": "Unisex",
+    "inspiredBy": "Al Wadi",
+    "family": "Woody Bakhoor",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": ["Woody", "Amber", "Smoky"],
+    "notes": {"top": "Warm woods", "mid": "Amber and resins", "base": "Soft smoke"},
+    "price": 450,
+    "sizes": [
+      {"value": 25, "unit": "gm", "priceMultiplier": 1},
+      {"value": 12.5, "unit": "gm", "priceMultiplier": 0.5555555556}
+    ],
+    "images": ["ee-brand-20260819.webp"],
+    "isActive": true
+  },
+  {
+    "legacyId": "bakhoor-al-arab",
+    "catalogOrder": 138,
+    "name": "Bakhoor Al Arab",
+    "description": "A smooth, aromatic bakhoor blend with warm woods and a polished oriental finish.",
+    "category": "Bakhoor",
+    "gender": "Unisex",
+    "inspiredBy": "Al Arab",
+    "family": "Oriental Bakhoor",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": ["Oriental", "Woody", "Warm Spicy"],
+    "notes": {"top": "Aromatic woods", "mid": "Spices and resins", "base": "Warm amber"},
+    "price": 300,
+    "sizes": [
+      {"value": 25, "unit": "gm", "priceMultiplier": 1},
+      {"value": 12.5, "unit": "gm", "priceMultiplier": 0.6}
+    ],
+    "images": ["ee-brand-20260819.webp"],
+    "isActive": true
+  },
+  {
+    "legacyId": "bakhoor-burner-regular",
+    "catalogOrder": 139,
+    "name": "Regular Bakhoor Burner",
+    "description": "A simple, durable burner for everyday bakhoor rituals.",
+    "category": "Bakhoor",
+    "gender": "Unisex",
+    "family": "Bakhoor Burner",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": ["Bakhoor Accessory"],
+    "price": 375,
+    "mrp": 499,
+    "sizes": [],
+    "images": ["ee-brand-20260819.webp"],
+    "isActive": true
+  },
+  {
+    "legacyId": "bakhoor-burner-automatic",
+    "catalogOrder": 140,
+    "name": "Automatic Bakhoor Burner with Timer",
+    "description": "An automatic bakhoor burner with timer control for a clean, convenient experience.",
+    "category": "Bakhoor",
+    "gender": "Unisex",
+    "family": "Bakhoor Burner",
+    "season": "All Season",
+    "time": "Day/Night",
+    "accords": ["Bakhoor Accessory", "Timer"],
+    "price": 850,
+    "mrp": 1199,
+    "sizes": [],
+    "images": ["ee-brand-20260819.webp"],
+    "isActive": true
+  }
+]
