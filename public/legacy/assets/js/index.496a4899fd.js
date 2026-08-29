@@ -7,6 +7,15 @@ const BACKEND_BASE_URL = String(
       : 'https://eternal-essence-backend.onrender.com'
   )
 ).trim().replace(/\/+$/, '');
+async function fetchWithTimeout(input, init = {}, timeoutMs = 3500) {
+const controller = new AbortController();
+const timer = setTimeout(() => controller.abort(), timeoutMs);
+try {
+return await fetch(input, { ...init, signal: init.signal || controller.signal });
+} finally {
+clearTimeout(timer);
+}
+}
 function escapeHtml(value) {
 if (!value && value !== 0) return '';
 return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -164,8 +173,12 @@ const products = [
 ["Urban Icon","Dunhill Icon","Male","Spring-Summer","Day","Fresh|Citrus|Woody","Neroli, Bergamot, Black Pepper, Petitgrain.","Lavender, Cardamom, Juniper Berries, Sage.","Vetiver, Oakmoss, Leather, Oud, Iris.",499,["urban_icon8.webp","urban_icon20.webp","urban_icon3.webp"]],
 ["Vanaffe","","Female","Autumn-Winter","Night","Sweet|Coffee|Vanilla","Candied Pear, Bubble Gum, Coffee, Vanilla.","Caramel, Jasmine, Tonka Bean, Coffee Blossom.","Rock Sugar, Vanilla, Sandalwood, Patchouli, Musk.",499,["vanaffe8.webp","Vanaffe20.webp","vanaffe3.webp"]],
 ["White OUD","White Oud","Unisex","Autumn-Winter","Night","Oud|Woody|Musky","Bergamot, Saffron, White Pepper.","Rose, Jasmine, White Woods.","White Oud, Musk, Amber, Sandalwood.",499,["white_oud8.webp","white_oud20.webp","white_oud3.webp"]],
-["Symphoria","LV Symphony","Unisex","Spring-Summer","Day","Citrus|Fresh|Fruity","Grapefruit, Bergamot, Orange.","Ginger, Fresh Spices.","Amber, Musk.",799,["symphoria.webp"]]
-].map(([name, inspiredBy, gender, season, time, accords, top, mid, base, price, comboImages], index) => {
+ ["Symphoria","LV Symphony","Unisex","Spring-Summer","Day","Citrus|Fresh|Fruity","Grapefruit, Bergamot, Orange.","Ginger, Fresh Spices.","Amber, Musk.",799,["symphoria.webp"]],
+  ["Bakhoor Al Wadi","Al Wadi","Unisex","All Season","Day/Night","Woody|Amber|Smoky","Warm woods","Amber and resins","Soft smoke",450,["ee-brand-20260819.webp"],"Bakhoor",[{value:25,unit:"gm",priceMultiplier:1},{value:12.5,unit:"gm",priceMultiplier:0.5555555556}]],
+  ["Bakhoor Al Arab","Al Arab","Unisex","All Season","Day/Night","Oriental|Woody|Warm Spicy","Aromatic woods","Spices and resins","Warm amber",300,["ee-brand-20260819.webp"],"Bakhoor",[{value:25,unit:"gm",priceMultiplier:1},{value:12.5,unit:"gm",priceMultiplier:0.6}]],
+  ["Regular Bakhoor Burner","","Unisex","All Season","Day/Night","Bakhoor Accessory","","","",375,["ee-brand-20260819.webp"],"Bakhoor",[],499],
+  ["Automatic Bakhoor Burner with Timer","","Unisex","All Season","Day/Night","Bakhoor Accessory|Timer","","","",850,["ee-brand-20260819.webp"],"Bakhoor",[],1199]
+].map(([name, inspiredBy, gender, season, time, accords, top, mid, base, price, comboImages, category, sizeDefinitions, mrp], index) => {
 
     const imageBase = name
         .trim()
@@ -197,10 +210,19 @@ const products = [
         20: explicitSizeImage(20) || `${imageBase}20.webp`
     };
 
+    const catalogueItem = Array.isArray(window.__EE_LOCAL_CATALOG__) ? window.__EE_LOCAL_CATALOG__[index] : null;
+    const catalogueImages = Array.isArray(catalogueItem?.images) ? catalogueItem.images.filter(Boolean) : [];
+    const effectiveCategory = catalogueItem?.category || category || (PERFUME_CATALOG_POSITIONS.has(index + 1) ? 'Perfume' : 'Attar');
+    const isFragrance = ['perfume', 'attar'].includes(String(effectiveCategory).toLowerCase());
+    const primaryImage = !isFragrance && comboImages?.[0]
+        ? comboImages[0]
+        : defaultImage;
+    const isAttar = String(effectiveCategory).toLowerCase() === 'attar';
+    const displayImage = isAttar && catalogueImages[0] ? catalogueImages[0] : primaryImage;
     return {
         id: `frontend_${index + 1}`,
         name,
-        type: PERFUME_CATALOG_POSITIONS.has(index + 1) ? 'Perfume' : 'Attar',
+        type: effectiveCategory,
         inspiredBy,
         gender,
         season,
@@ -211,10 +233,12 @@ const products = [
         mid,
         base,
         price,
-        image: defaultImage,
-        images: variants,
+        mrp,
+        sizes: sizeDefinitions || [],
+        image: displayImage,
+        images: isAttar && catalogueImages.length ? catalogueImages : (!isFragrance ? [primaryImage] : variants),
         comboOverlayImages,
-        description: `${accords.replaceAll('|', ', ')} fragrance inspired by ${inspiredBy}.`
+        description: catalogueItem?.description || `${accords.replaceAll('|', ', ')} fragrance inspired by ${inspiredBy}.`
     };
 });
 
@@ -283,7 +307,7 @@ product.sizes = getSizesByCategory(product.type);
 /* ================= COMBO / NO SIZE ================= */
 if (!product.sizes || product.sizes.length === 0) {
 sizeContainer.classList.add('hidden');
-const pricing = getPricing(product.price,1);
+const pricing = getPricing(product.price,1,product.mrp);
 currentPrice = pricing.sellingPrice;
 updatePriceDisplay(
 pricing.sellingPrice,
@@ -303,7 +327,8 @@ btn.onclick = () => {
 selectedSize = `${s.value}${s.unit}`;
 const pricing = getPricing(
 product.price,
-s.priceMultiplier
+s.priceMultiplier,
+product.mrp
 );
 currentPrice = pricing.sellingPrice;
 updatePriceDisplay(
@@ -359,9 +384,13 @@ const clean = value.split('/').pop();
 return `${window.__EE_IMAGE_BASE__ || '/products/'}${clean.replace(/\.(png|jpe?g)$/i,'.webp')}`;
 }
 function getDefaultProductImage(product) {
-// `image` is the established 30 ml gift-pack/default thumbnail asset for both
-// older JPG products and newer PNG products. Do not depend on image6 existing.
-return normalizeImageUrl(product?.image || product?.images?.[0] || `${window.__EE_IMAGE_BASE__ || '/products/'}placeholder.webp`);
+// Perfumes use the full product artwork; Attars use their concentrated-oil
+// bottle asset so an Attar collection never presents perfume packaging.
+const category = normalize(product?.type || product?.category);
+const image = category === 'attar'
+? product?.images?.[0] || product?.comboOverlayImages?.[8] || product?.image
+: product?.collectionImage || product?.image || product?.images?.[0];
+return normalizeImageUrl(image || `${window.__EE_IMAGE_BASE__ || '/products/'}ee-brand-20260819.webp`);
 }
 function getPerfumeVariantIndex(sizeLabel) {
 if (typeof sizeLabel === 'number') return sizeLabel;
@@ -753,6 +782,7 @@ switchPage('cart');
 }
 let backendProducts = [];
 let allProducts = [];
+let activeCategory = 'all';
 let bundleRules = [];
 function getCustomSetProducts() {
 return allProducts.filter(product =>
@@ -779,7 +809,7 @@ const DEFAULT_BUNDLE_RULES = [
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 async function loadBackendProducts() {
 try {
-const res = await fetch(`${BACKEND_BASE_URL}/api/products`);
+const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products`);
 const text = await res.text();
 if (text.startsWith('<')) {
 console.warn('Backend returned HTML instead of JSON');
@@ -793,8 +823,9 @@ return;
 }
 function normalizeCategory(cat) {
 if (!cat) return 'Perfume';
-const key = cat.toLowerCase().replace(/\s+/g, '');
-return ({perfume:'Perfume',attar:'Attar',solidperfume:'Solid Perfume',combo:'Combo'})[key] || 'Perfume';
+const label = String(cat).trim();
+const key = label.toLowerCase().replace(/\s+/g, '');
+return ({perfume:'Perfume',attar:'Attar',solidperfume:'Solid Perfume',combo:'Combo'})[key] || label;
 }
 backendProducts = data.products.slice().sort((a,b) => Number(a.catalogOrder ?? 999999) - Number(b.catalogOrder ?? 999999)).map(p => ({
 id: 'db_' + p._id,
@@ -812,50 +843,122 @@ top: p.notes?.top || '',
 mid: p.notes?.mid || '',
 base: p.notes?.base || '',
 price: p.price,
-image: resolveMergeImage(p.images?.[0]),
+mrp: p.mrp,
+sizes: Array.isArray(p.sizes) ? p.sizes : [],
+image: resolveMergeImage(p.images?.[6] || p.images?.[0]),
 images: (p.images || []).map(resolveMergeImage),
 source: 'backend'
 }));
 mergeProducts();
 } catch (err) {
-console.error('Failed to load backend products', err);
+console.warn('Backend catalogue is unavailable; using the bundled local catalogue.', err?.message || err);
 mergeProducts();
 }
 }
 function mergeProducts() {
 const frontendProducts = products.map(p => ({ ...p, source: 'frontend' }));
-allProducts = backendProducts.length ? backendProducts.map(serverProduct => {
-const order = Number(serverProduct.catalogOrder);
-// catalogOrder is zero-based in current-catalog.json and MongoDB.
-const canonical = Number.isInteger(order) && order >= 0 && order < frontendProducts.length
-? frontendProducts[order]
-: null;
-if (!canonical) return serverProduct;
+const matchedFrontendIds = new Set();
 const correctedAsset = value => {
 const source = String(value || '');
 const filename = source.split('/').pop().toLowerCase();
 const corrected = {
 'dark rebel.webp': 'dark_rebel.webp',
 'blue_oud.webp': 'blueoud.webp',
-'fire_oud.webp': 'fire oud.webp'
+'fire_oud.webp': 'fire oud.webp',
+'eternal_white.webp': 'eternal white.webp',
+'placeholder.webp': 'ee-brand-20260819.webp'
 }[filename];
 return corrected ? source.replace(/[^/\\]+$/, corrected) : source;
 };
+const mergedBackendProducts = backendProducts.map(serverProduct => {
+const order = Number(serverProduct.catalogOrder);
+const serverName = normalize(serverProduct.name);
+const orderCandidate = Number.isInteger(order) && order >= 0 && order < frontendProducts.length
+? frontendProducts[order]
+: null;
+const nameCandidates = frontendProducts.filter(product => normalize(product.name) === serverName);
+// catalogOrder is the primary identity. Category and price disambiguate the
+// handful of perfume/attar products that intentionally share a name.
+const canonical = (orderCandidate && normalize(orderCandidate.name) === serverName ? orderCandidate : null)
+|| nameCandidates.find(product => normalize(product.type) === normalize(serverProduct.type) && Number(product.price) === Number(serverProduct.price))
+|| nameCandidates.find(product => Number(product.price) === Number(serverProduct.price))
+|| nameCandidates.find(product => normalize(product.type) === normalize(serverProduct.type))
+|| nameCandidates[0]
+|| orderCandidate;
+if (!canonical) return serverProduct;
+matchedFrontendIds.add(canonical.id);
 return {
 ...canonical,
 ...serverProduct,
 // Keep live database metadata while protecting the canonical category from
 // the older import that marked every item as Perfume. Correct the three known
 // stale primary filenames without discarding Admin-managed image galleries.
+// The canonical image is the same full-pack artwork used on the product page;
+// backend gallery order is intentionally retained for size selection.
 type: canonical.type,
-image: correctedAsset(serverProduct.image),
+image: correctedAsset(canonical.image || serverProduct.image),
 images: (serverProduct.images || []).map(correctedAsset),
 source: 'backend'
 };
-}) : frontendProducts;
+});
+// A deployed database may lag behind the array/current-catalog source. Keep
+// array-defined products visible immediately and avoid duplicating rows once
+// the database has been synchronized.
+const frontendOnly = frontendProducts.filter(product => !matchedFrontendIds.has(product.id));
+allProducts = backendProducts.length ? [...mergedBackendProducts, ...frontendOnly] : frontendProducts;
+renderCategoryTabs();
 renderProducts(allProducts);
 renderBundleBuilder();
 buildCollectionMenus();
+}
+function categoryLabel(category){
+return String(category || 'Product').trim() || 'Product';
+}
+function categoryList(){
+const seen = new Set(), result = [];
+['Perfume','Attar'].forEach(category => { seen.add(normalize(category)); result.push(category); });
+allProducts.forEach(product => {
+const category = categoryLabel(product.type || product.category);
+const key = normalize(category);
+if (!key || key === 'combo' || seen.has(key)) return;
+seen.add(key); result.push(category);
+});
+return result;
+}
+function renderCategoryTabs(){
+const host = document.querySelector('#filter-bar .cat-btn')?.parentElement;
+if (!host) return;
+const current = normalize(activeCategory);
+host.innerHTML = '';
+const all = document.createElement('button');
+all.className = 'cat-btn'; all.dataset.cat = 'all'; all.textContent = 'All';
+all.onclick = () => setCategory('all'); host.appendChild(all);
+categoryList().forEach(category => {
+const button = document.createElement('button');
+button.className = 'cat-btn'; button.dataset.cat = category; button.textContent = category;
+button.onclick = () => setCategory(category); host.appendChild(button);
+});
+const selected = [...host.querySelectorAll('.cat-btn')].find(button => normalize(button.dataset.cat) === current) || all;
+selected.classList.add('active');
+}
+function renderDynamicCategoryLinks(){
+const extras = categoryList().filter(category => !['perfume','attar'].includes(normalize(category)));
+['collectionMenu','mobile-menu'].forEach(id => {
+const menu = document.getElementById(id);
+if (!menu) return;
+let box = menu.querySelector('[data-ee-extra-categories]');
+if (!box) { box = document.createElement('div'); box.dataset.eeExtraCategories = '1'; menu.appendChild(box); }
+if (id === 'mobile-menu') {
+const giftHeading = [...menu.children].find(child => normalize(child.textContent) === 'giftoptions');
+if (giftHeading) menu.insertBefore(box, giftHeading);
+}
+const itemClass = id === 'mobile-menu'
+? 'block w-full py-2 text-left text-yellow-500 hover:text-yellow-300 cursor-pointer'
+: 'px-5 py-3 hover:bg-yellow-500 hover:text-black cursor-pointer';
+box.innerHTML = extras.map(category => `<button type="button" class="${itemClass}" data-ee-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join('');
+box.querySelectorAll('[data-ee-category]').forEach(item => item.onclick = event => { event.stopPropagation(); window.goToCategory?.(item.dataset.eeCategory); closeMenus(); });
+box.classList.toggle('hidden', !extras.length);
+});
 }
 function placeProductFilters() {
 const filterBar = document.getElementById('filter-bar');
@@ -875,6 +978,7 @@ let discountAmount = 0;
 let appliedCoupon = null;
 const COD_CHARGE = 19;
 let editingCartIndex = null;
+let editingCartRowIndex = null;
 let ordersRenderSeq = 0;
 let currentProduct = null;
 let selectedSize = 100;
@@ -1028,8 +1132,17 @@ No products found.
 return;
 }
 list.forEach(product => {
-const pricing = getPricing(product.price, 1);
+const pricing = getPricing(product.price, 1, product.mrp);
 const imageUrl = getDefaultProductImage(product);
+const imageFallbacks = [
+imageUrl,
+normalizeImageUrl(product.comboOverlayImages?.[8]),
+normalizeImageUrl(product.images?.[2]),
+normalizeImageUrl(product.images?.[1]),
+normalizeImageUrl(product.images?.[7]),
+normalizeImageUrl(product.images?.[0]),
+`${window.__EE_IMAGE_BASE__ || '/products/'}ee-brand-20260819.webp`
+];
 const genderClass = (product.gender || 'Unisex').replace(/[^a-zA-Z]/g, '');
 const timeClass   = (product.time || '').replace(/[^a-zA-Z]/g, '');
 const seasonClass = (product.season || '').replace(/[^a-zA-Z]/g, '');
@@ -1040,52 +1153,29 @@ card.className = 'product-card bg-white relative group cursor-pointer';
 card.onclick = () => openModal(product);
 card.innerHTML = `
 <div class="product-image-wrap relative aspect-[4/5] overflow-hidden">
-<div class="absolute top-2 left-2 z-10 flex flex-col gap-1">
-<span class="badge gender ${genderClass}">
-${product.gender || 'Unisex'}
-</span>
-${product.time ? `
-<span class="badge time ${timeClass}">
-${product.time}
-</span>` : ''}
-${product.season ? `
-<span class="badge season ${seasonClass}">
-${product.season}
-</span>` : ''}
-<span class="badge category ${typeClass}">
-${product.type || product.category}
-</span>
-</div>
 <img
-${imageWithFallback(imageUrl, `${window.__EE_IMAGE_BASE__ || '/products/'}placeholder.webp`)}
+${imageWithFallbacks(imageFallbacks)}
 alt="${product.name}"
 class="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
 loading="lazy"
 />
 </div>
-<div class="product-details px-4 pb-5 pt-4 text-center">
-${product.family ? `
-<p class="text-xs text-gray-500 uppercase tracking-wide">
-${product.family}
-</p>` : ''}
-<h3 class="brand-font text-lg font-bold mt-1 text-gray-900">
-${product.name}
-</h3>
-<p class="text-xs text-gray-500 mt-1 line-clamp-2">
-${product.description || ''}
-</p>
-<div class="mt-3 flex flex-col items-center">
-<div class="inline-flex rounded-full bg-black px-4 py-1 text-lg font-bold text-yellow-400 shadow-sm">
-₹${pricing.sellingPrice.toLocaleString("en-IN")}
+<div class="product-details">
+<div class="product-card-copy">
+${product.family ? `<p class="product-family">${product.family}</p>` : ''}
+<h3 class="brand-font">${product.name}</h3>
+<p class="product-description">${product.description || ''}</p>
 </div>
-<div class="flex items-center gap-2 mt-2">
-<span class="text-gray-400 line-through text-sm">
-₹${pricing.mrp.toLocaleString("en-IN")}
-</span>
-<span class="bg-green-600 text-white text-[10px] px-2 py-1 rounded-full font-bold">
-${pricing.discount}% OFF
-</span>
+<div class="product-card-meta" aria-label="Fragrance details">
+<span class="badge gender ${genderClass}">${product.gender || 'Unisex'}</span>
+${product.time ? `<span class="badge time ${timeClass}">${product.time}</span>` : ''}
+${product.season ? `<span class="badge season ${seasonClass}">${product.season}</span>` : ''}
+<span class="badge category ${typeClass}">${product.type || product.category}</span>
 </div>
+<div class="product-price-row">
+<del>₹${pricing.mrp.toLocaleString("en-IN")}</del>
+<strong>₹${pricing.sellingPrice.toLocaleString("en-IN")}</strong>
+<span>${pricing.discount}% OFF</span>
 </div>
 </div>
 `;
@@ -1591,9 +1681,9 @@ function prevImage(){ currentImageIndex = (currentImageIndex-1+currentGallery.le
 function roundTo99(price){
 return Math.ceil(price/100)*100-1;
 }
-function getPricing(basePrice, multiplier = 1) {
+function getPricing(basePrice, multiplier = 1, explicitMrp = 0) {
 const sellingPrice = Math.ceil(basePrice * multiplier);
-const mrp = roundTo99(sellingPrice * 1.35);
+const mrp = Number(explicitMrp) > 0 && Number(multiplier) === 1 ? Number(explicitMrp) : roundTo99(sellingPrice * 1.35);
 const discount = Math.round(
 ((mrp - sellingPrice) / mrp) * 100
 );
@@ -1651,7 +1741,7 @@ function updateCartCount(){
 const badge = document.getElementById('cart-count-badge');
 if (badge) badge.textContent = cart.reduce((sum,item)=>sum+cartItemQty(item),0);
 }
-function removeFromCart(i){ cart.splice(i,1); updateCartCount(); renderCart(); saveCartToStorage(); }
+function removeFromCart(i){ cart.splice(i,1); editingCartRowIndex=null; updateCartCount(); renderCart(); saveCartToStorage(); window.dispatchEvent(new Event('ee:cart-updated')); }
 function isQuantityCartItem(item) {
 return !item || (!item.itemType || item.itemType === 'product');
 }
@@ -1663,12 +1753,35 @@ return Number(item.finalPrice || 0) * cartItemQty(item);
 }
 function changeCartQuantity(index, delta) {
 const item = cart[index];
-if (!item || !isQuantityCartItem(item)) return;
+if (!item || !isQuantityCartItem(item) || editingCartRowIndex !== index) return;
 const next = cartItemQty(item) + Number(delta || 0);
 if (next <= 0) cart.splice(index, 1);
 else item.quantity = next;
 updateCartCount(); renderCart(); saveCartToStorage();
 window.dispatchEvent(new Event('ee:cart-updated'));
+}
+function toggleCartItemEditing(index) {
+editingCartRowIndex = editingCartRowIndex === index ? null : index;
+renderCart();
+}
+function viewCartItem(index) {
+const item = cart[index];
+if (!item) return;
+editingCartIndex = null;
+if (item.itemType === 'bundle') { switchPage('custom-set'); return; }
+if (item.itemType === 'perfume_card') { switchPage('perfume-card'); return; }
+const productId = String(item.id || item.productId || '').replace(/^db_/, '');
+const product = allProducts.find(p => p.name === item.name && String(p.id || p._id || '').replace(/^db_/, '') === productId) || allProducts.find(p => p.name === item.name) || findProductByAnyId(productId);
+if (!product) { showToast('This product is not available right now.', 'error'); return; }
+if (window.eeNavigateToProduct) {
+window.eeNavigateToProduct(product, { size: item.selectedSize, name: item.name, quantity: 1 });
+return;
+}
+openModal(product);
+}
+function continueShopping() {
+if (window.eeNavigateCollection) window.eeNavigateCollection('all');
+else goToCategory('all');
 }
 function editCartItem(index) {
 const item = cart[index];
@@ -1803,15 +1916,17 @@ const qty = cartItemQty(item);
 const canChangeQty = isQuantityCartItem(item);
 const unitPrice = Number(item.finalPrice || 0);
 const linePrice = cartItemLineTotal(item);
+const isEditingRow = editingCartRowIndex === idx;
 const quantityControls = canChangeQty
-? `<div class="ee-cart-qty" aria-label="Change quantity">
+? isEditingRow ? `<div class="ee-cart-qty" aria-label="Change quantity">
 <button type="button" onclick="changeCartQuantity(${idx}, -1)" title="Decrease quantity">-</button>
 <b>${qty}</b>
 <button type="button" onclick="changeCartQuantity(${idx}, 1)" title="Increase quantity">+</button>
-</div>`
+</div><button type="button" class="ee-cart-options" onclick="editCartItem(${idx})">Change size or options</button>`
+: `<span class="ee-cart-qty-readonly" aria-label="Quantity ${qty}">${qty}</span>`
 : `<span class="text-xs text-gray-500">${item.itemType === 'perfume_card' ? `Qty ${item.cardMeta?.qty || 1}` : 'Set item'}</span>`;
 tr.innerHTML = `
-<td class="ee-cart-product p-4 flex items-center gap-4 pr-14 md:pr-4 cursor-pointer" onclick="editCartItem(${idx})" title="Open product options">
+<td class="ee-cart-product p-4 flex items-center gap-4 pr-14 md:pr-4 cursor-pointer" onclick="viewCartItem(${idx})" title="View product details">
 ${itemVisual}
 <div class="ee-cart-product-copy"><p class="font-bold text-sm">${item.name}</p>${bundleDetails}</div>
 </td>
@@ -1820,8 +1935,8 @@ ${itemVisual}
 <td class="ee-cart-price block md:table-cell px-4 pb-4 md:p-4 text-sm font-bold"><span class="md:hidden font-bold text-gray-500 mr-2">Price:</span>₹${linePrice.toLocaleString('en-IN')}${canChangeQty && qty > 1 ? `<small class="block text-[11px] font-normal text-gray-500">₹${unitPrice.toLocaleString('en-IN')} each</small>` : ''}</td>
 <td class="ee-cart-actions absolute top-4 right-4 md:static md:table-cell p-0 md:p-4 md:text-right">
 <div class="flex items-center justify-end gap-2">
-<button onclick="editCartItem(${idx})" class="w-9 h-9 rounded-full border border-yellow-200 text-yellow-700 hover:bg-yellow-50" title="Edit item"><i class="fas fa-pen"></i></button>
-<button onclick="removeFromCart(${idx})" class="w-9 h-9 rounded-full border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700" title="Remove item"><i class="fas fa-trash"></i></button>
+<button onclick="toggleCartItemEditing(${idx})" class="w-9 h-9 rounded-full border border-yellow-200 text-yellow-700 hover:bg-yellow-50 ${isEditingRow?'ee-cart-edit-active':''}" title="${isEditingRow?'Finish editing':'Edit item'}" aria-label="${isEditingRow?'Finish editing':'Edit item'}"><i class="fas ${isEditingRow?'fa-check':'fa-pen'}"></i></button>
+${isEditingRow?`<button onclick="removeFromCart(${idx})" class="w-9 h-9 rounded-full border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-700" title="Remove item" aria-label="Remove item"><i class="fas fa-trash"></i></button>`:''}
 </div>
 </td>
 `;
@@ -1949,6 +2064,11 @@ switchPage('profile');
 console.error('login err', err); msg.textContent = err.message || 'Login failed.'; msg.className='text-xs mt-2 text-red-600';
 }
 }
+document.addEventListener('keydown', event => {
+if (event.key !== 'Enter' || !['login-email','login-password'].includes(event.target?.id)) return;
+event.preventDefault();
+handleLogin();
+});
 function handleLogout(){
 stopOrdersPoller?.();
 clearAuth();
@@ -2461,7 +2581,7 @@ amount: d.amount,
 currency: 'INR',
 name: 'Eternal Essence',
 description: 'Eternal Essence order',
-image: 'ee.webp',
+image: 'https://eternalessence.in/products/ee-brand-20260819.webp',
 order_id: d.razorpayOrderId,
 prefill: { name, email: buyerEmail, contact: phone },
 theme: { color: '#FFD700' },
@@ -2486,6 +2606,8 @@ await notifyPaymentInterrupted(d.razorpayOrderId,'User closed Razorpay popup',pe
 }
 }
 };
+await window.eeLoadRazorpay?.();
+if (!window.Razorpay) throw new Error('Payment widget is unavailable. Please try again.');
 const rzp = new Razorpay(options); rzp.open();
 rzp.on('payment.failed', async function (response) {
 await notifyPaymentInterrupted(d.razorpayOrderId,response.error?.description || 'Payment failed',pendingAttemptId);
@@ -2883,7 +3005,9 @@ const res=await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`,{me
 const data=await res.json().catch(()=>({}));
 if(!res.ok||!data.success||!data.razorpayOrderId)throw new Error(data.error||'Retry failed');
 const attemptId=rememberPendingPayment(payload,data.quote||pending.quote,data.razorpayOrderId,'Retry payment started');
-const options={key:data.keyId,amount:data.amount,currency:'INR',name:'Eternal Essence',description:'Eternal Essence order',order_id:data.razorpayOrderId,prefill:{name:payload.customer?.name,email:payload.customer?.email,contact:payload.customer?.phone},theme:{color:'#FFD700'},handler:async response=>{try{const verifyRes=await fetch(`${BACKEND_BASE_URL}/api/orders/verify-razorpay`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});const verify=await verifyRes.json().catch(()=>({}));if(!verifyRes.ok||!verify.success)throw new Error(verify.error||'Payment verification failed');removePendingPayment(attemptId);renderOrders();showDeliveryEstimateModal(verify.deliveryEstimate);}catch(error){alert(error.message||'Payment verification failed.');}},modal:{ondismiss:()=>notifyPaymentInterrupted(data.razorpayOrderId,'User closed Razorpay popup',attemptId)}};
+const options={key:data.keyId,amount:data.amount,currency:'INR',name:'Eternal Essence',description:'Eternal Essence order',image:'https://eternalessence.in/products/ee-brand-20260819.webp',order_id:data.razorpayOrderId,prefill:{name:payload.customer?.name,email:payload.customer?.email,contact:payload.customer?.phone},theme:{color:'#FFD700'},handler:async response=>{try{const verifyRes=await fetch(`${BACKEND_BASE_URL}/api/orders/verify-razorpay`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});const verify=await verifyRes.json().catch(()=>({}));if(!verifyRes.ok||!verify.success)throw new Error(verify.error||'Payment verification failed');removePendingPayment(attemptId);renderOrders();showDeliveryEstimateModal(verify.deliveryEstimate);}catch(error){alert(error.message||'Payment verification failed.');}},modal:{ondismiss:()=>notifyPaymentInterrupted(data.razorpayOrderId,'User closed Razorpay popup',attemptId)}};
+await window.eeLoadRazorpay?.();
+if(!window.Razorpay)throw new Error('Payment widget is unavailable. Please try again.');
 const rzp=new Razorpay(options);rzp.open();rzp.on('payment.failed',response=>{notifyPaymentInterrupted(data.razorpayOrderId,response.error?.description||'Payment failed',attemptId);alert('Payment failed. You can retry again from My Orders.');});
 } catch(err){writePendingPaymentAttempts([...readPendingPaymentAttempts(),pending]);alert(err.message||'Unable to retry payment right now.');}
 return;
@@ -2900,7 +3024,7 @@ headers: {
 if (!res.ok) throw new Error('Retry failed');
 return res.json();
 })
-.then(data => {
+.then(async data => {
 if (!data.success) {
 alert(data.error || 'Retry not allowed');
 return;
@@ -2910,11 +3034,14 @@ key: data.keyId,
 amount: data.amount,
 currency: 'INR',
 name: 'Eternal Essence',
+image: 'https://eternalessence.in/products/ee-brand-20260819.webp',
 order_id: data.razorpayOrderId,
 handler: function (response) {
 alert('Payment successful. Please refresh orders.');
 }
 };
+await window.eeLoadRazorpay?.();
+if(!window.Razorpay)throw new Error('Payment widget is unavailable. Please try again.');
 const rzp = new Razorpay(options);
 rzp.open();
 })
@@ -2938,7 +3065,16 @@ renderOrders();
 alert(err.message || 'Cancel failed');
 }
 }
-let activeCategory = 'all';
+function cleanCollectionPath(cat){
+const value = String(cat || 'all').trim();
+const key = normalize(value);
+if (!value || key === 'all') return '/collections';
+if (key.includes('attar')) return '/collections/attars';
+if (key.includes('perfume')) return '/collections/perfumes';
+let slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+if (slug && !slug.endsWith('s')) slug += 's';
+return `/collections/${slug}`;
+}
 function setCategory(cat, skipURL = false){
 if (normalize(cat) === 'combo') {
 history.replaceState({}, "", "#custom-set");
@@ -2947,11 +3083,12 @@ return;
 }
 activeCategory = cat;
 document.querySelectorAll(".cat-btn").forEach(btn=>{
-btn.classList.toggle("active", btn.dataset.cat === cat);
+btn.classList.toggle("active", normalize(btn.dataset.cat) === normalize(cat));
 });
 applyFilters();
 if(!skipURL){
-history.pushState({}, "", `#home?cat=${encodeURIComponent(cat)}`);
+history.pushState({}, "", cleanCollectionPath(cat));
+window.dispatchEvent(new CustomEvent('ee:route',{detail:{path:location.pathname}}));
 }
 }
 const ALLOWED_PAGES = ['home','custom-set','perfume-card','about','contact','cart','orders','account','profile'];
@@ -3065,7 +3202,7 @@ grid.innerHTML = `<p class="col-span-full text-center text-gray-500">No products
 return;
 }
 list.forEach(product => {
-const pricing = getPricing(product.price, 1);
+const pricing = getPricing(product.price, 1, product.mrp);
 const card = document.createElement('div');
 card.className = 'product-card bg-white cursor-pointer';
 card.onclick = () => openModal(product);
@@ -3168,7 +3305,7 @@ return { page: page || "home", query: query || "" };
 }
 async function loadBundleRules() {
 try {
-const res = await fetch(`${BACKEND_BASE_URL}/api/products/bundle-rules`);
+const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products/bundle-rules`);
 const data = await res.json().catch(() => ({}));
 bundleRules = data.success && Array.isArray(data.rules) && data.rules.length
 ? data.rules
@@ -3751,11 +3888,57 @@ ${p.name} — ₹${p.price}
 `;
 }
 }
+function setupMobileCollectionRows(){
+[
+{ menuId: 'perfumeMenuMobile', category: 'Perfume', label: 'Perfumes' },
+{ menuId: 'attarMenuMobile', category: 'Attar', label: 'Attars' }
+].forEach(({ menuId, category, label }) => {
+const submenu = document.getElementById(menuId);
+const trigger = submenu?.previousElementSibling;
+if (!submenu || !trigger || trigger.dataset.eeTapRow) return;
+trigger.removeAttribute('onclick');
+trigger.className = 'py-1 flex items-center justify-between gap-2 text-yellow-500';
+trigger.innerHTML = '';
+const categoryButton = document.createElement('button');
+categoryButton.type = 'button';
+categoryButton.className = 'flex-1 py-2 text-left hover:text-yellow-300';
+categoryButton.textContent = label;
+categoryButton.onclick = event => {
+event.stopPropagation();
+window.goToCategory?.(category);
+closeMenus();
+};
+const expandButton = document.createElement('button');
+expandButton.type = 'button';
+expandButton.className = 'px-3 py-2 text-yellow-500 hover:text-white';
+expandButton.setAttribute('aria-label', `Expand ${label}`);
+expandButton.setAttribute('aria-controls', menuId);
+expandButton.setAttribute('aria-expanded', 'false');
+expandButton.textContent = '▸';
+expandButton.onclick = event => {
+event.stopPropagation();
+event.preventDefault();
+const opening = submenu.classList.contains('hidden') || submenu.classList.contains('menu-hidden');
+if (opening) {
+closeCollectionSubmenus(menuId);
+showMenu(submenu);
+} else {
+hideMenu(submenu);
+}
+expandButton.textContent = opening ? '▾' : '▸';
+expandButton.setAttribute('aria-expanded', String(opening));
+};
+trigger.append(categoryButton, expandButton);
+trigger.dataset.eeTapRow = '1';
+});
+}
 function buildCollectionMenus(){
 buildMenu("attarMenu");
 buildMenu("attarMenuMobile");
 buildPerfumeMenu("perfumeMenu");
 buildPerfumeMenu("perfumeMenuMobile");
+renderDynamicCategoryLinks();
+setupMobileCollectionRows();
 }
 buildCollectionMenus();
 bindCollectionCategoryHover();
@@ -3817,7 +4000,14 @@ return !!el && !el.classList.contains("hidden") && !el.classList.contains("menu-
 }
 function closeCollectionSubmenus(exceptId = '') {
 ["attarMenu", "perfumeMenu", "attarMenuMobile", "perfumeMenuMobile"].forEach(id => {
-if (id !== exceptId) hideMenu(document.getElementById(id));
+if (id !== exceptId) {
+hideMenu(document.getElementById(id));
+const arrow = document.querySelector(`#mobile-menu button[aria-controls="${id}"]`);
+if (arrow) {
+arrow.textContent = '▸';
+arrow.setAttribute('aria-expanded', 'false');
+}
+}
 });
 }
 function togglePerfumeMenu(e){
@@ -3895,6 +4085,26 @@ navigator.clipboard.writeText(url);
 showToast("Product link copied to clipboard!");
 }
 }
+function getWishlistPricing(product, savedSize, storedPrice = 0, storedMrp = 0) {
+const sizes = Array.isArray(product?.sizes) && product.sizes.length ? product.sizes : getSizesByCategory(product?.type || product?.category);
+const normalizedSize = normalizeWishlistSize(savedSize);
+const size = sizes.find(item => normalizeWishlistSize(`${item.value} ${item.unit}`) === normalizedSize);
+const computed = getPricing(Number(product?.price || storedPrice || 0), Number(size?.priceMultiplier || 1), Number(product?.mrp || 0));
+const sellingPrice = Number(storedPrice || computed.sellingPrice || product?.price || 0);
+const mrp = Math.max(sellingPrice, Number(storedMrp || computed.mrp || product?.mrp || sellingPrice));
+const discount = mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+return { sellingPrice, mrp, discount };
+}
+function adaptWishlistImage(image) {
+if (!image?.naturalWidth || !image?.naturalHeight) return;
+const frame = image.closest('.ee-wishlist-media');
+if (!frame) return;
+const ratio = image.naturalWidth / image.naturalHeight;
+const source = String(image.currentSrc || image.src || '').replace(/"/g, '%22');
+frame.style.backgroundImage = `linear-gradient(rgba(247,244,235,.72),rgba(247,244,235,.72)),url("${source}")`;
+frame.classList.toggle('is-portrait', ratio < .82);
+frame.classList.toggle('is-wide', ratio > 1.65);
+}
 async function toggleWishlist() {
 if (!authToken || !currentProduct) return;
 const pid = String(currentProduct.id || currentProduct._id);
@@ -3906,6 +4116,7 @@ currentProduct.image ||
 '';
 const isSaved = isWishlistItemSaved(pid, size);
 const endpoint = isSaved ? 'remove' : 'add';
+const wishlistPricing = getWishlistPricing(currentProduct, size, currentPrice);
 try {
 const res = await fetch(
 `${BACKEND_BASE_URL}/api/auth/wishlist/${endpoint}`,
@@ -3920,6 +4131,8 @@ productId: pid,
 size: size,
 name: currentProduct.name,
 price: currentPrice,
+mrp: wishlistPricing.mrp,
+discount: wishlistPricing.discount,
 image: variantImage
 })
 }
@@ -3942,6 +4155,8 @@ productId: pid,
 size: size,
 name: currentProduct.name,
 price: currentPrice,
+mrp: wishlistPricing.mrp,
+discount: wishlistPricing.discount,
 image: variantImage
 });
 }
@@ -3958,16 +4173,13 @@ if (!raw) return '';
 const normalized = raw
 .replace(/\s+/g, ' ')
 .trim();
-if (/gift/i.test(normalized)) {
 const match = normalized.match(/[\d.]+/);
 if (match) {
-return `${match[0]} ml Gift`;
-}
-return normalized;
-}
-const match = normalized.match(/[\d.]+/);
-if (match) {
-return `${match[0]} ml`;
+const unit = /\bkg\b/i.test(normalized) ? 'kg'
+: /\b(?:gm|g|gram|grams)\b/i.test(normalized) ? 'gm'
+: /\b(?:pc|piece|pieces)\b/i.test(normalized) ? 'pc'
+: 'ml';
+return `${match[0]} ${unit}${/gift/i.test(normalized) ? ' Gift' : ''}`;
 }
 return normalized;
 }
@@ -4046,6 +4258,8 @@ productId: String(item.productId || ''),
 size: normalizeWishlistSize(item.size),
 image: item.image || '',
 price: Number(item.price || 0),
+mrp: Number(item.mrp || 0),
+discount: Number(item.discount || 0),
 name: item.name || ''
 };
 });
@@ -4123,9 +4337,7 @@ exactVariantImage || product.image || product.images?.[0] || getDefaultProductIm
 const wishlistName =
 wid.name ||
 product.name;
-const wishlistPrice =
-Number(wid.price) ||
-product.price;
+const wishlistPricing = getWishlistPricing(product, savedSize, Number(wid.price), Number(wid.mrp));
 const safeProductId = String(
 wid.productId ||
 product.id ||
@@ -4133,33 +4345,37 @@ product._id ||
 ''
 );
 container.innerHTML += `
-<div
-class="product-card cursor-pointer border p-3 hover:shadow-lg"
+<article
+class="ee-wishlist-card"
 onclick="openWishlistProduct(
 '${escapeHtml(safeProductId)}',
 '${escapeHtml(savedSize)}',
 '${escapeHtml(wishlistName)}'
 )"
+onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"
+role="button"
+tabindex="0"
 >
+<div class="ee-wishlist-media">
 <img
 src="${escapeHtml(normalizedWishlistImage)}"
 onerror="
 this.onerror=null;
 this.src='${escapeHtml(normalizedWishlistFallback)}';
 "
-class="w-full h-40 object-contain mb-3"
+onload="adaptWishlistImage(this)"
 alt="${escapeHtml(wishlistName)}"
 >
-<h4 class="font-bold text-sm">
-${escapeHtml(wishlistName)}
-</h4>
-<p class="text-xs text-gray-500 mt-1">
-${escapeHtml(savedSize)}
-</p>
-<p class="text-yellow-600 font-semibold mt-1">
-₹${Number(wishlistPrice).toLocaleString('en-IN')}
-</p>
+<span>${escapeHtml(savedSize || 'Standard')}</span>
 </div>
+<div class="ee-wishlist-copy">
+<small>${escapeHtml(product.family || product.type || 'Eternal Essence')}</small>
+<h4>${escapeHtml(wishlistName)}</h4>
+<p>Selected size <b>${escapeHtml(savedSize || 'Standard')}</b></p>
+<div class="ee-wishlist-price"><del>₹${wishlistPricing.mrp.toLocaleString('en-IN')}</del><strong>₹${wishlistPricing.sellingPrice.toLocaleString('en-IN')}</strong>${wishlistPricing.discount>0?`<em>${wishlistPricing.discount}% OFF</em>`:''}</div>
+<span class="ee-wishlist-view">VIEW PRODUCT <i>→</i></span>
+</div>
+</article>
 `;
 });
 }
@@ -4173,8 +4389,7 @@ if(window.eeNavigateToProduct){ window.eeNavigateToProduct(product); return; }
 async function initStore() {
 placeProductFilters();
 mergeProducts();
-await loadBundleRules();
-await loadBackendProducts();
+await Promise.all([loadBundleRules(), loadBackendProducts()]);
 renderProducts(allProducts);
 renderBundleBuilder();
 restoreCategoryIfAny();

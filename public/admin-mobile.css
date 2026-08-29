@@ -1,0 +1,41 @@
+/* Mobile admin workspace: keep controls reachable without shrinking tables into unreadable columns. */
+@media (max-width: 640px){
+  html{-webkit-text-size-adjust:100%;}
+  body{padding-bottom:20px;}
+  body>nav{padding:10px 12px!important;gap:10px;align-items:center;}
+  body>nav>div:first-child{min-width:0;gap:8px!important;}
+  body>nav>div:first-child>div:first-child{width:34px!important;height:34px!important;flex:0 0 34px;}
+  body>nav>div:first-child>div:last-child>div:first-child{font-size:14px;line-height:1.15;white-space:nowrap;}
+  body>nav>div:first-child>div:last-child>div:last-child{font-size:9px;line-height:1.1;}
+  body>nav>div:last-child{gap:6px!important;}
+  body>nav #btn-logout{padding:7px 9px!important;font-size:11px;}
+  main.container{padding:14px 10px!important;}
+  #login-card{margin:16px 0 0;padding:18px!important;}
+  #login-card h2{font-size:1.35rem;}
+  #login-card .grid{grid-template-columns:1fr!important;gap:9px!important;}
+  #login-card input{min-height:44px;}
+  #login-card .flex{display:block;}
+  #login-card button{width:100%;min-height:44px;}
+  #dashboard{gap:16px;}
+  #dashboard>.flex.gap-3.items-center{grid-template-columns:1fr 1fr;gap:8px!important;margin-top:0!important;}
+  #dashboard>.flex.gap-3.items-center input,
+  #dashboard>.flex.gap-3.items-center button{min-width:0;width:100%;min-height:42px;}
+  #dashboard>.flex.gap-3.items-center button{padding:8px 6px!important;font-size:11px;}
+  #dashboard>.flex.gap-3.items-center input{padding:8px!important;font-size:12px;}
+  #dashboard>.flex.gap-3.items-center+ .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;}
+  #dashboard>.flex.gap-3.items-center+ .grid .card{padding:12px!important;min-height:108px;}
+  #dashboard>.flex.gap-3.items-center+ .grid .text-3xl{font-size:1.35rem;line-height:1.1;}
+  #dashboard>.flex.gap-3.items-center+ .grid .text-2xl{font-size:1.2rem;}
+  #dashboard h2{margin-top:1.15rem!important;}
+  #dashboard>.grid.lg\:grid-cols-3{gap:10px!important;}
+  .chart-fixed{height:205px!important;}
+  .card{padding:14px!important;}
+  .card h3{line-height:1.25;}
+  .card .overflow-auto{margin-inline:-2px;padding-bottom:4px;}
+  table{min-width:620px;}
+  th,td{white-space:nowrap;}
+  #orders-tbody td:last-child,#card-orders-tbody td:last-child{position:sticky;right:0;background:#fff;}
+  #orders-tbody tr:hover td:last-child,#card-orders-tbody tr:hover td:last-child{background:#f8fafc;}
+  #order-modal>div,#reject-order-modal>div,#gift-picker-modal>div{max-height:calc(100vh - 12px)!important;overflow-y:auto;}
+  #order-modal input,#order-modal select,#reject-order-modal input,#reject-order-modal select,#reject-order-modal textarea{font-size:16px;}
+}

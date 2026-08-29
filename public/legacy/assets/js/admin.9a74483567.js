@@ -1944,6 +1944,9 @@ loadDashboard();
 loadOrders();
 }
 document.getElementById('chart-view').addEventListener('change', loadDashboard);
+loginCard?.addEventListener('keydown', event => {
+if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); btnLogin?.click(); }
+});
 document.getElementById('user-search').addEventListener('input', loadUsers);
 document.getElementById('btn-add-product').addEventListener('click', saveProduct);
 document.getElementById('b-size').addEventListener('change', syncBundleQtyOptions);
