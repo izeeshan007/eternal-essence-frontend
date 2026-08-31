@@ -15,6 +15,13 @@ import './catalog.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 
+const LEGACY_ASSET_VERSION='20260831-1';
+const LEGACY_SCRIPTS=[
+  '/legacy/assets/js/storefront.js',
+  '/legacy/assets/js/scent-quiz.js',
+  '/legacy/assets/js/order-actions.js'
+];
+
 window.eeLoadPdfEngine=async()=>{
   if(window.jspdf?.jsPDF)return window.jspdf;
   const[{jsPDF},{applyPlugin}]=await Promise.all([import('jspdf'),import('jspdf-autotable')]);
@@ -151,8 +158,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
     async function mount(){
       if(!ref.current) return;
       try{
-        const legacyVersion='20260829-14';
-        const r=await fetch(`/legacy/legacy-body.html?v=${legacyVersion}`);
+        const r=await fetch(`/legacy/legacy-body.html?v=${LEGACY_ASSET_VERSION}`);
         const markup=(await r.text())
           .replace(/" onchange="applyFilters\(\)"><option value="">\s*$/,'')
           .replace(
@@ -248,11 +254,11 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
           }).catch(error=>{window.__eeRazorpayPromise=null;throw error});
           return window.__eeRazorpayPromise;
         });
-        // The legacy files keep stable filenames for compatibility, so add a
-        // release query when their contents change. This prevents Pages/browser
-        // caches from serving an older bundle after a deployment.
-        for(const src of [`/legacy/assets/js/index.496a4899fd.js?v=${legacyVersion}`,`/legacy/assets/js/index.75993714cf.js?v=${legacyVersion}`,`/legacy/assets/js/index.3563c0bc19.js?v=${legacyVersion}`]){
-          try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${src}`,e);}
+        // Keep source filenames readable; the release query still invalidates
+        // CDN/browser caches when one of these compatibility scripts changes.
+        for(const path of LEGACY_SCRIPTS){
+          const src=`${path}?v=${LEGACY_ASSET_VERSION}`;
+          try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${path}`,e);}
         }
         // Inline handlers in legacy-body.html call these functions by global
         // name. Explicitly expose the legacy menu function for strict/module
@@ -529,6 +535,7 @@ function App(){
   };
   return <div className="ee-route-view">
     <LegacyShell active={!isDealer} page={isProduct||isJournal?'home':(isCollection?'home':page)} collectionOnly={isCollection} productOnly={isProduct||isJournal||isDealer} onReady={handleLegacyReady}/>
+    {!isDealer&&!legacyReady&&<div className="ee-app-boot" role="status" aria-live="polite"><img src="/products/ee-brand-20260819.webp" alt=""/><p>ETERNAL ESSENCE</p><span>Preparing your collection</span></div>}
     {!isProduct && !isJournal && !isCollection && !isDealer && legacyReady && document.getElementById('ee-home-react-mount') &&
       createPortal(<HomeEnhancements/>,document.getElementById('ee-home-react-mount'))}
     {isProduct && (legacyReady ? <ProductPage product={product} route={route} onBack={navigateHome}/> : <div className="ee-loading"><div className="spinner"></div><p>Loading fragrance…</p></div>)}
