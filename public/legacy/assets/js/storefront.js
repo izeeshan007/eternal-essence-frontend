@@ -1210,7 +1210,7 @@ renderProducts(criteria);
 function openModal(product){
 if (!product) return;
 const pid = String(product.id || product._id || '').replace(/^db_/,'');
-if (window.eeNavigateToProduct) { window.eeNavigateToProduct(product); return; }
+if (window.eeNavigateToProduct) { window.eeNavigateToProduct(product, { size: window.eeDefaultProductSize?.(product) || '' }); return; }
 }
 function updateWishlistIcon(productId) {
 const icon = document.getElementById("wishlist-icon");
@@ -4153,6 +4153,7 @@ normalizeWishlistSize(item.size) === size
 wishlistIds.push({
 productId: pid,
 size: size,
+legacySizeMissing: false,
 name: currentProduct.name,
 price: currentPrice,
 mrp: wishlistPricing.mrp,
@@ -4182,6 +4183,16 @@ const unit = /\bkg\b/i.test(normalized) ? 'kg'
 return `${match[0]} ${unit}${/gift/i.test(normalized) ? ' Gift' : ''}`;
 }
 return normalized;
+}
+function getDefaultWishlistSize(product) {
+const category = String(product?.type || product?.category || '').toLowerCase();
+if (category.includes('perfume')) return '30 ml Gift';
+if (category.includes('attar')) return '3 ml';
+const firstSize = Array.isArray(product?.sizes) ? product.sizes[0] : null;
+return firstSize ? normalizeWishlistSize(`${firstSize.value || ''} ${firstSize.unit || ''}`) : '';
+}
+function resolveWishlistSize(item, product) {
+return normalizeWishlistSize(item?.size) || getDefaultWishlistSize(product);
 }
 function getWishlistVariantKey(size) {
 if (size === null || size === undefined) return '';
@@ -4247,21 +4258,28 @@ if (typeof item !== 'object' || item === null) {
 return {
 productId: String(item),
 size: '',
+legacySizeMissing: true,
 image: '',
 price: 0,
 name: ''
 };
 }
+const normalizedSize = normalizeWishlistSize(item.size);
 return {
 ...item,
 productId: String(item.productId || ''),
-size: normalizeWishlistSize(item.size),
+size: normalizedSize,
+legacySizeMissing: !normalizedSize,
 image: item.image || '',
 price: Number(item.price || 0),
 mrp: Number(item.mrp || 0),
 discount: Number(item.discount || 0),
 name: item.name || ''
 };
+});
+wishlistIds.forEach(item => {
+const product = allProducts.find(candidate => item.name && normalize(candidate.name) === normalize(item.name)) || findProductByAnyId(item.productId);
+item.size = resolveWishlistSize(item, product);
 });
 wishlistLoaded = true;
 wishlistReady = true;
@@ -4275,10 +4293,12 @@ wishlistReady = true;
 function isWishlistItemSaved(productId, size) {
 const pid = String(productId || '');
 const normalizedSize = normalizeWishlistSize(size);
-return wishlistIds.some(item =>
-String(item.productId || '') === pid &&
-normalizeWishlistSize(item.size) === normalizedSize
-);
+return wishlistIds.some(item => {
+const sameProduct = String(item.productId || '').replace(/^db_/, '') === pid.replace(/^db_/, '');
+if (!sameProduct) return false;
+const product = allProducts.find(candidate => item.name && normalize(candidate.name) === normalize(item.name)) || findProductByAnyId(item.productId);
+return resolveWishlistSize(item, product) === normalizedSize;
+});
 }
 function loadWishlist() {
 const container = document.getElementById("wishlist-container");
@@ -4320,13 +4340,13 @@ return;
 }
 wishlistIds.forEach(wid => {
 const product = allProducts.find(item => wid.name && normalize(item.name) === normalize(wid.name)) || findProductByAnyId(wid.productId) || { ...wid, id: wid.productId, images: [] };
-const savedSize = normalizeWishlistSize(wid.size);
+const savedSize = resolveWishlistSize(wid, product);
 const exactVariantImage = getWishlistVariantImage(
 product,
 savedSize
 );
 const wishlistImage =
-wid.image ||
+(wid.legacySizeMissing ? exactVariantImage : wid.image) ||
 exactVariantImage ||
 product.image ||
 '';
@@ -4337,7 +4357,7 @@ exactVariantImage || product.image || product.images?.[0] || getDefaultProductIm
 const wishlistName =
 wid.name ||
 product.name;
-const wishlistPricing = getWishlistPricing(product, savedSize, Number(wid.price), Number(wid.mrp));
+const wishlistPricing = getWishlistPricing(product, savedSize, wid.legacySizeMissing ? 0 : Number(wid.price), wid.legacySizeMissing ? 0 : Number(wid.mrp));
 const safeProductId = String(
 wid.productId ||
 product.id ||
@@ -4366,6 +4386,7 @@ this.src='${escapeHtml(normalizedWishlistFallback)}';
 onload="adaptWishlistImage(this)"
 alt="${escapeHtml(wishlistName)}"
 >
+<button type="button" class="ee-wishlist-heart" aria-label="Remove ${escapeHtml(wishlistName)} from wishlist" title="Remove from wishlist" onclick="removeWishlistCardItem(event,'${escapeHtml(safeProductId)}','${escapeHtml(savedSize)}','${escapeHtml(wishlistName)}')"><i class="fas fa-heart"></i></button>
 <span>${escapeHtml(savedSize || 'Standard')}</span>
 </div>
 <div class="ee-wishlist-copy">
@@ -4373,17 +4394,37 @@ alt="${escapeHtml(wishlistName)}"
 <h4>${escapeHtml(wishlistName)}</h4>
 <p>Selected size <b>${escapeHtml(savedSize || 'Standard')}</b></p>
 <div class="ee-wishlist-price"><del>₹${wishlistPricing.mrp.toLocaleString('en-IN')}</del><strong>₹${wishlistPricing.sellingPrice.toLocaleString('en-IN')}</strong>${wishlistPricing.discount>0?`<em>${wishlistPricing.discount}% OFF</em>`:''}</div>
-<span class="ee-wishlist-view">VIEW PRODUCT <i>→</i></span>
+<div class="ee-wishlist-actions"><span class="ee-wishlist-view">VIEW PRODUCT <i>→</i></span><button type="button" class="ee-wishlist-cart" aria-label="Add ${escapeHtml(wishlistName)} in ${escapeHtml(savedSize)} to cart" title="Add to cart" onclick="addWishlistCardItem(event,'${escapeHtml(safeProductId)}','${escapeHtml(savedSize)}','${escapeHtml(wishlistName)}',${wishlistPricing.sellingPrice})"><i class="fas fa-cart-plus"></i></button></div>
 </div>
 </article>
 `;
 });
 }
+async function removeWishlistCardItem(event, productId, savedSize, savedName = '') {
+event?.preventDefault();
+event?.stopPropagation();
+const product = allProducts.find(item => savedName && normalize(item.name) === normalize(savedName)) || findProductByAnyId(productId);
+if (!product) return;
+currentProduct = product;
+selectedSize = normalizeWishlistSize(savedSize) || getDefaultWishlistSize(product);
+currentPrice = getWishlistPricing(product, selectedSize).sellingPrice;
+await toggleWishlist();
+}
+function addWishlistCardItem(event, productId, savedSize, savedName = '', savedPrice = 0) {
+event?.preventDefault();
+event?.stopPropagation();
+const product = allProducts.find(item => savedName && normalize(item.name) === normalize(savedName)) || findProductByAnyId(productId);
+if (!product) return;
+const size = normalizeWishlistSize(savedSize) || getDefaultWishlistSize(product);
+const price = Number(savedPrice) || getWishlistPricing(product, size).sellingPrice;
+window.EE?.addToCart?.(product, size, price, 1);
+setTimeout(() => window.dispatchEvent(new Event('ee:mini-cart-open')), 80);
+}
 function openModalById(id){
 const product = findProductByAnyId(id);
 if(product){
 const pid=String(product.id||product._id||'').replace(/^db_/,'');
-if(window.eeNavigateToProduct){ window.eeNavigateToProduct(product); return; }
+if(window.eeNavigateToProduct){ window.eeNavigateToProduct(product, { size: window.eeDefaultProductSize?.(product) || '' }); return; }
 }
 }
 async function initStore() {
