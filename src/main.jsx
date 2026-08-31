@@ -15,7 +15,7 @@ import './catalog.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 
-const LEGACY_ASSET_VERSION='20260831-1';
+const LEGACY_ASSET_VERSION='20260831-2';
 const LEGACY_SCRIPTS=[
   '/legacy/assets/js/storefront.js',
   '/legacy/assets/js/scent-quiz.js',
@@ -144,6 +144,15 @@ function productSlug(product){
 function productPath(product){
   return `/products/${categorySlug(product)}/${productSlug(product)}`;
 }
+function defaultProductSize(product){
+  const category=categoryName(product).toLowerCase();
+  if(category.includes('perfume'))return '30 ml Gift';
+  if(category.includes('attar'))return '3 ml';
+  const first=Array.isArray(product?.sizes)?product.sizes[0]:null;
+  if(!first)return '';
+  return `${first.value??''} ${first.unit??''}`.trim();
+}
+window.eeDefaultProductSize=defaultProductSize;
 function journalPath(slug){return `/journal/${slug}`;}
 function pagePath(page, hash=''){
   const routes={home:'/', collection:'/collections', 'custom-set':'/custom-set','perfume-card':'/perfume-card','about':'/about','contact':'/contact','cart':'/cart','orders':'/orders','account':'/account','profile':'/profile'};
@@ -352,7 +361,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         if(window.openModal && !window.__eeProductModalBridge){
           window.openModal=(productOrId)=>{
             const product=typeof productOrId==='object' ? productOrId : window.EE?.findProduct?.(productOrId);
-            if(product) window.eeNavigateToProduct(product);
+            if(product) window.eeNavigateToProduct(product,{size:defaultProductSize(product)});
           };
           window.__eeProductModalBridge=true;
         }
