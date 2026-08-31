@@ -15,7 +15,7 @@ const legacyAdminSource=legacyAdminCandidates.find(candidate=>fs.existsSync(cand
 if(!legacyAdminSource)throw new Error('The existing admin dashboard shell could not be found.');
 // Cache before Vite clears its output directory during a production build.
 const legacyAdminMarkup=fs.readFileSync(legacyAdminSource,'utf8');
-const adminAssetVersion='20260820-9';
+const adminAssetVersion='20260831-1';
 
 function adminHtml(backendBase='',backendFallback=''){
   const primary=String(backendBase||'').trim().replace(/\/+$/, '');
@@ -26,9 +26,9 @@ function adminHtml(backendBase='',backendFallback=''){
     .replace('<head>','<head>'+runtimeConfig)
     .replace('</head>','<link rel="stylesheet" href="/admin-mobile.css"></head>')
     .replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js@4\.4\.0\/dist\/chart\.umd\.min\.js"><\/script>/,'<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>')
-    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/css\/admin\.100012cefd\.css(?:\?v=[^"']*)?/g,`$1/legacy/assets/css/admin.100012cefd.css?v=${adminAssetVersion}`)
-    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/js\/admin\.9a74483567\.js(?:\?v=[^"']*)?/g,`$1/legacy/assets/js/admin.9a74483567.js?v=${adminAssetVersion}`)
-    .replace(/<script src="(\/legacy\/assets\/js\/admin\.9a74483567\.js\?v=[^"]+)"><\/script>/,'<script defer src="$1"></script>');
+    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/css\/(?:admin\.100012cefd|admin-dashboard)\.css(?:\?v=[^"']*)?/g,`$1/legacy/assets/css/admin-dashboard.css?v=${adminAssetVersion}`)
+    .replace(/(["'])\/?(?:\.\/)?(?:legacy\/)?assets\/js\/(?:admin\.9a74483567|admin-dashboard)\.js(?:\?v=[^"']*)?/g,`$1/legacy/assets/js/admin-dashboard.js?v=${adminAssetVersion}`)
+    .replace(/<script src="(\/legacy\/assets\/js\/admin-dashboard\.js\?v=[^"]+)"><\/script>/,'<script defer src="$1"></script>');
 }
 
 function restoreAdminDashboard(backendBase,backendFallback){
