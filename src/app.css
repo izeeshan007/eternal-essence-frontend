@@ -177,6 +177,28 @@ nav #nav-profile-btn{width:44px!important;height:44px!important;border:1px solid
 @media(max-width:540px){.ee-mini-cart-layer{padding:0;background:rgba(5,7,5,.5)}.ee-mini-cart{width:100%;max-height:82vh;border-radius:18px 18px 0 0;border-inline:0;border-bottom:0}.ee-mini-cart>footer{grid-template-columns:1fr}.ee-mini-cart-item{grid-template-columns:52px minmax(0,1fr) auto}.ee-mini-cart-item img{width:52px;height:59px}}
 @media(max-width:520px){#wishlist-container{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ee-wishlist-copy{padding:11px}.ee-wishlist-copy h4{font-size:13px}.ee-wishlist-price{gap:4px}.ee-wishlist-price strong{font-size:15px}.ee-wishlist-price em{font-size:7px}.ee-wishlist-view{font-size:8px}.ee-wishlist-media.is-portrait img,.ee-wishlist-media.is-wide img{padding:6px}.ee-wishlist-heart{top:7px;right:7px;width:30px;height:30px}.ee-wishlist-cart{flex-basis:30px;width:30px;height:30px}.ee-wishlist-actions{gap:6px}}
 
+/* Keep variant choices beside the product image on phones. */
+.ee-mobile-size-picker{display:none}
+@media(max-width:700px){
+  .ee-product-page{width:100%;overflow-x:hidden}
+  .ee-product-hero{width:100%;box-sizing:border-box;padding:8px 10px 24px;gap:14px}
+  .ee-product-gallery{width:100%;box-sizing:border-box;grid-template-columns:44px minmax(0,1fr);gap:8px;min-height:0;align-items:start}
+  .ee-thumbs{max-height:280px;gap:7px}
+  .ee-thumbs button{width:42px;height:56px;padding:3px}
+  .ee-main-image{width:100%;height:280px;border-radius:13px}
+  .ee-main-image img{padding:6px}
+  .ee-mobile-size-picker{grid-column:1/-1;display:block;padding:2px 2px 0}
+  .ee-mobile-size-picker .ee-sizes{gap:6px;margin:7px 0 0}
+  .ee-mobile-size-picker .ee-sizes button{padding:8px 10px;font-size:11px}
+  .ee-product-info{width:100%;box-sizing:border-box;margin:0;padding:18px 14px;border-radius:14px}
+  .ee-product-info>.ee-label,.ee-product-info>.ee-sizes{display:none}
+}
+
+/* The remove action stays deliberately compact so it does not compete with the card. */
+.ee-wishlist-heart{width:26px;height:26px;top:8px;right:8px}
+.ee-wishlist-heart i{font-size:10px}
+@media(max-width:520px){.ee-wishlist-heart{width:24px;height:24px;top:6px;right:6px}.ee-wishlist-heart i{font-size:9px}}
+
 /* Phone cart: replace the collapsed desktop table with clear, non-overlapping cards. */
 @media(max-width:767px){
   #page-cart>.bg-gray-100{padding-top:25px!important;padding-bottom:25px!important}
@@ -206,6 +228,13 @@ nav #nav-profile-btn{width:44px!important;height:44px!important;border:1px solid
   #page-cart #coupon-code{min-width:0}
   #page-cart #coupon-code+button{padding-left:12px!important;padding-right:12px!important}
 }
+
+/* Keep the family beside the compact gender tag in the product heading. */
+.ee-product-info{position:relative}
+.ee-product-info>.ee-gender{font-size:9px;letter-spacing:.2em;margin-bottom:10px;padding:4px 9px;line-height:1}
+.ee-product-info>.ee-meta{position:absolute;top:31px;left:125px;display:flex;align-items:center;max-width:calc(100% - 145px);font-size:11px;letter-spacing:.16em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ee-product-info>.ee-meta::before{content:'|';margin-right:9px;color:#c7a03a;font-size:13px;font-weight:700}
+@media(max-width:700px){.ee-product-info>.ee-meta{top:20px;left:105px;max-width:calc(100% - 119px);font-size:10px}}
 
 @media(max-width:390px){
   .ee-cart-product{padding-right:86px!important}
@@ -264,3 +293,162 @@ nav #nav-profile-btn{width:44px!important;height:44px!important;border:1px solid
 /* Balanced product detail proportions */
 @media(min-width:1101px){.ee-product-toolbar,.ee-breadcrumb,.ee-product-hero,.ee-scent-journey,.ee-notes,.ee-why,.ee-compare,.ee-reviews{max-width:1260px}.ee-product-hero{grid-template-columns:minmax(0,1.08fr) minmax(400px,.92fr);gap:28px;padding-top:10px}.ee-product-gallery{min-height:540px;grid-template-columns:78px minmax(0,1fr)}.ee-thumbs{max-height:540px}.ee-thumbs button{width:72px;height:88px}.ee-main-image{height:540px;min-height:0}.ee-main-image img{max-height:none}.ee-product-info{padding:29px 30px}.ee-product-info h1{font-size:38px}.ee-divider{margin:17px 0}.ee-quote{font-size:15px;margin-bottom:20px}.ee-best{gap:11px;margin-bottom:17px}.ee-sizes button{font-size:13px}.ee-micro{font-size:11px}}
 .ee-phone-verify{position:relative;width:min(430px,100%);background:#fffdf8;border:1px solid #d7ad37;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.38);padding:26px}.ee-phone-verify>.close{position:absolute;right:10px;top:7px;border:0;background:transparent;font-size:26px;cursor:pointer}.ee-phone-verify>span{color:#9b7412;font-size:9px;font-weight:900;letter-spacing:.18em}.ee-phone-verify h3{margin:6px 0;font:700 23px Georgia,serif}.ee-phone-verify p{font-size:12px;color:#655f55;line-height:1.55}.ee-phone-verify input{width:100%;box-sizing:border-box;margin-top:9px;border:1px solid #d9d4ca;border-radius:7px;padding:11px}.ee-phone-verify>button:not(.close),.ee-phone-code-row button{border:0;background:#111;color:#e6bd43;font-weight:900;border-radius:7px;padding:11px 13px;margin-top:10px;cursor:pointer}.ee-phone-code-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.ee-phone-verify small{display:block;min-height:18px;margin-top:9px}.ee-phone-verify small.success{color:#23763a}.ee-phone-verify small.error{color:#b42318}
+
+/* A consistent size selector makes the primary purchase choice easy to scan. */
+.ee-product-info>.ee-sizes{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;}
+.ee-product-info>.ee-sizes button{min-width:86px;min-height:38px;padding:9px 10px;display:flex;align-items:center;justify-content:center;line-height:1.15;font-size:11px;letter-spacing:.02em;border-radius:8px;background:linear-gradient(180deg,#fff,#faf7ef);box-shadow:0 2px 6px rgba(80,62,25,.08);transition:border-color .2s ease,background .2s ease,transform .2s ease,box-shadow .2s ease;}
+.ee-product-info>.ee-sizes button.selected{background:linear-gradient(180deg,#181818,#050505);color:#f4c52e;border-color:#050505;box-shadow:0 5px 12px rgba(20,18,11,.18);}
+.ee-product-info>.ee-sizes button:hover{border-color:#b8942e;background:#fffaf0;transform:translateY(-1px);}
+.ee-mobile-size-picker .ee-sizes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+.ee-mobile-size-picker .ee-sizes button{min-width:0;min-height:36px;padding:8px 5px;font-size:10px;}
+@media(max-width:390px){.ee-mobile-size-picker .ee-sizes{grid-template-columns:repeat(3,minmax(0,1fr));}}
+
+/* Product actions: keep quantity with the purchase button and put utility
+   actions on the artwork, where they are easy to find without adding height. */
+.ee-main-image>.ee-image-actions{position:absolute;top:14px;right:14px;z-index:4;display:flex;flex-direction:column;gap:8px;}
+.ee-main-image>.ee-image-actions button{position:static;transform:none;width:38px;height:38px;padding:0;border:1px solid rgba(210,205,194,.9);border-radius:50%;background:rgba(255,255,255,.94);color:#25221d;box-shadow:0 5px 14px rgba(40,34,20,.13);display:grid;place-items:center;cursor:pointer;}
+.ee-main-image>.ee-image-actions button:hover{background:#fff8e6;border-color:#c59a25;}
+.ee-main-image>.ee-image-actions button.saved{color:#e11d48;border-color:#efb0ba;background:#fff1f2;}
+.ee-main-image>.ee-image-actions svg{width:17px;height:17px;}
+.ee-main-image>button:first-child{left:14px;}
+.ee-main-image>button:last-child{right:14px;}
+.ee-actions{grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;}
+.ee-action-qty{gap:7px;padding:4px;background:#fff;border-color:#d9d6ce;color:#222;white-space:nowrap;}
+.ee-action-qty button{width:28px;height:28px;color:#222;}
+.ee-action-qty b{min-width:13px;text-align:center;font-size:12px;}
+@media(max-width:700px){
+  .ee-product-hero{padding-bottom:16px;gap:14px;}
+  .ee-product-gallery{height:auto!important;margin-bottom:0!important;grid-auto-rows:max-content;}
+  .ee-mobile-size-picker{margin-bottom:0!important;padding-bottom:0!important;}
+  .ee-product-info{padding:14px 14px 16px;}
+  .ee-product-info>.ee-sizes{display:none!important;}
+  .ee-divider{margin:13px 0;}
+  .ee-quote{margin-bottom:14px;}
+  .ee-best{gap:9px;margin-bottom:13px;}
+  .ee-price{padding:10px 12px;margin-bottom:11px;}
+  .ee-actions{grid-template-columns:auto minmax(0,1fr);gap:8px;}
+  .ee-action-qty{gap:5px;padding:3px;}
+  .ee-action-qty button{width:26px;height:26px;}
+  .ee-add{min-height:44px;}
+  .ee-micro{margin-top:10px;gap:7px;font-size:9px;line-height:1.3;}
+  .ee-scent-journey{margin-top:0!important;padding-top:20px;}
+  .ee-main-image>.ee-image-actions{top:9px;right:9px;gap:6px;}
+  .ee-main-image>.ee-image-actions button{width:32px;height:32px;}
+  .ee-main-image>.ee-image-actions svg{width:15px;height:15px;}
+}
+
+/* The desktop panel should begin beside the gallery, not 90px below it.
+   On phones the legacy gallery minimum was also leaving an empty row above
+   the product details after the size picker moved into the gallery grid. */
+@media(min-width:1101px){
+  .ee-product-info{position:relative;top:auto!important;}
+}
+@media(max-width:700px){
+  .ee-product-hero{gap:8px;padding-bottom:8px;}
+  .ee-product-gallery{min-height:0!important;height:auto!important;grid-auto-rows:max-content;}
+  .ee-main-image{min-height:0!important;height:280px;}
+  .ee-mobile-size-picker{margin-top:0!important;margin-bottom:0!important;padding-top:0!important;}
+  .ee-product-info{margin-top:0!important;top:auto!important;}
+}
+
+/* Keep live demand visible after a refresh without adding a full-width row. */
+.ee-product-info>.ee-live-viewers{
+  position:absolute;top:12px;right:28px;z-index:2;
+  display:inline-flex;width:auto;max-width:160px;box-sizing:border-box;
+  align-items:center;gap:5px;margin:0;padding:5px 8px;
+  border:1px solid #e6ddc4;border-radius:999px;background:#fffaf0;
+  color:#4e452e;font-size:9px;line-height:1.1;white-space:nowrap;
+}
+.ee-product-info>.ee-live-viewers span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.ee-product-info>.ee-live-viewers svg{width:12px;height:12px;flex:0 0 auto;}
+.ee-product-info>.ee-live-viewers b{color:#8d6410;}
+.ee-product-info>.ee-live-viewers i{width:5px;height:5px;flex:0 0 auto;box-shadow:0 0 0 3px rgba(34,164,71,.12);}
+.ee-product-info>.ee-live-viewers.loading{color:#7c7465;}
+.ee-product-info>.ee-live-viewers.loading i{background:#d0a72e;box-shadow:0 0 0 3px rgba(208,167,46,.13);}
+@media(max-width:700px){
+  .ee-product-info>.ee-live-viewers{top:10px;right:12px;max-width:132px;padding:4px 7px;font-size:8px;}
+  .ee-product-info>.ee-live-viewers svg{width:11px;height:11px;}
+}
+
+/* Similar products are ranked from catalogue data and presented as a compact
+   commerce carousel with the strongest match reason visible on the artwork. */
+.ee-similar-products{max-width:1260px;margin:0 auto 48px;padding:40px 24px 4px;box-sizing:border-box;border-top:1px solid #e7e1d4;}
+.ee-similar-products>header{text-align:center;margin-bottom:24px;}
+.ee-similar-products>header>span,.ee-review-heading>div>span{color:#9b7412;font-size:9px;font-weight:900;letter-spacing:.24em;}
+.ee-similar-products>header h2,.ee-review-heading h2{margin:7px 0 5px;font-family:Cinzel,Georgia,serif;font-size:29px;font-weight:600;letter-spacing:.02em;color:#17140e;}
+.ee-similar-products>header p{margin:0;color:#746e63;font-size:12px;}
+.ee-similar-grid{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:14px;overflow-x:auto;padding:2px 2px 16px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#c4aa65 #f3efe5;}
+.ee-similar-card{appearance:none;min-width:0;padding:0;border:1px solid #e2ddcf;border-radius:15px;background:#fff;color:#17140e;text-align:left;overflow:hidden;cursor:pointer;scroll-snap-align:start;box-shadow:0 8px 24px rgba(50,39,14,.055);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;}
+.ee-similar-card:hover{transform:translateY(-3px);border-color:#c5a34d;box-shadow:0 14px 32px rgba(50,39,14,.11);}
+.ee-similar-image{position:relative;height:238px;background:#f2efe7;overflow:hidden;}
+.ee-similar-image img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease;}
+.ee-similar-card:hover .ee-similar-image img{transform:scale(1.025);}
+.ee-similar-image>span{position:absolute;left:10px;bottom:10px;max-width:calc(100% - 20px);box-sizing:border-box;padding:6px 8px;border-radius:999px;background:rgba(8,10,8,.88);color:#f1c746;font-size:8px;font-weight:800;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ee-similar-copy{padding:16px;}
+.ee-similar-copy>small{display:block;color:#9b7412;font-size:8px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;}
+.ee-similar-copy>strong{display:block;margin-top:7px;font-family:Cinzel,Georgia,serif;font-size:17px;line-height:1.25;}
+.ee-similar-copy>p{height:31px;margin:7px 0 14px;color:#777064;font-size:10px;line-height:1.5;overflow:hidden;}
+.ee-similar-copy>div{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #ece7dc;padding-top:12px;}
+.ee-similar-copy>div b{font-size:17px;}
+.ee-similar-copy>div em{color:#86630b;font-size:8px;font-style:normal;font-weight:900;letter-spacing:.07em;white-space:nowrap;}
+
+/* Verified review presentation and customer-photo lightbox. */
+.ee-reviews{max-width:1260px;margin:0 auto 48px;padding:38px 24px 12px;box-sizing:border-box;border-top:1px solid #e7e1d4;}
+.ee-review-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px;}
+.ee-review-heading h2{margin-bottom:0;text-transform:none;}
+.ee-review-heading aside{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e3dac2;border-radius:11px;background:#fffbf0;}
+.ee-review-heading aside>strong{font-size:29px;line-height:1;color:#17140e;}
+.ee-review-heading aside b{display:block;color:#bd8f15;font-size:13px;letter-spacing:.12em;}
+.ee-review-heading aside small{display:block;margin-top:3px;color:#716a5e;font-size:9px;}
+.ee-reviews .review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:0;}
+.ee-reviews .review-card{min-width:0;padding:19px;border:1px solid #e6e1d6;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(44,35,16,.045);}
+.review-card>header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;}
+.review-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#11150f;color:#e8c34d;font:700 13px Cinzel,Georgia,serif;}
+.review-card>header b{display:block;margin:0;font-size:12px;}
+.review-card>header small{display:block;margin-top:2px;color:#218245;font-size:8px;font-weight:800;letter-spacing:.04em;}
+.review-card>header time{color:#948d81;font-size:9px;white-space:nowrap;}
+.ee-reviews .review-card .stars{margin-top:13px;color:#c99a20;font-size:12px;letter-spacing:2px;}
+.ee-reviews .review-card>p{margin:8px 0 0;color:#57534b;font-size:12px;line-height:1.65;white-space:pre-wrap;}
+.review-images{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px;}
+.review-images.count-1{grid-template-columns:minmax(0,180px);}
+.review-images.count-2{grid-template-columns:repeat(2,minmax(0,150px));}
+.review-images button{height:112px;min-height:0;padding:0;border:1px solid #e0dbd0;border-radius:9px;background:#f5f2eb;overflow:hidden;cursor:zoom-in;}
+.review-images img{width:100%;height:100%;display:block;object-fit:cover;transition:transform .25s ease;}
+.review-images button:hover img{transform:scale(1.04);}
+.ee-reviews .empty-reviews{display:grid;gap:5px;padding:34px;border:1px dashed #d9cfb4;border-radius:14px;background:#fffcf5;text-align:center;}
+.ee-reviews .empty-reviews b{font:600 18px Cinzel,Georgia,serif;color:#2c281f;}
+.ee-reviews .empty-reviews span{color:#837b6e;font-size:11px;}
+.review-lightbox{position:fixed;inset:0;z-index:10020;display:grid;place-items:center;padding:28px;background:rgba(0,0,0,.9);backdrop-filter:blur(5px);}
+.review-lightbox>img{display:block;max-width:min(100%,1000px);max-height:88vh;border-radius:10px;object-fit:contain;box-shadow:0 24px 80px rgba(0,0,0,.5);}
+.review-lightbox>button{position:absolute;top:18px;right:22px;width:42px;height:42px;border:1px solid rgba(255,255,255,.42);border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:25px;cursor:pointer;}
+
+/* Delivered-order review photo picker. */
+#review-modal>div{max-height:92vh;overflow-y:auto;}
+.ee-review-upload{margin:-5px 0 16px;padding:13px;border:1px solid #e4ddce;border-radius:10px;background:#fffcf6;}
+.ee-review-upload-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px;}
+.ee-review-upload-title b{font-size:11px;}
+.ee-review-upload-title span,.ee-review-upload>small{color:#81796d;font-size:9px;}
+.ee-review-upload-button{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #cba744;border-radius:8px;background:#fff;color:#3b3119;font-size:10px;font-weight:800;cursor:pointer;}
+.ee-review-upload>small{display:block;margin-top:7px;}
+.ee-review-image-status{min-height:14px;margin-top:6px;color:#81600b;font-size:9px;}
+.ee-review-image-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;}
+.ee-review-image-preview>div{position:relative;height:76px;border-radius:8px;overflow:hidden;background:#eee9de;}
+.ee-review-image-preview img{width:100%;height:100%;display:block;object-fit:cover;}
+.ee-review-image-preview button{position:absolute;top:4px;right:4px;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:16px;line-height:1;cursor:pointer;}
+
+@media(max-width:700px){
+  .ee-similar-products{margin-bottom:32px;padding:30px 10px 2px;}
+  .ee-similar-products>header{padding:0 10px;margin-bottom:18px;}
+  .ee-similar-products>header h2,.ee-review-heading h2{font-size:23px;}
+  .ee-similar-products>header p{font-size:10px;line-height:1.5;}
+  .ee-similar-grid{grid-auto-columns:minmax(205px,74vw);gap:10px;}
+  .ee-similar-image{height:218px;}
+  .ee-reviews{margin-bottom:30px;padding:30px 12px 5px;}
+  .ee-review-heading{align-items:flex-start;}
+  .ee-review-heading aside{padding:8px 10px;gap:8px;}
+  .ee-review-heading aside>strong{font-size:22px;}
+  .ee-reviews .review-grid{grid-template-columns:1fr;}
+  .ee-reviews .review-card{padding:15px;}
+  .review-images button{height:96px;}
+  .review-lightbox{padding:14px;}
+}

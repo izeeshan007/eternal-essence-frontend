@@ -93,7 +93,58 @@ function variantImages(product,size){
   const candidates=[exact, idx===6?first:null, ml?`${base}${ml}${ext}`:null, idx?`${base}(${idx})${ext}`:null, idx?`common${idx}.webp`:null, first].filter(Boolean).map(imgUrl);
   return [...new Set(candidates)];
 }
-function ProductImage({sources,alt}){const [index,setIndex]=useState(0);useEffect(()=>setIndex(0),[sources.join('|')]);return <img src={sources[index]||'/products/placeholder.webp'} alt={alt} onError={()=>setIndex(i=>Math.min(i+1,sources.length-1))}/>;}
+function galleryImageSources(product,index){
+  const gallery=product?.images?.length?product.images:[product?.image].filter(Boolean);
+  const selected=gallery[index]||gallery[0];
+  return [...new Set([selected,...gallery.slice(0,1),'/products/placeholder.webp'].filter(Boolean).map(imgUrl))];
+}
+function ProductImage({sources,alt}){const [index,setIndex]=useState(0);useEffect(()=>setIndex(0),[sources.join('|')]);return <img src={sources[index]||'/products/ee-brand-20260819.webp'} alt={alt} onError={()=>setIndex(i=>Math.min(i+1,sources.length))}/>;}
+
+function similarProductsFor(current,products){
+  if(!current)return [];
+  const currentId=String(current.id||current._id||''),currentAccords=(current.accords||[]).map(cleanKey).filter(Boolean);
+  return (products||[]).filter(Boolean).filter(candidate=>String(candidate.id||candidate._id||'')!==currentId).map(candidate=>{
+    const candidateAccords=(Array.isArray(candidate.accords)?candidate.accords:String(candidate.accords||'').split(/[|,]/)).map(cleanKey).filter(Boolean);
+    const shared=currentAccords.filter(accord=>candidateAccords.includes(accord));
+    const sameCategory=categorySlug(candidate)===categorySlug(current);
+    const sameFamily=cleanKey(candidate.family)&&cleanKey(candidate.family)===cleanKey(current.family);
+    const sameGender=cleanKey(candidate.gender)&&cleanKey(candidate.gender)===cleanKey(current.gender);
+    const compatibleGender=/unisex/i.test(String(candidate.gender||current.gender||''));
+    const sameSeason=cleanKey(candidate.season)&&cleanKey(candidate.season)===cleanKey(current.season);
+    const sameTime=cleanKey(candidate.time)&&cleanKey(candidate.time)===cleanKey(current.time);
+    const priceGap=Math.abs(Number(candidate.price||0)-Number(current.price||0));
+    const score=(sameCategory?6:-5)+(sameFamily?8:0)+shared.length*5+(sameGender?3:compatibleGender?1:0)+(sameSeason?1.5:0)+(sameTime?1:0)+(priceGap<=150?1:0);
+    const reasons=[];
+    if(shared.length)reasons.push(`${shared.slice(0,2).map(value=>value.replace(/\b\w/g,char=>char.toUpperCase())).join(' · ')} match`);
+    if(sameFamily)reasons.push('Same fragrance family');
+    if(sameGender)reasons.push(`For ${candidate.gender}`);
+    if(sameSeason)reasons.push('Same season');
+    return {product:candidate,score,reasons};
+  }).filter(item=>item.score>4).sort((a,b)=>b.score-a.score||String(a.product.name||'').localeCompare(String(b.product.name||''))).slice(0,6);
+}
+function SimilarProducts({current}){
+  const products=window.EE?.getProducts?.()||[];
+  const recommendations=useMemo(()=>similarProductsFor(current,products),[current?.id,current?._id,current?.name,products.length]);
+  if(!recommendations.length)return null;
+  return <section className="ee-similar-products" aria-labelledby="ee-similar-title">
+    <header><span>CURATED FOR THIS PROFILE</span><h2 id="ee-similar-title">You may also like</h2><p>Selected by shared accords, fragrance family, gender and wear occasion.</p></header>
+    <div className="ee-similar-grid">{recommendations.map(({product,reasons})=><button type="button" className="ee-similar-card" key={product.id||product._id||product.name} onClick={()=>window.eeNavigateToProduct?.(product,{size:window.eeDefaultProductSize?.(product)})}>
+      <div className="ee-similar-image"><ProductImage sources={galleryImageSources(product,0)} alt={product.name}/><span>{reasons[0]||'Similar profile'}</span></div>
+      <div className="ee-similar-copy"><small>{product.family||categoryName(product)}</small><strong>{product.name}</strong><p>{(Array.isArray(product.accords)?product.accords:[]).slice(0,3).join(' · ')||'Signature fragrance'}</p><div><b>₹{Number(product.price||0).toLocaleString('en-IN')}</b><em>VIEW FRAGRANCE →</em></div></div>
+    </button>)}</div>
+  </section>;
+}
+function reviewImages(review){return (Array.isArray(review?.images)?review.images:[]).map(image=>typeof image==='string'?image:image?.data).filter(source=>/^data:image\/(?:jpeg|png|webp);base64,/i.test(String(source||''))).slice(0,3);}
+function reviewerName(review){return String(review?.name||review?.user?.name||review?.userEmail?.split('@')[0]||'Customer').trim()||'Customer';}
+function CustomerReviews({reviews}){
+  const [activeImage,setActiveImage]=useState('');
+  const average=reviews.length?reviews.reduce((sum,review)=>sum+Number(review.rating||0),0)/reviews.length:0;
+  return <section className="ee-reviews" aria-labelledby="ee-review-title">
+    <div className="ee-review-heading"><div><span>VERIFIED EXPERIENCES</span><h2 id="ee-review-title">Customer reviews</h2></div>{reviews.length>0&&<aside><strong>{average.toFixed(1)}</strong><div><b>{'★'.repeat(Math.round(average))}{'☆'.repeat(5-Math.round(average))}</b><small>Based on {reviews.length} review{reviews.length===1?'':'s'}</small></div></aside>}</div>
+    {reviews.length?<div className="review-grid">{reviews.slice(0,8).map((review,index)=>{const name=reviewerName(review),images=reviewImages(review);return <article className="review-card" key={review._id||index}><header><span className="review-avatar">{name.slice(0,1).toUpperCase()}</span><div><b>{name}</b><small>✓ Verified purchase</small></div><time>{review.createdAt?new Date(review.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):''}</time></header><div className="stars" aria-label={`${Number(review.rating)||5} out of 5 stars`}>{'★'.repeat(Number(review.rating)||5)}{'☆'.repeat(5-(Number(review.rating)||5))}</div><p>{review.comment||review.review||review.text||''}</p>{images.length>0&&<div className={`review-images count-${images.length}`}>{images.map((source,imageIndex)=><button type="button" key={imageIndex} onClick={()=>setActiveImage(source)} aria-label={`Open review photo ${imageIndex+1}`}><img src={source} alt={`${name}'s review photo ${imageIndex+1}`}/></button>)}</div>}</article>})}</div>:<div className="empty-reviews"><b>No reviews yet</b><span>Delivered-order customers can be the first to share their experience and photos.</span></div>}
+    {activeImage&&<div className="review-lightbox" role="dialog" aria-modal="true" aria-label="Customer review photo" onClick={()=>setActiveImage('')}><button type="button" aria-label="Close review photo" onClick={()=>setActiveImage('')}>×</button><img src={activeImage} alt="Customer review" onClick={event=>event.stopPropagation()}/></div>}
+  </section>;
+}
 
 const LONGEVITY={'cool essence':[24,48],'divine essence':[10,24],aventus:[10,16],'eternal white':[8,14],'golden aura':[12,36],titanium:[10,16],'purple oud':[10,16],'golden blush':[8,12],'aqua wave':[8,12],'intense suede':[10,16],'vanilla blossom':[10,24],intus:[10,16],'caramel oud':[10,24],'eternal ember':[10,24],qahwa:[12,16],'blue oud':[24,72],'azure tide':[6,12],ombre:[10,16],'pulse royale':[8,14],'eternal elixir':[10,16],'eternal sauvage':[6,12],invictus:[8,14],'bleu voyage':[6,12],'golden flora':[8,14],'fresh impact':[8,14],'alpha blue':[6,12],'cool tide':[6,12],'luminous veil':[6,12],'most wanted':[8,14],'fresh horizon':[8,14],'br 540':[8,14],'ruh al wadi':[10,36],'fume vanille':[10,36],'fire oud':[10,36],'afternoon dive':[6,14],noble:[10,36],mukhaklat:[10,36],million:[8,12],'pink vanilla':[10,16],'tao mist':[10,16],'urban icon':[8,12],vanaffe:[8,12],'white oud':[8,16],symphoria:[8,16],melior:[10,24]};
 function cleanKey(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -107,20 +158,48 @@ function displayHour(hours,max,isAfter=false){
 function makeJourney(product){
   const top=splitNotes(product.top), heart=splitNotes(product.mid), base=splitNotes(product.base), acc=product.accords||[];
   const longevity=longevityFor(product),max=longevity.max,timelineMax=max/.98,counts=[top.length,heart.length,base.length];
-  const strength=Math.min(.94,.55+counts[0]*.03+counts[1]*.025+counts[2]*.025);
-  const fresh=acc.some(a=>/citrus|fresh|aquatic|marine|green|aromatic/i.test(a));
+  const identity=cleanKey([product.name,product.inspiredBy].filter(Boolean).join(' '));
+  const fresh=acc.some(a=>/citrus|fresh|aquatic|marine|green|aromatic|fruity/i.test(a));
+  const freshProfile=/lacoste white|eternal white|aventus|cool essence|aqua wave/i.test(identity)||fresh;
+  const explosiveProfile=/eternal ember|\bember\b/i.test(identity);
+  const vanillaStableProfile=/vanilla blossom/i.test(identity);
   const woody=acc.some(a=>/oud|woody|leather|amber|smoky|musk/i.test(a));
   const sweet=acc.some(a=>/sweet|vanilla|gourmand|caramel|tonka|fruity/i.test(a));
-  const peak=Math.min(.96,strength+(fresh?.05:0)+(woody?.025:0));
-  const tail=Math.min(.72,.18+(max/72)*.36+base.length*.028+(woody?.10:0)+(sweet?.05:0));
-  const openingEnd=Math.min(2,Math.max(.6,max*.11)),heartEnd=Math.min(max*.58,Math.max(openingEnd+1.4,max*.32));
+  const strength=Math.min(.94,.55+counts[0]*.03+counts[1]*.025+counts[2]*.025);
+  const profile=explosiveProfile
+    ? {peak:.99,rise:.98,opening:.82,heart:.58,heartEnd:.31,intimate:30,mid:16,late:5,finish:2}
+    : vanillaStableProfile
+      ? {peak:.72,rise:.70,opening:.68,heart:.64,heartEnd:.60,intimate:58,mid:48,late:34,finish:6}
+      : freshProfile
+        ? {peak:Math.min(.99,strength+.1),rise:.97,opening:.86,heart:.64,heartEnd:.42,intimate:20,mid:11,late:3,finish:1}
+        : {peak:Math.min(.96,strength+(woody?.025:0)),rise:.83,opening:.88,heart:.52,heartEnd:.40,intimate:18,mid:10,late:3,finish:1};
+  const peak=profile.peak;
+  const openingEnd=Math.min(2.2,Math.max(.6,max*.11)),heartEnd=Math.min(max*.58,Math.max(openingEnd+1.4,max*.32));
+  const riseTime=explosiveProfile?.016:freshProfile?Math.min(.12,openingEnd*.32):openingEnd*.32;
+  // The lower estimate is the point where projection becomes intimate, while
+  // the upper estimate is only the final close-to-clothing trace.
+  const intimateStart=Math.max(heartEnd+1,Math.min(longevity.min,max-1));
+  const tailMid=Math.max(intimateStart+.05,max*.78),tailLate=Math.max(tailMid+.05,max*.93);
+  const intimateV=vanillaStableProfile?.5:Math.min(.72,.18+(max/72)*.36+base.length*.028+(woody?.1:0)+(sweet?.05:0)+.02);
+  const projectionFeel=vanillaStableProfile?'Projection stays soft but steady, around 45–60 cm.':`Projection is now intimate, around ${explosiveProfile?'20–30':'10–20'} cm.`;
   const feel=(phase,notes,t)=>notes.length?(
     phase==='Opening'?`${notes.slice(0,3).join(', ')} open with ${fresh?'lift and brightness':'a distinct first impression'}.`:
     phase==='Heart'?`${notes.slice(0,3).join(', ')} build the signature character and depth.`:
     `${notes.slice(0,3).join(', ')} settle into a ${woody?'warm, lasting':'smooth'} finish.`
   ):`${phase} notes shape the fragrance as it evolves.`;
   const h=t=>displayHour(t,max);
-  const kf=[{t:0,v:.04,phase:'Opening',time:'Spray',feel:'The first impression begins.',proj:0,hours:0},{t:openingEnd*.32,v:peak*(fresh?.96:.83),phase:'Opening',time:h(openingEnd*.32),feel:feel('Opening',top),proj:Math.round(135*peak),hours:openingEnd*.32},{t:openingEnd,v:peak*(fresh?.78:.88),phase:'Opening',time:h(openingEnd),feel:feel('Opening',top),proj:Math.round(112*peak),hours:openingEnd},{t:heartEnd*.62,v:Math.min(.88,.52+heart.length*.04+(sweet?.1:0)),phase:'Heart',time:h(heartEnd*.62),feel:feel('Heart',heart),proj:Math.round(74*peak),hours:heartEnd*.62},{t:heartEnd,v:Math.min(.7,.40+heart.length*.035+(woody?.08:0)),phase:'Heart',time:h(heartEnd),feel:feel('Heart',heart),proj:Math.round(48*peak),hours:heartEnd},{t:max*.78,v:Math.min(.62,tail+.12),phase:'Dry-down',time:h(max*.78),feel:feel('Dry-down',base),proj:Math.round(25*peak),hours:max*.78},{t:max,v:.012,phase:'Dry-down',time:`${max} h`,feel:feel('Dry-down',base),proj:1,hours:max},{t:timelineMax,v:.005,phase:'Afterglow',time:`After ${max} h`,feel:'At most a near-zero 0.5% trace may remain when smelling very close to clothing.',proj:0,hours:timelineMax}];
+  const kf=[
+    {t:0,v:.04,phase:'Opening',time:'Spray',feel:'The first impression begins.',proj:0,hours:0},
+    {t:riseTime,v:peak*profile.rise,phase:'Opening',time:h(riseTime),feel:feel('Opening',top),proj:explosiveProfile?360:freshProfile?240:vanillaStableProfile?60:135,hours:riseTime},
+    {t:openingEnd,v:peak*profile.opening,phase:'Opening',time:h(openingEnd),feel:feel('Opening',top),proj:explosiveProfile?300:freshProfile?205:vanillaStableProfile?58:112,hours:openingEnd},
+    {t:heartEnd*.62,v:Math.min(.88,profile.heart+heart.length*.04+(sweet?.1:0)),phase:'Heart',time:h(heartEnd*.62),feel:feel('Heart',heart),proj:explosiveProfile?180:freshProfile?125:vanillaStableProfile?55:74,hours:heartEnd*.62},
+    {t:heartEnd,v:Math.min(.7,profile.heartEnd+heart.length*.035+(woody?.08:0)),phase:'Heart',time:h(heartEnd),feel:feel('Heart',heart),proj:explosiveProfile?95:freshProfile?65:vanillaStableProfile?52:48,hours:heartEnd},
+    {t:intimateStart,v:intimateV,phase:'Dry-down',time:h(intimateStart),feel:`${feel('Dry-down',base)} ${projectionFeel}`,proj:profile.intimate,hours:intimateStart},
+    {t:tailMid,v:vanillaStableProfile?.4:.16,phase:'Dry-down',time:h(tailMid),feel:feel('Dry-down',base),proj:profile.mid,hours:tailMid},
+    {t:tailLate,v:vanillaStableProfile?.2:.06,phase:'Dry-down',time:h(tailLate),feel:vanillaStableProfile?'The vanilla and amber base remains a quiet, steady aura.':'The scent is fading quickly and stays close to the skin.',proj:profile.late,hours:tailLate},
+    {t:max,v:vanillaStableProfile?.035:.012,phase:'Dry-down',time:`${max} h`,feel:feel('Dry-down',base),proj:profile.finish,hours:max},
+    {t:timelineMax,v:.005,phase:'Afterglow',time:`After ${max} h`,feel:'At most a near-zero 0.5% trace may remain when smelling very close to clothing.',proj:0,hours:timelineMax}
+  ];
   const notes=[
     {t:openingEnd/timelineMax,label:(top[0]||'Top note'),kind:'Opening'},
     {t:heartEnd/timelineMax,label:(heart[0]||'Heart note'),kind:'Heart'},
@@ -227,7 +306,7 @@ export function ScentJourney({product}){
   return <section className="ee-scent-journey">
     <div className="sj-kicker">{product.name?.toUpperCase()}</div>
     <h2>The life of this fragrance</h2>
-    <p className="sj-hint"><Sparkles size={13}/> Estimated wear: <b>{longevity.label}</b> · move across the curve to follow its evolution</p><p className="sj-disclaimer">* Wear time is an estimate, not a guarantee. It varies with skin, clothing, weather, storage and application. Beyond the limit, at most a near-zero 0.5% trace may remain very close to clothing.</p>
+    <p className="sj-hint"><Sparkles size={13}/> Estimated wear: <b>{longevity.label}</b> · move across the curve to follow its evolution</p><p className="sj-disclaimer">* Wear time is an estimate, not a guarantee. It varies with skin, clothing, weather, storage and application. After around {longevity.min} hours, the fragrance settles into its close-wearing dry-down and fades toward a near-zero trace by the upper estimate.</p>
     <div className="sj-chart-wrap" ref={wrap}>
       <canvas ref={canvas} className="sj-canvas" onMouseEnter={e=>setT(e)} onMouseMove={e=>{if(dragging.current||e.buttons===0)setT(e)}} onMouseDown={e=>{dragging.current=true;setT(e)}} onMouseUp={()=>{dragging.current=false}} onMouseLeave={()=>{if(!dragging.current)setHover(null)}} onTouchStart={e=>setT({clientX:e.touches[0].clientX})} onTouchMove={e=>setT({clientX:e.touches[0].clientX})}/>
       {active && <div className="sj-tooltip" style={{left:`${Math.min(chartWidth<560?70:82,Math.max(chartWidth<560?30:18,((PL+(hover??0)*Math.max(1,(chartWidth||720)-PL-PR))/(chartWidth||720))*100))}%`}}>
@@ -251,12 +330,20 @@ function ProductFooter(){return <footer className="ee-product-footer"><img src="
 function readCartCount(){
   try{return Number((window.EE?.getCart?.()||[]).reduce((sum,item)=>sum+Number(item.quantity||item.qty||1),0)||0)}catch{return 0}
 }
+function getAnalyticsVisitorId(){
+  try{
+    const key='ee_analytics_visitor_v1';
+    let id=sessionStorage.getItem(key);
+    if(!id){id=globalThis.crypto?.randomUUID?.()||`ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(key,id);}
+    return id;
+  }catch{return `ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;}
+}
 export default function ProductPage({product,route,onBack}){
   const [p,setP]=useState(()=>normalize(product)),[size,setSize]=useState(null),[qty,setQty]=useState(1),[img,setImg]=useState(0),[wish,setWish]=useState(false),[reviews,setReviews]=useState([]);
   const [variantNotice,setVariantNotice]=useState('');
   const [variantStock,setVariantStock]=useState({});
   const [variantPricing,setVariantPricing]=useState({});
-  const [viewerCount,setViewerCount]=useState(0);
+  const [viewerCount,setViewerCount]=useState(null);
   const [cartCount,setCartCount]=useState(readCartCount);
   const [showFloatingCart,setShowFloatingCart]=useState(false);
   const pendingSelection=window.__eePendingProductSelection;
@@ -275,8 +362,9 @@ export default function ProductPage({product,route,onBack}){
   useEffect(()=>{
     if(!p?.id)return;
     let active=true;
+    setViewerCount(null);
     const base=window.EE?.getBackendBase?.()||'http://localhost:5000';
-    const visitorId=window.eeAnalyticsVisitorId?.()||sessionStorage.getItem('ee_analytics_visitor_v1');
+    const visitorId=window.eeAnalyticsVisitorId?.()||getAnalyticsVisitorId();
     const heartbeat=()=>fetch(`${base}/api/analytics/products/${encodeURIComponent(p.id)}/heartbeat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitorId,productName:p.name})}).then(response=>response.json()).then(data=>{if(active&&data.success)setViewerCount(Number(data.displayCount||0));}).catch(()=>{});
     window.eeTrackAnalytics?.('product_view',{productId:p.id,productName:p.name});
     heartbeat();
@@ -308,7 +396,12 @@ export default function ProductPage({product,route,onBack}){
   const sizes=getSizes(p),selectedSize=size||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),p.mrp),gallery=p.images?.length?p.images:[p.image];
   const selectedStock=variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
-  const currentSources=img===selectedVariantIndex ? variantImages(p,selectedSize) : [imgUrl(gallery[img])];
+  const currentSources=img===selectedVariantIndex ? variantImages(p,selectedSize) : galleryImageSources(p,img);
+  const moveImage=delta=>{
+    if(!gallery.length)return;
+    if(selectedVariantIndex>=gallery.length&&img===selectedVariantIndex){setImg(delta>0?0:gallery.length-1);return;}
+    setImg((img+delta+gallery.length)%gallery.length);
+  };
   const add=()=>{
     if(selectedStock<=0){setVariantNotice(`${displaySize(selectedSize)} is currently out of stock. Please choose another size.`);return;}
     const editing=isEditingCartItem;
@@ -320,7 +413,7 @@ export default function ProductPage({product,route,onBack}){
       else window.dispatchEvent(new Event('ee:mini-cart-open'));
     },80);
   };
-  const toggle=()=>{try{window.EE?.setSelection?.(p,`${selectedSize.value} ${selectedSize.unit}`,pr.selling,variantIndex(selectedSize));window.EE?.toggleWishlist?.();setWish(v=>!v);}catch{}};
+  const toggle=async()=>{try{window.EE?.setSelection?.(p,`${selectedSize.value} ${selectedSize.unit}`,pr.selling,variantIndex(selectedSize));const changed=await window.EE?.toggleWishlist?.();if(changed)setWish(v=>!v);}catch{}};
   const selectSize=nextSize=>{setSize(nextSize);setImg(variantIndex(nextSize));setVariantNotice('');const url=new URL(location.href);url.searchParams.set('size',displaySize(nextSize));history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);};
   const share=()=>{const url=new URL(location.href);url.searchParams.set('size',displaySize(selectedSize));const sharedUrl=url.toString();navigator.share?navigator.share({title:p.name,text:`${p.name} – Eternal Essence`,url:sharedUrl}).catch(()=>{}):navigator.clipboard?.writeText(sharedUrl);};
   const goCart=()=>{if(window.eeNavigatePage)window.eeNavigatePage('cart');else{history.pushState({},'', '/cart');window.dispatchEvent(new CustomEvent('ee:route',{detail:{path:'/cart'}}));}};
@@ -329,12 +422,13 @@ export default function ProductPage({product,route,onBack}){
     {showFloatingCart&&<button type="button" className="ee-floating-cart ee-floating-cart-reveal" aria-label="Open floating cart preview" onClick={()=>window.dispatchEvent(new Event('ee:mini-cart-open'))}><ShoppingCart size={17}/><span>Cart</span><b>{cartCount}</b></button>}
     <div className="ee-breadcrumb"><button type="button" onClick={()=>window.eeNavigateCollection?.('all')}>Products</button><b>/</b><button type="button" onClick={()=>window.eeNavigateCollection?.(categoryName(p))}>{categoryName(p)}</button><b>/</b><strong>{productSlug(p)}</strong></div>
     <div className="ee-product-hero">
-      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>setImg((img+gallery.length-1)%gallery.length)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><button onClick={()=>setImg((img+1)%gallery.length)}><ChevronRight/></button></div></div>
-      <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div>{viewerCount>0&&<div className="ee-live-viewers" role="status"><Eye size={15}/><span><b>{viewerCount}</b> people are viewing this fragrance now</span><i/></div>}<div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div><div className="ee-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{variantNotice&&<div className="ee-variant-notice" role="status">{variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={s===size?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><button className={'ee-icon '+(wish?'saved':'')} onClick={toggle}><Heart fill={wish?'currentColor':'none'}/></button><button className="ee-icon" onClick={share}><Share2/></button><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
+      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={s===size?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
+      <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div><div className={`ee-live-viewers ${viewerCount>0?'':'loading'}`} role="status"><Eye size={15}/><span>{viewerCount>0?<><b>{viewerCount}</b> {viewerCount===1?'person':'people'} viewing now</>:'Live interest updating'}</span><i/></div><div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{variantNotice&&<div className="ee-variant-notice" role="status">{variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={s===size?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><div className="ee-qty ee-action-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
     </div>
     <ScentJourney product={p}/>
     <section className="ee-notes ee-accords-only"><div><span className="ee-kicker">MAIN ACCORDS</span><div className="ee-chips">{(p.accords||[]).map(a=><span key={a}>{a}</span>)}</div></div></section>
+    <SimilarProducts current={p}/>
     <WhySection/>
-    <section className="ee-reviews"><div className="ee-section-title"><span/>CUSTOMER REVIEWS<span/></div>{reviews.length?<div className="review-grid">{reviews.slice(0,8).map((r,i)=><div className="review-card" key={i}><div className="stars">{'★'.repeat(Number(r.rating)||5)}</div><b>{r.name||r.user?.name||r.userEmail?.split('@')[0]||'Customer'}</b><p>{r.comment||r.review||r.text||''}</p></div>)}</div>:<p className="empty-reviews">No reviews yet for this fragrance.</p>}</section><ProductFooter/>
+    <CustomerReviews reviews={reviews}/><ProductFooter/>
   </div>;
 }
