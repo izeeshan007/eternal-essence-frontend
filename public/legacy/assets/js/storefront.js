@@ -896,8 +896,9 @@ return {
 // The canonical image is the same full-pack artwork used on the product page;
 // backend gallery order is intentionally retained for size selection.
 type: canonical.type,
-image: correctedAsset(canonical.image || serverProduct.image),
-images: (serverProduct.images || []).map(correctedAsset),
+frontendId: canonical.id,
+image: correctedAsset(canonical.image || serverProduct.image || canonical.images?.[0] || serverProduct.images?.[0]),
+images: (serverProduct.images?.length ? serverProduct.images : (canonical.images || [])).map(correctedAsset),
 source: 'backend'
 };
 });
@@ -1242,7 +1243,7 @@ icon.classList.add('far');
 }
 }
 function openWishlistProduct(productId, savedSize, savedName = '') {
-const product = allProducts.find(item => savedName && normalize(item.name) === normalize(savedName)) || findProductByAnyId(productId);
+const product = findProductByAnyId(productId) || allProducts.find(item => savedName && normalize(item.name) === normalize(savedName));
 if (!product) {
 showToast('This saved fragrance is no longer available.', 'error');
 return;
@@ -3266,6 +3267,91 @@ star.classList.toggle('active', idx < count);
 star.classList.toggle('hovered', hover && idx < count);
 });
 }
+let reviewImagePayload = [];
+let reviewImageProcessing = null;
+function ensureReviewImageInput() {
+if (document.getElementById('review-images')) return;
+const comment = document.getElementById('review-comment');
+if (!comment) return;
+const field = document.createElement('div');
+field.id = 'review-image-field';
+field.className = 'ee-review-upload';
+field.innerHTML = `
+<div class="ee-review-upload-title"><b>Add photos</b><span>Optional · up to 3</span></div>
+<label class="ee-review-upload-button"><i class="fas fa-camera"></i> Choose photos<input id="review-images" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+<small>Images are resized before upload. JPEG, PNG or WebP.</small>
+<div id="review-image-status" class="ee-review-image-status"></div>
+<div id="review-image-preview" class="ee-review-image-preview"></div>`;
+comment.insertAdjacentElement('afterend', field);
+document.getElementById('review-images').addEventListener('change', previewReviewImages);
+}
+function encodeReviewImage(image, maxSide, quality) {
+const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+const canvas = document.createElement('canvas');
+canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+const context = canvas.getContext('2d');
+context.fillStyle = '#fff';
+context.fillRect(0, 0, canvas.width, canvas.height);
+context.drawImage(image, 0, 0, canvas.width, canvas.height);
+return canvas.toDataURL('image/jpeg', quality);
+}
+async function prepareReviewImage(file) {
+if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) throw new Error('Please choose JPEG, PNG or WebP images.');
+if (file.size > 6 * 1024 * 1024) throw new Error('Each original image must be smaller than 6 MB.');
+const source = await new Promise((resolve, reject) => {
+const reader = new FileReader();
+reader.onload = () => resolve(reader.result);
+reader.onerror = () => reject(new Error('Could not read one of the selected images.'));
+reader.readAsDataURL(file);
+});
+const image = await new Promise((resolve, reject) => {
+const next = new Image();
+next.onload = () => resolve(next);
+next.onerror = () => reject(new Error('One selected image could not be opened.'));
+next.src = source;
+});
+let data = encodeReviewImage(image, 1200, .78);
+if (data.length > 1_450_000) data = encodeReviewImage(image, 900, .68);
+if (data.length > 1_450_000) throw new Error('One image is still too large after processing. Please choose a smaller photo.');
+return { data, name: file.name || 'review-photo.jpg', contentType: 'image/jpeg' };
+}
+function renderReviewImagePreviews() {
+const preview = document.getElementById('review-image-preview');
+if (!preview) return;
+preview.innerHTML = reviewImagePayload.map((image, index) => `<div><img src="${image.data}" alt="Selected review photo"><button type="button" aria-label="Remove photo" onclick="removeReviewImage(${index})">×</button></div>`).join('');
+}
+function removeReviewImage(index) {
+reviewImagePayload.splice(index, 1);
+renderReviewImagePreviews();
+}
+async function previewReviewImages() {
+const input = document.getElementById('review-images');
+const status = document.getElementById('review-image-status');
+const files = [...(input?.files || [])];
+if (files.length > 3) {
+input.value = '';
+reviewImagePayload = [];
+renderReviewImagePreviews();
+if (status) status.textContent = 'Please choose no more than 3 photos.';
+return;
+}
+if (status) status.textContent = files.length ? 'Preparing photos…' : '';
+const task = Promise.all(files.map(prepareReviewImage));
+reviewImageProcessing = task;
+try {
+reviewImagePayload = await task;
+renderReviewImagePreviews();
+if (status) status.textContent = reviewImagePayload.length ? `${reviewImagePayload.length} photo${reviewImagePayload.length === 1 ? '' : 's'} ready` : '';
+} catch (error) {
+reviewImagePayload = [];
+if (input) input.value = '';
+renderReviewImagePreviews();
+if (status) status.textContent = error.message || 'Could not prepare the selected photos.';
+} finally {
+reviewImageProcessing = null;
+}
+}
 async function submitReview() {
 if (!reviewProductId) {
 alert('Invalid product');
@@ -3275,6 +3361,7 @@ const rating = Number(document.getElementById('review-rating').value || selected
 const comment = document.getElementById('review-comment').value.trim();
 const msg = document.getElementById('review-msg');
 try {
+if (reviewImageProcessing) await reviewImageProcessing;
 const res = await fetch(
 `${BACKEND_BASE_URL}/api/reviews/${reviewProductId}`,
 {
@@ -3283,7 +3370,7 @@ headers: {
 'Content-Type': 'application/json',
 'Authorization': `Bearer ${authToken}`
 },
-body: JSON.stringify({ rating, comment })
+body: JSON.stringify({ rating, comment, images: reviewImagePayload })
 }
 );
 const data = await res.json();
@@ -3292,6 +3379,7 @@ throw new Error(data.error || 'Failed to add review');
 }
 msg.textContent = 'Review submitted';
 msg.className = 'text-green-600 text-xs';
+reviewImagePayload = [];
 setTimeout(closeReviewModal, 800);
 } catch (err) {
 msg.textContent = err.message;
@@ -3329,8 +3417,15 @@ return allProducts.find(p => {
 const possibleIds = [
 p.id,
 p._id,
+p.frontendId,
+p.legacyFrontendId,
+p.legacyId,
+p.catalogOrder,
 String(p.id || '').replace(/^db_/, ''),
-String(p._id || '').replace(/^db_/, '')
+String(p._id || '').replace(/^db_/, ''),
+String(p.frontendId || '').replace(/^db_/, ''),
+String(p.legacyId || '').replace(/^db_/, ''),
+String(p.catalogOrder || '').replace(/^db_/, '')
 ].map(String);
 return possibleIds.includes(requested) || possibleIds.includes(cleanRequested);
 });
@@ -3640,9 +3735,16 @@ alert('Invalid product');
 return;
 }
 reviewProductId = productId;
+ensureReviewImageInput();
 document.getElementById('review-product-name').textContent =
 productName || 'this product';
 document.getElementById('review-comment').value = '';
+const reviewImages = document.getElementById('review-images');
+if (reviewImages) reviewImages.value = '';
+reviewImagePayload = [];
+renderReviewImagePreviews();
+const reviewImageStatus = document.getElementById('review-image-status');
+if (reviewImageStatus) reviewImageStatus.textContent = '';
 selectedRating = 5;
 document.getElementById('review-rating').value = '5';
 document.getElementById('review-msg').textContent = '';
@@ -3651,6 +3753,7 @@ document.getElementById('review-modal').classList.remove('hidden');
 }
 function closeReviewModal() {
 document.getElementById('review-modal').classList.add('hidden');
+reviewImagePayload = [];
 }
 function openOrderModal(order) {
 const modal = document.getElementById('order-modal');
@@ -4106,12 +4209,12 @@ frame.classList.toggle('is-portrait', ratio < .82);
 frame.classList.toggle('is-wide', ratio > 1.65);
 }
 async function toggleWishlist() {
-if (!authToken || !currentProduct) return;
+if (!authToken || !currentProduct) return false;
 const pid = String(currentProduct.id || currentProduct._id);
 const size = normalizeWishlistSize(selectedSize);
 const variantKey = getWishlistVariantKey(size);
 const variantImage =
-getVariantImage(currentProduct, variantKey) ||
+getWishlistVariantImage(currentProduct, size) ||
 currentProduct.image ||
 '';
 const isSaved = isWishlistItemSaved(pid, size);
@@ -4140,12 +4243,12 @@ image: variantImage
 const data = await res.json();
 if (!res.ok || !data.success) {
 console.error('Wishlist update failed:', data);
-return;
+return false;
 }
 if (isSaved) {
 wishlistIds = wishlistIds.filter(item =>
 !(
-String(item.productId || '') === pid &&
+String(item.productId || '').replace(/^db_/, '') === pid.replace(/^db_/, '') &&
 normalizeWishlistSize(item.size) === size
 )
 );
@@ -4163,8 +4266,10 @@ image: variantImage
 }
 syncWishlistHeart(pid);
 renderWishlist();
+return true;
 } catch (err) {
 console.error('Wishlist update error:', err);
+return false;
 }
 }
 function normalizeWishlistSize(size) {
@@ -4203,6 +4308,12 @@ return String(size)
 }
 function getWishlistVariantImage(product, savedSize) {
 if (!product) return '';
+// The 30 ml gift slot uses the main artwork. Older rows can point to a
+// non-existent `name6.webp` file for this slot.
+const variantKey = getWishlistVariantKey(savedSize);
+if (getPerfumeVariantIndex(variantKey) === 6) return getDefaultProductImage(product);
+const variantImage = getVariantImage(product, variantKey);
+if (variantImage) return variantImage;
 const normalized = String(savedSize || '')
 .trim()
 .toLowerCase()
@@ -4278,7 +4389,7 @@ name: item.name || ''
 };
 });
 wishlistIds.forEach(item => {
-const product = allProducts.find(candidate => item.name && normalize(candidate.name) === normalize(item.name)) || findProductByAnyId(item.productId);
+const product = findProductByAnyId(item.productId) || allProducts.find(candidate => item.name && normalize(candidate.name) === normalize(item.name));
 item.size = resolveWishlistSize(item, product);
 });
 wishlistLoaded = true;
@@ -4296,7 +4407,7 @@ const normalizedSize = normalizeWishlistSize(size);
 return wishlistIds.some(item => {
 const sameProduct = String(item.productId || '').replace(/^db_/, '') === pid.replace(/^db_/, '');
 if (!sameProduct) return false;
-const product = allProducts.find(candidate => item.name && normalize(candidate.name) === normalize(item.name)) || findProductByAnyId(item.productId);
+const product = findProductByAnyId(item.productId) || allProducts.find(candidate => item.name && normalize(candidate.name) === normalize(item.name));
 return resolveWishlistSize(item, product) === normalizedSize;
 });
 }
@@ -4339,21 +4450,27 @@ Your wishlist is empty.
 return;
 }
 wishlistIds.forEach(wid => {
-const product = allProducts.find(item => wid.name && normalize(item.name) === normalize(wid.name)) || findProductByAnyId(wid.productId) || { ...wid, id: wid.productId, images: [] };
+const product = findProductByAnyId(wid.productId) || allProducts.find(item => wid.name && normalize(item.name) === normalize(wid.name)) || { ...wid, id: wid.productId, images: [] };
 const savedSize = resolveWishlistSize(wid, product);
 const exactVariantImage = getWishlistVariantImage(
 product,
 savedSize
 );
 const wishlistImage =
-(wid.legacySizeMissing ? exactVariantImage : wid.image) ||
+(wid.legacySizeMissing ? exactVariantImage : normalizeImageUrl(wid.image)) ||
 exactVariantImage ||
-product.image ||
+getDefaultProductImage(product) ||
 '';
 const normalizedWishlistImage = normalizeImageUrl(wishlistImage || getDefaultProductImage(product));
 const normalizedWishlistFallback = normalizeImageUrl(
 exactVariantImage || product.image || product.images?.[0] || getDefaultProductImage(product)
 );
+const wishlistImageAttrs = imageWithFallbacks([
+normalizedWishlistImage,
+normalizedWishlistFallback,
+normalizeImageUrl(product.image || product.images?.[0] || getDefaultProductImage(product)),
+`${window.__EE_IMAGE_BASE__ || '/products/'}ee-brand-20260819.webp`
+]);
 const wishlistName =
 wid.name ||
 product.name;
@@ -4377,12 +4494,7 @@ role="button"
 tabindex="0"
 >
 <div class="ee-wishlist-media">
-<img
-src="${escapeHtml(normalizedWishlistImage)}"
-onerror="
-this.onerror=null;
-this.src='${escapeHtml(normalizedWishlistFallback)}';
-"
+<img ${wishlistImageAttrs}
 onload="adaptWishlistImage(this)"
 alt="${escapeHtml(wishlistName)}"
 >
@@ -4403,17 +4515,18 @@ alt="${escapeHtml(wishlistName)}"
 async function removeWishlistCardItem(event, productId, savedSize, savedName = '') {
 event?.preventDefault();
 event?.stopPropagation();
-const product = allProducts.find(item => savedName && normalize(item.name) === normalize(savedName)) || findProductByAnyId(productId);
+const product = findProductByAnyId(productId) || allProducts.find(item => savedName && normalize(item.name) === normalize(savedName));
 if (!product) return;
 currentProduct = product;
 selectedSize = normalizeWishlistSize(savedSize) || getDefaultWishlistSize(product);
 currentPrice = getWishlistPricing(product, selectedSize).sellingPrice;
-await toggleWishlist();
+const removed = await toggleWishlist();
+if (removed) renderWishlist();
 }
 function addWishlistCardItem(event, productId, savedSize, savedName = '', savedPrice = 0) {
 event?.preventDefault();
 event?.stopPropagation();
-const product = allProducts.find(item => savedName && normalize(item.name) === normalize(savedName)) || findProductByAnyId(productId);
+const product = findProductByAnyId(productId) || allProducts.find(item => savedName && normalize(item.name) === normalize(savedName));
 if (!product) return;
 const size = normalizeWishlistSize(savedSize) || getDefaultWishlistSize(product);
 const price = Number(savedPrice) || getWishlistPricing(product, size).sellingPrice;
