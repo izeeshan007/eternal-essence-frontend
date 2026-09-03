@@ -1091,7 +1091,7 @@ const pageEl = document.getElementById('page-'+pageId);
 if (pageEl) pageEl.classList.remove('hidden');
 updateActiveNav(pageId);
 window.scrollTo(0,0);
-if (pageId === 'cart') { renderSavedAddressControls(); renderCart(); }
+if (pageId === 'cart') { renderSavedAddressControls(); renderCart(); window.eeTrackCommerceEvent?.('cart_view',{cart:commerceCartPayload()}); }
 if (pageId === 'orders') renderOrders();
 if (pageId === 'profile') populateProfile();
 if (pageId === 'custom-set') renderBundleBuilder();
@@ -1734,6 +1734,7 @@ editingCartIndex = null;
 cart.push(cartItem);
 }
 updateCartCount(); renderCart(); saveCartToStorage(); closeModal();
+window.eeTrackCommerceEvent?.('add_to_cart',{productId:cartItem.id||cartItem.productId,productName:cartItem.name,cart:commerceCartPayload(),value:Number(cartItem.finalPrice||0)*quantity});
 showToast(`${currentProduct.name} added to your cart.`);
 const btn = document.querySelector('button[onclick="switchPage(\'cart\')"] i');
 if (btn) { btn.classList.add('text-yellow-400','scale-125'); setTimeout(()=>btn.classList.remove('text-yellow-400','scale-125'), 300); }
@@ -1742,7 +1743,7 @@ function updateCartCount(){
 const badge = document.getElementById('cart-count-badge');
 if (badge) badge.textContent = cart.reduce((sum,item)=>sum+cartItemQty(item),0);
 }
-function removeFromCart(i){ cart.splice(i,1); editingCartRowIndex=null; updateCartCount(); renderCart(); saveCartToStorage(); window.dispatchEvent(new Event('ee:cart-updated')); }
+function removeFromCart(i){ const removed=cart[i];cart.splice(i,1); editingCartRowIndex=null; updateCartCount(); renderCart(); saveCartToStorage(); window.eeTrackCommerceEvent?.('remove_from_cart',{productId:removed?.id||removed?.productId,productName:removed?.name,cart:commerceCartPayload()});window.dispatchEvent(new Event('ee:cart-updated')); }
 function isQuantityCartItem(item) {
 return !item || (!item.itemType || item.itemType === 'product');
 }
@@ -2542,6 +2543,8 @@ const paymentMethod = getSelectedPaymentMethod() || 'Not Selected';
 const btn = document.getElementById('checkout-btn'); const originalText = btn.textContent;
 const payload = {
 clientReference: (globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(16).slice(2)}`),
+visitorId: window.eeAnalyticsVisitorId?.()||'',
+attribution: window.eeGetAttribution?.()||{},
 cart: commerceCartPayload(),
 freeGift: formatGift(cartValueGift),
 customer: { email: buyerEmail, name, phone, address: shippingAddress },
@@ -2553,6 +2556,7 @@ paymentMethod
 const headers = { 'Content-Type':'application/json' }; if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 try {
 btn.disabled = true; btn.textContent = 'Processing...';
+window.eeTrackCommerceEvent?.('checkout_started',{cart:commerceCartPayload(),value:Number(calculateTotals()?.total||0)});
 if (paymentMethod === 'Cash on Delivery') {
 if (cartHasPerfumeCard()) throw new Error('COD is not available for custom perfume cards.');
 if (!isMumbaiCheckoutCity()) throw new Error('COD is available only for Mumbai delivery addresses.');
@@ -2565,6 +2569,7 @@ if (!await confirmCodOrder(quoteData.quote)) return;
 const res = await fetch(`${BACKEND_BASE_URL}/api/orders/cod`, { method:'POST', headers, body: JSON.stringify(payload) });
 const d = await res.json().catch(()=>({}));
 if (!res.ok || !d.success) throw new Error(d.error || 'Could not place COD order.');
+window.eeTrackCommerceEvent?.('purchase_completed',{cart:commerceCartPayload(),value:Number(d.quote?.total||payload.total||0),metadata:{orderId:d.orderId}});
 cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(d.deliveryEstimate); return;
 }
 const quoteRes = await fetch(`${BACKEND_BASE_URL}/api/orders/quote`, { method:'POST', headers, body: JSON.stringify(payload) });
@@ -2596,6 +2601,7 @@ razorpay_signature: response.razorpay_signature
 const verifyData = await verifyRes.json().catch(()=>({}));
 if (!verifyRes.ok || !verifyData.success) throw new Error(verifyData.error || 'Payment verification failed.');
 removePendingPayment(pendingAttemptId);
+window.eeTrackCommerceEvent?.('purchase_completed',{cart:commerceCartPayload(),value:Number(payload.total||0),metadata:{orderId:verifyData.orderId}});
 cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(verifyData.deliveryEstimate);
 } catch (err) {
 console.error('Verification error', err); alert(err.message || 'Payment captured but verification failed. Contact support.');
