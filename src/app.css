@@ -122,6 +122,48 @@ body{background:#fff;font-family:Lato,Arial,sans-serif}
   .sj-tooltip{min-width:150px;max-width:200px}
 }
 
+/* Engagement-led WhatsApp welcome prompt. */
+.ee-wa-layer{position:fixed;inset:0;z-index:10030;display:grid;place-items:center;padding:18px;background:rgba(8,9,7,.58);backdrop-filter:blur(5px)}
+.ee-wa-card{position:relative;width:min(410px,100%);box-sizing:border-box;padding:28px 26px 21px;border:1px solid #d6b34d;border-radius:18px;background:radial-gradient(circle at 100% 0,rgba(215,177,57,.16),transparent 40%),#fffdf7;color:#171610;box-shadow:0 28px 90px rgba(0,0,0,.36);text-align:center}
+.ee-wa-close{position:absolute;top:10px;right:10px;width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:50%;background:#f3eee2;color:#4b473d;cursor:pointer}
+.ee-wa-mark{width:50px;height:50px;margin:0 auto 11px;display:grid;place-items:center;border-radius:50%;background:#177c45;color:#fff;box-shadow:0 8px 20px rgba(23,124,69,.24)}
+.ee-wa-kicker{color:#9a751a;font-size:9px;font-weight:900;letter-spacing:.24em}
+.ee-wa-card h2{margin:7px 0 8px;font:700 27px/1.18 Cinzel,Georgia,serif}
+.ee-wa-card>p{margin:0 auto 17px;max-width:330px;color:#635d52;font-size:12px;line-height:1.55}
+.ee-wa-phone{display:block;text-align:left}.ee-wa-phone>span{display:block;margin-bottom:6px;color:#7d6b3a;font-size:8px;font-weight:900;letter-spacing:.17em}
+.ee-wa-phone input{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #d9d2c3;border-radius:8px;background:#fff;font-size:14px;outline:none}.ee-wa-phone input:focus{border-color:#b88b19;box-shadow:0 0 0 3px rgba(184,139,25,.12)}
+.ee-wa-consent{display:grid;grid-template-columns:auto 1fr;gap:9px;margin:12px 0;text-align:left;align-items:start;color:#696257;font-size:10px;line-height:1.45}.ee-wa-consent input{margin-top:2px;accent-color:#177c45}
+.ee-wa-card>small{display:block;margin:0 0 13px;color:#716a60;font-size:9px;line-height:1.45}
+.ee-wa-primary{width:100%;min-height:45px;display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:8px;background:#116c3b;color:#fff;font-size:11px;font-weight:900;letter-spacing:.08em;cursor:pointer}.ee-wa-primary:disabled{opacity:.65;cursor:wait}
+.ee-wa-later{margin:10px 0 0;border:0;background:transparent;color:#787168;font-size:10px;text-decoration:underline;cursor:pointer}
+.ee-wa-status{margin-top:9px;color:#29643f;font-size:10px;line-height:1.4}
+.ee-route-view{max-width:100%;overflow-x:clip}
+
+/* Keep the whole interactive scent readout visible while dragging on phones. */
+@media(max-width:700px){
+  .ee-scent-journey{padding:14px 8px 12px!important;margin-bottom:18px!important}
+  .ee-scent-journey .sj-kicker{font-size:8px;letter-spacing:.22em}
+  .ee-scent-journey h2{margin:4px 0 2px;font-size:18px!important;line-height:1.15}
+  .sj-hint{gap:4px;margin:0 0 5px;font-size:9px!important;line-height:1.25!important}
+  .sj-hint svg{width:10px;height:10px}
+  .sj-disclaimer{display:-webkit-box;margin:4px 5px 7px!important;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:8px!important;line-height:1.25!important}
+  .sj-chart-wrap{touch-action:none}
+  .sj-tooltip{top:6px!important;min-width:108px!important;max-width:132px!important;padding:6px 7px!important;gap:2px!important}
+  .sj-tooltip strong{font-size:7px}.sj-tooltip b{font-size:10px!important}.sj-tooltip span{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:8px!important;line-height:1.25!important}
+  .sj-note-summary{grid-template-columns:repeat(3,minmax(0,1fr))!important;margin-top:6px;gap:1px}
+  .sj-note-summary>div{min-width:0;padding:6px 7px}
+  .sj-note-summary span{margin-bottom:3px;font-size:7px;letter-spacing:.11em}
+  .sj-note-summary b{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:8px;line-height:1.3}
+  .sj-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important;margin-top:6px}
+  .sj-stats>div{min-width:0;padding:7px 6px!important;border-right:1px solid #ddd6c8!important;border-bottom:0!important}
+  .sj-stats>div:last-child{border-right:0!important}
+  .sj-stats span{margin-bottom:3px;font-size:7px;letter-spacing:.1em}
+  .sj-stats b{overflow:hidden;font-size:10px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+  .sj-stats small{margin-top:3px;font-size:7px;line-height:1.25}
+  .sj-tags{display:none}
+  .ee-wa-card{padding:23px 18px 17px;border-radius:15px}.ee-wa-card h2{font-size:23px}.ee-wa-card>p{font-size:11px;margin-bottom:13px}
+}
+
 /* Refined collection discovery, kept in the original black-and-gold palette. */
 .ee-home-collections{padding:72px 24px 64px;background:#070907;color:#f5f1df;border-block:1px solid rgba(252,196,41,.32)}
 .ee-home-intro{max-width:840px;margin:0 auto 30px;text-align:center}.ee-home-intro>span,.ee-home-bestsellers>div>span{font-size:10px;font-weight:900;letter-spacing:.3em;color:#c49722}.ee-home-intro h2,.ee-home-bestsellers h2{font-family:Cinzel,Georgia,serif;font-size:40px;line-height:1.1;margin:10px 0;color:#fff}.ee-home-intro p,.ee-home-bestsellers p{color:#b8b8ae;line-height:1.7;margin:0}
@@ -451,4 +493,19 @@ nav #nav-profile-btn{width:44px!important;height:44px!important;border:1px solid
   .ee-reviews .review-card{padding:15px;}
   .review-images button{height:96px;}
   .review-lightbox{padding:14px;}
+}
+
+/* Final mobile overrides live after the shared scent styles. */
+@media(max-width:700px){
+  .sj-note-summary{margin-top:6px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .sj-note-summary>div{min-width:0;padding:6px 7px!important}
+  .sj-note-summary span{margin-bottom:3px!important;font-size:7px!important;letter-spacing:.11em!important}
+  .sj-note-summary b{display:-webkit-box!important;overflow:hidden!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:8px!important;line-height:1.3!important}
+  .sj-stats{margin-top:6px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .sj-stats>div{min-width:0;padding:7px 6px!important;border-right:1px solid #ddd6c8!important;border-bottom:0!important}
+  .sj-stats>div:last-child{border-right:0!important}
+  .sj-stats span{margin-bottom:3px!important;font-size:7px!important;letter-spacing:.1em!important}
+  .sj-stats b{overflow:hidden;font-size:10px!important;line-height:1.2!important;text-overflow:ellipsis;white-space:nowrap}
+  .sj-stats small{margin-top:3px!important;font-size:7px!important;line-height:1.25!important}
+  .sj-tags{display:none!important}
 }

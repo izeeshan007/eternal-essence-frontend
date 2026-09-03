@@ -256,7 +256,7 @@ export function ScentJourney({product}){
   useEffect(()=>{
     const cv=canvas.current;if(!cv)return;
     const ctx=cv.getContext('2d');
-    const W=Math.max(280,chartWidth||Math.round(wrap.current?.clientWidth||720)),compact=W<560,H=compact?250:Math.max(260,Math.min(360,Math.round(W*.32))),PT=18,PB=compact?50:76,cW=W-PL-PR,cH=H-PT-PB;
+    const W=Math.max(280,chartWidth||Math.round(wrap.current?.clientWidth||720)),compact=W<560,H=compact?188:Math.max(260,Math.min(360,Math.round(W*.32))),PT=compact?10:18,PB=compact?43:76,cW=W-PL-PR,cH=H-PT-PB;
     const DPR=Math.min(3,window.devicePixelRatio||1);
     cv.width=W*DPR;cv.height=H*DPR;cv.style.width='100%';cv.style.height=`${H}px`;
     ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -332,9 +332,10 @@ function readCartCount(){
 }
 function getAnalyticsVisitorId(){
   try{
-    const key='ee_analytics_visitor_v1';
-    let id=sessionStorage.getItem(key);
-    if(!id){id=globalThis.crypto?.randomUUID?.()||`ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(key,id);}
+    const key='ee_visitor_id',legacyKey='ee_analytics_visitor_v1';
+    let id=localStorage.getItem(key)||sessionStorage.getItem(legacyKey);
+    if(!id)id=globalThis.crypto?.randomUUID?.()||`ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(key,id);sessionStorage.setItem(legacyKey,id);
     return id;
   }catch{return `ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;}
 }
@@ -366,10 +367,15 @@ export default function ProductPage({product,route,onBack}){
     const base=window.EE?.getBackendBase?.()||'http://localhost:5000';
     const visitorId=window.eeAnalyticsVisitorId?.()||getAnalyticsVisitorId();
     const heartbeat=()=>fetch(`${base}/api/analytics/products/${encodeURIComponent(p.id)}/heartbeat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitorId,productName:p.name})}).then(response=>response.json()).then(data=>{if(active&&data.success)setViewerCount(Number(data.displayCount||0));}).catch(()=>{});
+    const viewedKey=`ee_viewed_${String(p.id).replace(/[^a-z0-9_-]/gi,'')}`;
+    const priorView=Number(localStorage.getItem(viewedKey)||0);
     window.eeTrackAnalytics?.('product_view',{productId:p.id,productName:p.name});
+    if(priorView&&Date.now()-priorView<30*24*60*60*1000)window.eeTrackAnalytics?.('repeat_product_view',{productId:p.id,productName:p.name});
+    localStorage.setItem(viewedKey,String(Date.now()));
+    const viewStarted=Date.now();
     heartbeat();
     const timer=setInterval(heartbeat,20000);
-    return()=>{active=false;clearInterval(timer);fetch(`${base}/api/analytics/products/${encodeURIComponent(p.id)}/heartbeat`,{method:'DELETE',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({visitorId})}).catch(()=>{});};
+    return()=>{active=false;clearInterval(timer);const durationSeconds=Math.round((Date.now()-viewStarted)/1000);if(durationSeconds>=30)window.eeTrackAnalytics?.('product_view_duration',{productId:p.id,productName:p.name,durationSeconds});fetch(`${base}/api/analytics/products/${encodeURIComponent(p.id)}/heartbeat`,{method:'DELETE',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({visitorId})}).catch(()=>{});};
   },[p?.id,p?.name]);
   useEffect(()=>{
     if(!p)return;

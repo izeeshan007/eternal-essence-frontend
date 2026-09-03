@@ -8,6 +8,7 @@ import OfferPopup from './OfferPopup';
 import HomeEnhancements from './HomeEnhancements';
 import DealerPage from './DealerPage';
 import CartDrawer from './CartDrawer';
+import WhatsAppOptIn from './WhatsAppOptIn';
 import currentCatalog from "../data/current-catalog.json";
 import './legacy.css';
 import './app.css';
@@ -114,16 +115,34 @@ window.__EE_CONFIG__={
 };
 installBackendFailover();
 function analyticsVisitorId(){
-  const key='ee_analytics_visitor_v1';
-  let id=sessionStorage.getItem(key);
-  if(!id){id=globalThis.crypto?.randomUUID?.()||`ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(key,id);}
+  const key='ee_visitor_id',legacyKey='ee_analytics_visitor_v1';
+  let id=localStorage.getItem(key)||sessionStorage.getItem(legacyKey);
+  if(!id)id=globalThis.crypto?.randomUUID?.()||`ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(key,id);sessionStorage.setItem(legacyKey,id);
   return id;
 }
+function analyticsAttribution(){
+  const key='ee_attribution_v1';
+  const params=new URLSearchParams(location.search);
+  if(params.get('utm_source')){
+    const value={source:params.get('utm_source')||'',medium:params.get('utm_medium')||'',campaign:params.get('utm_campaign')||''};
+    localStorage.setItem(key,JSON.stringify(value));return value;
+  }
+  try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return{}}
+}
+const engagement={pageViews:0,productViews:0,meaningful:false};
 function trackAnalytics(eventType,payload={}){
-  return fetch(`${backendUrl()}/api/analytics/event`,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({visitorId:analyticsVisitorId(),eventType,path:location.pathname+location.search,referrer:document.referrer,...payload})}).catch(()=>{});
+  if(eventType==='page_view')engagement.pageViews+=1;
+  if(eventType==='product_view')engagement.productViews+=1;
+  if(['add_to_cart','checkout_started','product_view_duration'].includes(eventType))engagement.meaningful=true;
+  const eligible=engagement.meaningful||engagement.productViews>=2||engagement.pageViews>=3;
+  window.dispatchEvent(new CustomEvent('ee:whatsapp-engagement',{detail:{eventType,eligible}}));
+  return fetch(`${backendUrl()}/api/analytics/event`,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({visitorId:analyticsVisitorId(),eventType,path:location.pathname+location.search,referrer:document.referrer,attribution:analyticsAttribution(),...payload})}).catch(()=>{});
 }
 window.eeAnalyticsVisitorId=analyticsVisitorId;
 window.eeTrackAnalytics=trackAnalytics;
+window.eeTrackCommerceEvent=trackAnalytics;
+window.eeGetAttribution=analyticsAttribution;
 function slugify(value){
   return String(value||'').trim().toLowerCase()
     .replace(/&/g,' and ')
@@ -552,6 +571,7 @@ function App(){
     {isDealer&&<DealerPage backendBase={backendUrl()} legacyReady={legacyReady}/>}
     {!isDealer&&<CartDrawer/>}
     {!isDealer&&<OfferPopup/>}
+    {!isDealer&&<WhatsAppOptIn backendBase={backendUrl()} visitorId={analyticsVisitorId()}/>}
   </div>;
 }
 const rootElement=document.getElementById('root');
