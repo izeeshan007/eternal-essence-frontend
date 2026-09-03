@@ -15,7 +15,7 @@ const legacyAdminSource=legacyAdminCandidates.find(candidate=>fs.existsSync(cand
 if(!legacyAdminSource)throw new Error('The existing admin dashboard shell could not be found.');
 // Cache before Vite clears its output directory during a production build.
 const legacyAdminMarkup=fs.readFileSync(legacyAdminSource,'utf8');
-const adminAssetVersion='20260831-1';
+const adminAssetVersion='20260903-2';
 
 function adminHtml(backendBase='',backendFallback=''){
   const primary=String(backendBase||'').trim().replace(/\/+$/, '');
