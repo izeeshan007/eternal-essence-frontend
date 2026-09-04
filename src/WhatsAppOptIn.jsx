@@ -8,10 +8,11 @@ const REVEAL_DELAY_MS=3*60*1000;
 
 export default function WhatsAppOptIn({backendBase,visitorId}){
   const shownThisVisit=useRef(false),dismissedThisVisit=useRef(false);
-  const [config,setConfig]=useState(null),[visible,setVisible]=useState(false),[phone,setPhone]=useState(''),[consent,setConsent]=useState(false),[status,setStatus]=useState(''),[couponCode,setCouponCode]=useState(''),[busy,setBusy]=useState(false),[accepted,setAccepted]=useState(()=>localStorage.getItem(ACCEPTED_KEY)==='1');
+  const [config,setConfig]=useState(null),[popupEnabled,setPopupEnabled]=useState(false),[visible,setVisible]=useState(false),[phone,setPhone]=useState(''),[consent,setConsent]=useState(false),[status,setStatus]=useState(''),[couponCode,setCouponCode]=useState(''),[busy,setBusy]=useState(false),[accepted,setAccepted]=useState(()=>localStorage.getItem(ACCEPTED_KEY)==='1');
   useEffect(()=>{
     let active=true;
     fetch(`${backendBase}/api/whatsapp/config`).then(response=>response.json()).then(data=>{if(active&&data.success)setConfig(data)}).catch(()=>{});
+    fetch(`${backendBase}/api/whatsapp/popup-config`).then(response=>response.json()).then(data=>{if(active&&data.success)setPopupEnabled(data.enabled===true)}).catch(()=>{if(active)setPopupEnabled(false)});
     return()=>{active=false};
   },[backendBase]);
   useEffect(()=>{
@@ -25,7 +26,7 @@ export default function WhatsAppOptIn({backendBase,visitorId}){
     return()=>window.removeEventListener('storage',syncAccepted);
   },[]);
   useEffect(()=>{
-    if(!config?.enabled||accepted||localStorage.getItem(ACCEPTED_KEY)==='1'||shownThisVisit.current||dismissedThisVisit.current)return;
+    if(!popupEnabled||!config?.enabled||accepted||localStorage.getItem(ACCEPTED_KEY)==='1'||shownThisVisit.current||dismissedThisVisit.current)return;
     const dismissed=Number(localStorage.getItem(DISMISS_KEY)||0);
     if(Date.now()-dismissed<DISMISS_MS)return;
     const reveal=()=>{
@@ -35,7 +36,7 @@ export default function WhatsAppOptIn({backendBase,visitorId}){
     };
     const revealTimer=setTimeout(reveal,REVEAL_DELAY_MS);
     return()=>clearTimeout(revealTimer);
-  },[config,accepted]);
+  },[config,popupEnabled,accepted]);
   const dismiss=()=>{dismissedThisVisit.current=true;localStorage.setItem(DISMISS_KEY,String(Date.now()));setVisible(false)};
   const trackClick=()=>fetch(`${backendBase}/api/whatsapp/cta-click`,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({visitorId,path:location.pathname+location.search})}).catch(()=>{});
   const submit=async()=>{
@@ -57,7 +58,7 @@ export default function WhatsAppOptIn({backendBase,visitorId}){
       setTimeout(()=>setVisible(false),5000);
     }catch(error){setStatus(error.message)}finally{setBusy(false)}
   };
-  if(!visible||!config?.enabled)return null;
+  if(!visible||!popupEnabled||!config?.enabled)return null;
   return <div className="ee-wa-layer" role="dialog" aria-modal="true" aria-labelledby="ee-wa-title">
     <section className="ee-wa-card">
       <button type="button" className="ee-wa-close" onClick={dismiss} aria-label="Not now"><X size={18}/></button>
