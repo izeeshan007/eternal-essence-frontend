@@ -1,12 +1,14 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {MessageCircle,X} from 'lucide-react';
 
 const DISMISS_KEY='ee_whatsapp_prompt_dismissed_at';
 const ACCEPTED_KEY='ee_whatsapp_prompt_accepted';
-const DISMISS_MS=7*24*60*60*1000;
+const DISMISS_MS=4*60*60*1000;
+const REVEAL_DELAY_MS=3*60*1000;
 
 export default function WhatsAppOptIn({backendBase,visitorId}){
-  const [config,setConfig]=useState(null),[visible,setVisible]=useState(false),[phone,setPhone]=useState(''),[consent,setConsent]=useState(false),[status,setStatus]=useState(''),[busy,setBusy]=useState(false),[accepted,setAccepted]=useState(()=>localStorage.getItem(ACCEPTED_KEY)==='1');
+  const shownThisVisit=useRef(false),dismissedThisVisit=useRef(false);
+  const [config,setConfig]=useState(null),[visible,setVisible]=useState(false),[phone,setPhone]=useState(''),[consent,setConsent]=useState(false),[status,setStatus]=useState(''),[couponCode,setCouponCode]=useState(''),[busy,setBusy]=useState(false),[accepted,setAccepted]=useState(()=>localStorage.getItem(ACCEPTED_KEY)==='1');
   useEffect(()=>{
     let active=true;
     fetch(`${backendBase}/api/whatsapp/config`).then(response=>response.json()).then(data=>{if(active&&data.success)setConfig(data)}).catch(()=>{});
@@ -23,20 +25,18 @@ export default function WhatsAppOptIn({backendBase,visitorId}){
     return()=>window.removeEventListener('storage',syncAccepted);
   },[]);
   useEffect(()=>{
-    if(!config?.enabled||accepted||localStorage.getItem(ACCEPTED_KEY)==='1')return;
+    if(!config?.enabled||accepted||localStorage.getItem(ACCEPTED_KEY)==='1'||shownThisVisit.current||dismissedThisVisit.current)return;
     const dismissed=Number(localStorage.getItem(DISMISS_KEY)||0);
     if(Date.now()-dismissed<DISMISS_MS)return;
     const reveal=()=>{
-      if(accepted||localStorage.getItem(ACCEPTED_KEY)==='1')return;
+      if(accepted||localStorage.getItem(ACCEPTED_KEY)==='1'||shownThisVisit.current||dismissedThisVisit.current)return;
+      shownThisVisit.current=true;
       setVisible(true);
     };
-    const onEngagement=event=>{if(event.detail?.eligible)setTimeout(reveal,650)};
-    const onExit=event=>{if(window.innerWidth>=900&&event.clientY<=4)reveal()};
-    window.addEventListener('ee:whatsapp-engagement',onEngagement);
-    document.addEventListener('mouseout',onExit);
-    return()=>{window.removeEventListener('ee:whatsapp-engagement',onEngagement);document.removeEventListener('mouseout',onExit)};
+    const revealTimer=setTimeout(reveal,REVEAL_DELAY_MS);
+    return()=>clearTimeout(revealTimer);
   },[config,accepted]);
-  const dismiss=()=>{localStorage.setItem(DISMISS_KEY,String(Date.now()));setVisible(false)};
+  const dismiss=()=>{dismissedThisVisit.current=true;localStorage.setItem(DISMISS_KEY,String(Date.now()));setVisible(false)};
   const trackClick=()=>fetch(`${backendBase}/api/whatsapp/cta-click`,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({visitorId,path:location.pathname+location.search})}).catch(()=>{});
   const submit=async()=>{
     setStatus('');
@@ -52,8 +52,9 @@ export default function WhatsAppOptIn({backendBase,visitorId}){
       const response=await fetch(`${backendBase}/api/whatsapp/consent`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitorId,phone,consent:true,source:'welcome_popup',path:location.pathname+location.search})});
       const data=await response.json().catch(()=>({}));
       if(!response.ok||!data.success)throw new Error(data.error||'Could not save your preference.');
-      localStorage.setItem(ACCEPTED_KEY,'1');setAccepted(true);setStatus('You’re in — your WhatsApp welcome offer is being prepared.');
-      setTimeout(()=>setVisible(false),1800);
+      const issuedCoupon=String(data.couponCode||'').toUpperCase();
+      localStorage.setItem(ACCEPTED_KEY,'1');setAccepted(true);shownThisVisit.current=true;setCouponCode(issuedCoupon);setStatus(issuedCoupon?`Your ₹100 coupon code is ${issuedCoupon}. Use it on orders above ₹499.`:'You’re in — your WhatsApp welcome offer is being prepared.');
+      setTimeout(()=>setVisible(false),5000);
     }catch(error){setStatus(error.message)}finally{setBusy(false)}
   };
   if(!visible||!config?.enabled)return null;
@@ -71,6 +72,7 @@ export default function WhatsAppOptIn({backendBase,visitorId}){
       {config.mode==='click_to_chat'&&<small>WhatsApp will open with a prefilled request. Opening the chat does not subscribe you automatically.</small>}
       <button type="button" className="ee-wa-primary" disabled={busy} onClick={submit}><MessageCircle size={17}/>{busy?'SAVING…':config.mode==='click_to_chat'?'OPEN WHATSAPP':'GET MY ₹100 OFFER'}</button>
       <button type="button" className="ee-wa-later" onClick={dismiss}>Not now</button>
+      {couponCode&&<div className="ee-wa-status" role="status"><strong>{couponCode}</strong> — ₹100 off on orders above ₹499.</div>}
       {status&&<div className="ee-wa-status" role="status">{status}</div>}
     </section>
   </div>;
