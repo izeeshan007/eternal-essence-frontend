@@ -2022,3 +2022,39 @@ document.getElementById('reject-reason-count').textContent = `${e.target.value.l
 }
 setupOrderManagementControls();
 setAuthUI(); if (adminToken) initData(); })();
+
+(function () {
+  function renderWhatsAppSubscribers(consents) {
+    const list = document.getElementById('wa-subscriber-list');
+    if (!list) return;
+    list.innerHTML = (consents || []).map(item => `<div class="border rounded p-3"><b class="text-sm">${escapeHtml(item.normalizedPhone || '')}</b><div class="tiny text-gray-500">Opted in ${item.optInAt ? new Date(item.optInAt).toLocaleString('en-IN') : '—'} · ${escapeHtml(item.optInSource || 'website')}</div></div>`).join('') || '<p class="tiny text-gray-500">No active WhatsApp subscribers.</p>';
+  }
+
+  async function toggleWhatsAppPhoneVisibility(reveal) {
+    const message = document.getElementById('wa-phone-visibility-message');
+    try {
+      const response = await adminFetch(`/api/admin/whatsapp/campaigns?revealPhones=${reveal ? 'true' : 'false'}`);
+      if (!response.ok) throw new Error(response.body?.error || 'Could not load subscriber numbers.');
+      renderWhatsAppSubscribers(response.body.recentConsents || []);
+      if (message) message.textContent = reveal ? 'Full numbers are visible to this admin session.' : 'Numbers are masked.';
+    } catch (error) {
+      if (message) message.textContent = error.message;
+    }
+  }
+
+  function ensureWhatsAppPhoneVisibilityControl() {
+    const list = document.getElementById('wa-subscriber-list');
+    if (!list || document.getElementById('wa-show-phone')) return;
+    const heading = list.previousElementSibling;
+    if (!heading) return;
+    const control = document.createElement('div');
+    control.className = 'flex items-center gap-2 mb-2';
+    control.innerHTML = '<label class="tiny flex items-center gap-2"><input id="wa-show-phone" type="checkbox" class="accent-green-600"> Show full mobile numbers</label><span id="wa-phone-visibility-message" class="tiny text-gray-500">Numbers are masked.</span>';
+    heading.insertAdjacentElement('afterend', control);
+    control.querySelector('#wa-show-phone').addEventListener('change', event => toggleWhatsAppPhoneVisibility(event.target.checked));
+  }
+
+  const observer = new MutationObserver(ensureWhatsAppPhoneVisibilityControl);
+  observer.observe(document.body, { childList: true, subtree: true });
+  ensureWhatsAppPhoneVisibilityControl();
+})();
