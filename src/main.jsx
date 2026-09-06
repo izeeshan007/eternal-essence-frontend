@@ -16,7 +16,7 @@ import './catalog.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 
-const LEGACY_ASSET_VERSION='20260831-2';
+const LEGACY_ASSET_VERSION='20260907-1';
 const LEGACY_SCRIPTS=[
   '/legacy/assets/js/storefront.js',
   '/legacy/assets/js/scent-quiz.js',

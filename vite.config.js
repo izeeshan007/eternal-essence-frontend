@@ -15,12 +15,12 @@ const legacyAdminSource=legacyAdminCandidates.find(candidate=>fs.existsSync(cand
 if(!legacyAdminSource)throw new Error('The existing admin dashboard shell could not be found.');
 // Cache before Vite clears its output directory during a production build.
 const legacyAdminMarkup=fs.readFileSync(legacyAdminSource,'utf8');
-const adminAssetVersion='20260903-2';
+const adminAssetVersion='20260907-2';
 
 function adminHtml(backendBase='',backendFallback=''){
   const primary=String(backendBase||'').trim().replace(/\/+$/, '');
   const fallback=String(backendFallback||'').trim().replace(/\/+$/, '');
-  const runtimeConfig=`<link rel="preconnect" href="https://cdn.tailwindcss.com"><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><script>window.__EE_BACKEND_BASE_URL__=${JSON.stringify(primary).replace(/</g,'\\u003c')};window.__EE_BACKEND_FALLBACK_URL__=${JSON.stringify(fallback).replace(/</g,'\\u003c')};</script>`;
+  const runtimeConfig=`<script>document.documentElement.dataset.eeAdminRoute=location.pathname.replace(/\\/+$/,'')||'/';</script><link rel="preconnect" href="https://cdn.tailwindcss.com"><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><script>window.__EE_BACKEND_BASE_URL__=${JSON.stringify(primary).replace(/</g,'\\u003c')};window.__EE_BACKEND_FALLBACK_URL__=${JSON.stringify(fallback).replace(/</g,'\\u003c')};</script>`;
   return legacyAdminMarkup
     .replace(/<script>window\.__EE_BACKEND_BASE_URL__=[\s\S]*?<\/script>/g,'')
     .replace('<head>','<head>'+runtimeConfig)
@@ -40,7 +40,7 @@ function restoreAdminDashboard(backendBase,backendFallback){
         if(pathname==='/admin/dealers'){
           res.statusCode=302; res.setHeader('Location','/admin'); res.end(); return;
         }
-        if(pathname!=='/admin'&&pathname!=='/admin.html'&&pathname!=='/admin/products') return next();
+        if(pathname!=='/admin'&&pathname!=='/admin.html'&&pathname!=='/admin/products'&&pathname!=='/admin/analytics') return next();
         const html=await server.transformIndexHtml('/admin',adminHtml(backendBase,backendFallback));
         res.statusCode=200; res.setHeader('Content-Type','text/html; charset=utf-8'); res.end(html);
       });
@@ -50,9 +50,12 @@ function restoreAdminDashboard(backendBase,backendFallback){
       const markup=adminHtml(backendBase,backendFallback);
       const adminDir=path.join(outDir,'admin');
       const productsDir=path.join(adminDir,'products');
+      const analyticsDir=path.join(adminDir,'analytics');
       fs.mkdirSync(productsDir,{recursive:true});
+      fs.mkdirSync(analyticsDir,{recursive:true});
       fs.writeFileSync(path.join(adminDir,'index.html'),markup,'utf8');
       fs.writeFileSync(path.join(productsDir,'index.html'),markup,'utf8');
+      fs.writeFileSync(path.join(analyticsDir,'index.html'),markup,'utf8');
     }
   };
 }
