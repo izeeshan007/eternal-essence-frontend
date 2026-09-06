@@ -5,7 +5,9 @@ const BACKEND_FALLBACK_URL = normalizeAdminBackend(isLocalAdmin ? (window.__EE_B
 let activeAdminBackend = BACKEND_BASE_URL;
 const ADMIN_TOKEN_KEY = 'ee_admin_token_v1';
 const PRODUCT_CATALOGUE_PAGE = location.pathname.replace(/\/+$/, '') === '/admin/products';
+const ANALYTICS_PAGE = location.pathname.replace(/\/+$/, '') === '/admin/analytics';
 let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || null;
+const ADMIN_DEDICATED_PAGE = PRODUCT_CATALOGUE_PAGE || ANALYTICS_PAGE;
 const loginCard = document.getElementById('login-card');
 const dashboardEl = document.getElementById('dashboard');
 const adminStatus = document.getElementById('admin-status');
@@ -207,6 +209,86 @@ return null;
 }
 function formatINR(n){ return '₹' + Number(n||0).toLocaleString('en-IN'); }
 function escapeHtml(s){ if (!s && s !== 0) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function adminSectionHeading(node) {
+const headings = [...(node.matches?.('h2,h3') ? [node] : []), ...node.querySelectorAll('h2,h3')].map(item => item.textContent.replace(/\s+/g, ' ').trim().toLowerCase());
+return headings.join(' | ');
+}
+function adminNodeTab(node, current = 'overview') {
+const id = node.id || '';
+const heading = adminSectionHeading(node);
+if (id === 'visitor-analytics-section' || id === 'advanced-analytics' || /analytics|visitor/.test(id)) return 'analytics';
+if (id === 'product-catalogue-shortcut' || id === 'analytics-shortcut') return 'overview';
+if (id === 'whatsapp-campaign-section') return 'whatsapp';
+if (id === 'offers-admin-section' || /discount coupons|custom perfume set offers/.test(heading)) return 'offers';
+if (/orders management|custom perfume card orders/.test(heading)) return 'orders';
+if (/verified users/.test(heading)) return 'users';
+if (id === 'dealer-management' || /dealer management/.test(heading)) return 'dealers';
+if (/add product|products catalog/.test(heading)) return 'products';
+if (/business overview|top selling products/.test(heading)) return 'overview';
+return current;
+}
+function showAdminTab(tab, options = {}) {
+const allowed = ['overview','orders','products','analytics','offers','whatsapp','users','dealers'];
+const active = allowed.includes(tab) ? tab : 'overview';
+document.querySelectorAll('#admin-tabs [data-admin-tab]').forEach(button => {
+button.classList.toggle('active', button.dataset.adminTab === active);
+button.setAttribute('aria-selected', button.dataset.adminTab === active ? 'true' : 'false');
+});
+document.querySelectorAll('#admin-panels [data-admin-panel]').forEach(panel => {
+panel.classList.toggle('active', panel.dataset.adminPanel === active);
+panel.hidden = panel.dataset.adminPanel !== active;
+});
+if (!options.skipUrl) {
+const url = new URL(location.href);
+url.searchParams.set('tab', active);
+history.replaceState(null, '', url.pathname + url.search);
+}
+if (active === 'orders' && options.status) {
+const select = document.getElementById('status-filter');
+if (select) { if (options.status === 'PENDING_GROUP' && !select.querySelector('option[value="PENDING_GROUP"]')) select.insertAdjacentHTML('afterbegin','<option value="PENDING_GROUP">Pending / processing</option>'); select.value = options.status; page = 1; applyOrderFilters(); }
+}
+}
+function ensureAdminTabs() {
+if (!dashboardEl || PRODUCT_CATALOGUE_PAGE || ANALYTICS_PAGE || document.getElementById('admin-tabs')) return;
+const children = [...dashboardEl.children];
+const tabbar = document.createElement('div');
+tabbar.id = 'admin-tabs';
+tabbar.className = 'admin-tabs';
+tabbar.setAttribute('role', 'tablist');
+const navTabs = [
+['overview','Overview','fa-gauge-high'],['orders','Orders','fa-box'],['offers','Offers & promotions','fa-tags'],['whatsapp','WhatsApp offers','fa-whatsapp'],['users','Verified users','fa-users'],['dealers','Dealer access','fa-store']
+];
+const panelDefinitions = [
+...navTabs, ['products','Product catalogue','fa-flask'], ['analytics','Analytics','fa-chart-line']
+];
+tabbar.innerHTML = navTabs.map(([value,label,icon]) => `<button type="button" role="tab" data-admin-tab="${value}" aria-selected="false"><i class="fas ${icon}"></i><span>${label}</span></button>`).join('');
+const panels = document.createElement('div');
+panels.id = 'admin-panels';
+panels.className = 'admin-panels';
+const panelMap = new Map(panelDefinitions.map(([value]) => {
+const panel = document.createElement('section');
+panel.className = 'admin-tab-panel';
+panel.dataset.adminPanel = value;
+panel.hidden = true;
+return [value, panel];
+}));
+let current = 'overview';
+children.forEach(node => {
+current = adminNodeTab(node, current);
+panelMap.get(current)?.appendChild(node);
+});
+panelDefinitions.forEach(([value]) => panels.appendChild(panelMap.get(value)));
+tabbar.querySelectorAll('[data-admin-tab]').forEach(button => button.addEventListener('click', () => showAdminTab(button.dataset.adminTab)));
+dashboardEl.append(tabbar, panels);
+const pending = document.getElementById('kpi-pending')?.closest('.card');
+const delivered = document.getElementById('kpi-success')?.closest('.card');
+pending?.classList.add('admin-kpi-clickable');
+delivered?.classList.add('admin-kpi-clickable');
+pending?.addEventListener('click', () => showAdminTab('orders', { status: 'PENDING_GROUP' }));
+delivered?.addEventListener('click', () => showAdminTab('orders', { status: 'DELIVERED' }));
+const initial = new URL(location.href).searchParams.get('tab') || 'overview';
+showAdminTab(initial, { skipUrl: true });
+}
 function ensureAdvancedAnalytics() {
 if (!dashboardEl || document.getElementById('advanced-analytics')) return;
 const section = document.createElement('section');
@@ -451,7 +533,8 @@ adminCapabilities = await loadAdminCapabilities();
 await Promise.allSettled([loadDashboard(), loadOrders()]);
 adminInitialLoadDone = true;
 setAdminLoading(false);
-Promise.allSettled([loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), loadVisitorAnalytics(), loadWhatsAppCampaigns()])
+Promise.allSettled([loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), PRODUCT_CATALOGUE_PAGE ? Promise.resolve() : loadVisitorAnalytics(), ADMIN_DEDICATED_PAGE ? Promise.resolve() : loadWhatsAppCampaigns()])
+.then(() => { if (ANALYTICS_PAGE) finalizeAnalyticsPage(); else if (PRODUCT_CATALOGUE_PAGE) finalizeProductCataloguePage(); else ensureAdminTabs(); })
 .catch(err => console.warn('Secondary admin data load failed:', err));
 loadHardcodedProducts()
 .then(() => loadAdminProducts())
@@ -616,6 +699,7 @@ function ensureVisitorAnalyticsUI(){if(document.getElementById('visitor-analytic
 async function loadVisitorAnalytics(){ensureVisitorAnalyticsUI();try{const{ok,body}=await adminFetch('/api/admin/analytics/visitors?days=30');if(!ok)throw new Error(body.error||'Could not load visitor analytics');document.getElementById('visitor-today').textContent=body.summary?.todayVisitors||0;document.getElementById('visitor-month').textContent=body.summary?.visitors||0;document.getElementById('visitor-live').textContent=body.summary?.currentProductViewers||0;document.getElementById('visitor-recent-rows').innerHTML=(body.recentVisitors||[]).map(item=>{const ip=item.ipAddress||item.maskedIp||'Unavailable';const isLocal=ip==='::1'||ip==='127.0.0.1'||ip.startsWith('192.168.')||ip.startsWith('10.');const location=[item.city,item.region,item.postalCode,item.country].filter(Boolean).join(', ')||(isLocal?'Local / internal network':(item.ipAddress?'Approximate location unavailable':'Historical record — full IP/location was not stored'));return `<tr class="border-b"><td class="p-2 tiny whitespace-nowrap">${new Date(item.lastSeenAt).toLocaleString('en-IN')}</td><td class="p-2 tiny"><b class="break-all" title="${escapeHtml(ip)}">${escapeHtml(ip)}</b><div class="text-gray-500">${escapeHtml(location)}</div>${item.timezone?`<div class="text-gray-400">${escapeHtml(item.timezone)}</div>`:''}</td><td class="p-2 tiny"><b>${item.events||0} events</b><div class="text-gray-500">${item.searches||0} searches · ${escapeHtml(item.lastPath||'/')}</div></td></tr>`}).join('')||'<tr><td colspan="3" class="p-3 text-gray-500">No visitor data yet.</td></tr>';document.getElementById('visitor-searches').innerHTML=(body.topSearches||[]).slice(0,12).map((item,index)=>`<div class="flex items-center justify-between border rounded p-2"><span class="text-sm"><b class="text-yellow-700 mr-2">${index+1}</b>${escapeHtml(item._id)}</span><strong class="tiny">${item.count} searches</strong></div>`).join('')||'<p class="tiny text-gray-500">No catalogue searches recorded yet.</p>';document.getElementById('visitor-products').innerHTML=(body.activeProducts||[]).map(item=>`<div class="flex items-center justify-between border rounded p-2"><span class="text-sm">${escapeHtml(item.productName||item._id)}</span><strong class="tiny text-green-700">${item.realCount} live</strong></div>`).join('')||'<p class="tiny text-gray-500">No active product pages right now.</p>';}catch(err){const rows=document.getElementById('visitor-recent-rows');if(rows)rows.innerHTML=`<tr><td colspan="3" class="p-3 text-red-600">${escapeHtml(err.message)}</td></tr>`;}}
 let whatsappCampaignState = null;
 function ensureWhatsAppCampaignUI(){
+if (ADMIN_DEDICATED_PAGE) return;
 if(document.getElementById('whatsapp-campaign-section')){loadWhatsAppPopupSetting();return;}
 const heading=[...document.querySelectorAll('h2')].find(node=>node.textContent.includes('Discount Coupons'));
 heading?.insertAdjacentHTML('beforebegin',`<section id="whatsapp-campaign-section" class="mt-8"><div class="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3"><div><h2 class="text-xl font-bold text-gray-800"><i class="fab fa-whatsapp text-green-600 mr-2"></i>WhatsApp Offers</h2><p class="text-xs text-gray-500 mt-1">Queue an approved Meta template only for customers with active WhatsApp consent.</p></div><button type="button" onclick="loadWhatsAppCampaigns()" class="px-3 py-2 border rounded tiny font-bold bg-white">Refresh</button></div><div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4"><div class="card p-4 border-l-4 border-green-500"><span class="tiny uppercase text-gray-500">Opted-in customers</span><b id="wa-active-consents" class="block text-2xl mt-1">0</b></div><div class="card p-4 border-l-4 border-yellow-500"><span class="tiny uppercase text-gray-500">Pending jobs</span><b id="wa-pending-jobs" class="block text-2xl mt-1">0</b></div><div class="card p-4 border-l-4 border-blue-500"><span class="tiny uppercase text-gray-500">Sent jobs</span><b id="wa-sent-jobs" class="block text-2xl mt-1">0</b></div><div class="card p-4 border-l-4 border-gray-500"><span class="tiny uppercase text-gray-500">Runtime</span><b id="wa-runtime-mode" class="block text-sm mt-2">Loading...</b></div></div><div id="wa-runtime-note" class="hidden mb-4 rounded border p-3 text-sm"></div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="card p-5 xl:col-span-1"><h3 class="font-bold text-lg">Create offer campaign</h3><p class="tiny text-gray-500 mt-1 mb-4">Template: <code id="wa-template-name">ee_marketing_offer</code></p><label class="block tiny font-bold mb-1">INTERNAL CAMPAIGN NAME</label><input id="wa-campaign-name" maxlength="120" placeholder="September fragrance offer" class="w-full p-2 border rounded mb-3 outline-none focus:border-green-600"><label class="block tiny font-bold mb-1">OFFER MESSAGE</label><textarea id="wa-offer-text" maxlength="240" rows="3" placeholder="Get ₹150 off selected fragrances" class="w-full p-2 border rounded mb-3 outline-none focus:border-green-600" oninput="updateWhatsAppCampaignPreview()"></textarea><div class="grid grid-cols-2 gap-2"><div><label class="block tiny font-bold mb-1">COUPON CODE</label><input id="wa-coupon-code" maxlength="40" placeholder="SAVE150" class="w-full p-2 border rounded mb-3 uppercase" oninput="updateWhatsAppCampaignPreview()"></div><div><label class="block tiny font-bold mb-1">EXPIRY TEXT</label><input id="wa-expiry-text" maxlength="80" placeholder="30 September" class="w-full p-2 border rounded mb-3" oninput="updateWhatsAppCampaignPreview()"></div></div><label class="block tiny font-bold mb-1">WEBSITE LINK</label><input id="wa-destination-url" value="/collections" maxlength="1000" class="w-full p-2 border rounded mb-3" oninput="updateWhatsAppCampaignPreview()"><label class="block tiny font-bold mb-1">SEND NOW OR SCHEDULE</label><input id="wa-scheduled-at" type="datetime-local" class="w-full p-2 border rounded mb-3"><div class="rounded border border-green-200 bg-green-50 p-3 mb-3"><div class="tiny font-bold text-green-800 mb-1">MESSAGE PREVIEW</div><p id="wa-message-preview" class="text-sm whitespace-pre-line"></p></div><label class="flex items-start gap-2 tiny mb-3"><input id="wa-confirm-campaign" type="checkbox" class="mt-1 accent-green-600"><span>I confirm this offer uses the approved Meta template and should go only to opted-in customers.</span></label><button id="wa-queue-button" type="button" onclick="queueWhatsAppCampaign()" class="w-full bg-green-700 text-white px-4 py-3 rounded font-bold hover:bg-green-800">Queue WhatsApp Offer</button><p id="wa-campaign-msg" class="text-xs mt-2"></p></div><div class="card p-5 xl:col-span-2"><div class="flex items-center justify-between gap-3"><div><h3 class="font-bold text-lg">Campaign history</h3><p class="tiny text-gray-500">Meta delivery states update through the configured webhook.</p></div></div><div id="wa-campaign-list" class="space-y-3 mt-4"></div><h3 class="font-bold mt-6 mb-2">Recent active subscribers</h3><div id="wa-subscriber-list" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div></div></div></section>`);
@@ -824,8 +908,46 @@ renderCardOrdersTable();
 ordersTbody.innerHTML = `<tr><td colspan="7" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
 }
 }
+function ensureUserAdminUI() {
+const table = usersTbody?.closest('table');
+if (table && !table.querySelector('[data-user-actions-header]')) table.querySelector('thead tr')?.insertAdjacentHTML('beforeend','<th class="p-3" data-user-actions-header>Actions</th>');
+if (document.getElementById('admin-user-modal')) return;
+document.body.insertAdjacentHTML('beforeend', `<div id="admin-user-modal" class="fixed inset-0 bg-black/60 hidden z-[80] flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6"><div class="flex items-start justify-between"><div><div class="text-xs uppercase tracking-[.2em] text-yellow-700 font-bold">Verified customer</div><h3 class="text-xl font-bold mt-1">Edit user</h3></div><button type="button" onclick="closeAdminUserEditor()" class="text-gray-500 hover:text-red-600"><i class="fas fa-times text-xl"></i></button></div><input id="admin-user-id" type="hidden"><div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5"><label class="text-sm font-semibold">Name<input id="admin-user-name" class="w-full p-2 border rounded mt-1"></label><label class="text-sm font-semibold">Phone<input id="admin-user-phone" class="w-full p-2 border rounded mt-1"></label><label class="text-sm font-semibold md:col-span-2">Address<input id="admin-user-address-line" class="w-full p-2 border rounded mt-1"></label><label class="text-sm font-semibold">City<input id="admin-user-city" class="w-full p-2 border rounded mt-1"></label><label class="text-sm font-semibold">Pincode<input id="admin-user-pincode" class="w-full p-2 border rounded mt-1"></label><label class="text-sm font-semibold">State<input id="admin-user-state" class="w-full p-2 border rounded mt-1"></label></div><p id="admin-user-editor-msg" class="text-sm mt-3"></p><div class="flex justify-end gap-2 mt-5"><button type="button" onclick="closeAdminUserEditor()" class="px-4 py-2 border rounded">Cancel</button><button type="button" onclick="saveAdminUser()" id="admin-user-save" class="px-5 py-2 rounded bg-black text-white font-semibold">Save changes</button></div></div></div>`);
+}
+function openAdminUserEditor(id) {
+const user = users.find(item => String(item._id) === String(id));
+if (!user) return;
+ensureUserAdminUI();
+const address = user.address || {};
+document.getElementById('admin-user-id').value = user._id;
+document.getElementById('admin-user-name').value = user.name || '';
+document.getElementById('admin-user-phone').value = user.phone || address.phone || '';
+document.getElementById('admin-user-address-line').value = address.addressLine || '';
+document.getElementById('admin-user-city').value = address.city || '';
+document.getElementById('admin-user-pincode').value = address.pincode || '';
+document.getElementById('admin-user-state').value = address.state || '';
+document.getElementById('admin-user-editor-msg').textContent = '';
+document.getElementById('admin-user-modal').classList.remove('hidden');
+document.body.style.overflow = 'hidden';
+}
+function closeAdminUserEditor() { document.getElementById('admin-user-modal')?.classList.add('hidden'); document.body.style.overflow = ''; }
+async function saveAdminUser() {
+const id = document.getElementById('admin-user-id').value;
+const msg = document.getElementById('admin-user-editor-msg');
+const button = document.getElementById('admin-user-save');
+const payload = { name: document.getElementById('admin-user-name').value.trim(), phone: document.getElementById('admin-user-phone').value.trim(), address: { name: document.getElementById('admin-user-name').value.trim(), phone: document.getElementById('admin-user-phone').value.trim(), addressLine: document.getElementById('admin-user-address-line').value.trim(), city: document.getElementById('admin-user-city').value.trim(), pincode: document.getElementById('admin-user-pincode').value.trim(), state: document.getElementById('admin-user-state').value.trim() } };
+try { button.disabled = true; msg.textContent = 'Saving…'; const { ok, body } = await adminFetch(`/api/admin/users/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) }); if (!ok) throw new Error(body.error || 'Could not update user'); closeAdminUserEditor(); await loadUsers(); } catch (error) { msg.textContent = error.message; msg.className = 'text-sm mt-3 text-red-600'; } finally { button.disabled = false; }
+}
+async function deleteAdminUser(id) {
+const user = users.find(item => String(item._id) === String(id));
+if (!user || !confirm(`Delete the verified user ${user.email || user.name || ''}? This cannot be undone.`)) return;
+const { ok, body } = await adminFetch(`/api/admin/users/${id}`, { method:'DELETE' });
+if (!ok) return alert(body.error || 'Could not delete user');
+await loadUsers();
+}
 async function loadUsers() {
 if (!usersTbody) return;
+ensureUserAdminUI();
 const qs = new URLSearchParams();
 const q = document.getElementById('user-search')?.value.trim();
 if (q) qs.append('q', q);
@@ -846,9 +968,10 @@ return `
 <td class="p-3 tiny">${escapeHtml(user.phone || address.phone || '')}</td>
 <td class="p-3 tiny">${escapeHtml(addressText || 'No saved address')}</td>
 <td class="p-3 tiny">${user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : ''}</td>
+<td class="p-3"><div class="flex flex-wrap gap-2"><button type="button" onclick="openAdminUserEditor('${user._id}')" class="px-2 py-1 border rounded tiny text-blue-700">Edit</button><button type="button" onclick="deleteAdminUser('${user._id}')" class="px-2 py-1 border border-red-200 rounded tiny text-red-700">Delete</button></div></td>
 </tr>
 `;
-}).join('') || `<tr><td colspan="4" class="p-4 text-gray-500">No verified users found.</td></tr>`;
+}).join('') || `<tr><td colspan="5" class="p-4 text-gray-500">No verified users found.</td></tr>`;
 } catch (err) {
 usersTbody.innerHTML = `<tr><td colspan="4" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
 }
@@ -864,7 +987,7 @@ order.paymentMethod, order.awb, order.deliveryPartner, order.shippingAddress,
 ...(order.items || []).map(item => `${item.name || ''} ${item.size || ''}`)
 ].filter(Boolean).join(' ').toLowerCase();
 const matchesSearch = !q || searchable.includes(q);
-const matchesStatus = !status || normalizedStatus === status;
+const matchesStatus = !status ? true : status === 'PENDING_GROUP' ? ['PENDING_PAYMENT','Pending','PROCESSING'].includes(normalizedStatus) : normalizedStatus === status;
 return matchesSearch && matchesStatus;
 });
 page = 1;
@@ -925,13 +1048,69 @@ if (lines[0] === String(order.name || '').trim()) lines.shift();
 if (/^phone\s*:/i.test(lines[0] || '') || lines[0] === String(order.phone || '').trim()) lines.shift();
 return lines.join('\n');
 }
+let orderPickerProducts = [];
+function orderCatalogueVariants(product) {
+const productId = String(product?._id || product?.id || product?.legacyId || '');
+const productName = String(product?.name || '').trim().toLowerCase();
+const rows = (inventoryRows || []).filter(row => String(row.productId || '') === productId || String(row.name || '').trim().toLowerCase() === productName);
+if (rows.length) return rows.map(row => ({ sizeLabel: row.sizeLabel || 'Default', variantKey: row.variantKey || 'default', price: Math.round(Number(row.basePrice || product.price || 0) * Number(row.priceMultiplier || 1)), image: row.image || product.images?.[0] || product.image || '' }));
+return adminInventoryVariants(product).map(variant => ({ sizeLabel: variant.sizeLabel || 'Default', variantKey: variant.variantKey || 'default', price: Math.round(Number(product.price || 0) * Number(variant.priceMultiplier || 1)), image: variant.image || product.images?.[0] || product.image || '' }));
+}
+function ensureOrderProductPickerUI() {
+if (document.getElementById('order-product-picker-modal')) return;
+document.body.insertAdjacentHTML('beforeend', `<div id="order-product-picker-modal" class="hidden fixed inset-0 z-[80] bg-black/60 p-3 sm:p-6 items-center justify-center"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden"><div class="flex items-center justify-between gap-3 px-4 py-3 border-b"><div><h3 class="font-bold text-lg">Add product from catalogue</h3><p class="tiny text-gray-500">Choose an existing catalogue product and size.</p></div><button type="button" onclick="closeOrderProductPicker()" class="w-9 h-9 rounded-full border text-gray-600 hover:bg-gray-100" aria-label="Close product catalogue">&times;</button></div><div class="p-4 border-b"><input id="order-product-search" type="search" oninput="renderOrderProductPicker()" placeholder="Search products or categories" class="w-full p-3 border rounded-lg outline-none focus:border-yellow-500"></div><div id="order-product-picker-grid" class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto" style="max-height:70vh"></div></div></div>`);
+}
+function renderOrderProductPicker() {
+const grid = document.getElementById('order-product-picker-grid');
+if (!grid) return;
+const query = (document.getElementById('order-product-search')?.value || '').trim().toLowerCase();
+const unique = new Map();
+getGiftProducts().filter(product => product && product.isActive !== false).forEach(product => {
+const key = `${String(product.category || product.type || 'Perfume').toLowerCase()}:${String(product.name || '').trim().toLowerCase()}`;
+if (!unique.has(key)) unique.set(key, product);
+});
+orderPickerProducts = [...unique.values()].filter(product => !query || `${product.name || ''} ${product.category || product.type || ''} ${product.family || ''}`.toLowerCase().includes(query));
+if (!orderPickerProducts.length) { grid.innerHTML = '<div class="col-span-full text-gray-500 p-4 text-center">No catalogue products found.</div>'; return; }
+grid.innerHTML = orderPickerProducts.map((product, productIndex) => {
+const variants = orderCatalogueVariants(product);
+const image = productImage(product);
+return `<article class="border rounded-xl p-3 bg-gray-50"><div class="flex gap-3 items-center"><img src="${escapeHtml(image)}" class="w-16 h-16 object-contain rounded-lg border bg-white" onerror="this.style.display='none'"><div class="min-w-0"><div class="tiny uppercase tracking-wide text-yellow-700">${escapeHtml(product.category || product.type || 'Perfume')}</div><h4 class="font-bold truncate">${escapeHtml(product.name || 'Product')}</h4><div class="tiny text-gray-500">Choose size</div></div></div><div class="flex flex-wrap gap-2 mt-3">${variants.map((variant, variantIndex) => `<button type="button" onclick="selectOrderCatalogueItem(${productIndex},${variantIndex})" class="px-2 py-1.5 border border-yellow-500 rounded-lg bg-white hover:bg-yellow-50 text-left"><span class="block text-xs font-semibold">${escapeHtml(variant.sizeLabel)}</span><span class="block tiny font-bold">${formatINR(variant.price)}</span></button>`).join('')}</div></article>`;
+}).join('');
+}
+function openOrderProductPicker() { ensureOrderProductPickerUI(); renderOrderProductPicker(); const modal = document.getElementById('order-product-picker-modal'); if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); document.getElementById('order-product-search')?.focus(); } }
+function closeOrderProductPicker() { const modal = document.getElementById('order-product-picker-modal'); if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); } }
+function selectOrderCatalogueItem(productIndex, variantIndex) {
+const product = orderPickerProducts[Number(productIndex)];
+const variant = orderCatalogueVariants(product)[Number(variantIndex)];
+if (!product || !variant) return;
+const newItem = { productId: String(product._id || product.id || product.legacyId || ''), name: product.name, size: variant.sizeLabel, variantKey: variant.variantKey, category: product.category || product.type || 'Perfume', qty: 1, price: variant.price, image: variant.image || product.images?.[0] || product.image || '', itemType: 'product', __adminNew: true, __orderSourceIndex: null };
+selectedOrder = { ...selectedOrder, items: [...(selectedOrder.items || [])] };
+selectedOrder.items = [...(selectedOrder.items || []), newItem];
+closeOrderProductPicker();
+openOrderModal(selectedOrder._id || selectedOrder.orderId);
+}
+function removeOrderItem(index) {
+if (!selectedOrder?.items?.length) return;
+if (selectedOrder.items.length <= 1) return alert('An order must keep at least one item.');
+selectedOrder = { ...selectedOrder, items: [...selectedOrder.items] };
+selectedOrder.items.splice(Number(index), 1);
+openOrderModal(selectedOrder._id || selectedOrder.orderId);
+}
 function openOrderModal(id) {
-selectedOrder = orders.find(
+const draftMatches = selectedOrder && !orders.includes(selectedOrder) && (
+String(selectedOrder._id) === String(id) || String(selectedOrder.orderId) === String(id)
+);
+if (!draftMatches) selectedOrder = orders.find(
 o =>
 String(o._id) === String(id) ||
 String(o.orderId) === String(id)
 );
 if (!selectedOrder) return;
+ensureOrderProductPickerUI();
+selectedOrder.items = (selectedOrder.items || []).map((item, index) => {
+if (item.__adminNew) return { ...item, __orderSourceIndex: null };
+return { ...item, __orderSourceIndex: item.__orderSourceIndex === undefined ? index : item.__orderSourceIndex };
+});
 const orderId =
 selectedOrder._id || selectedOrder.orderId;
 const currentStatus =
@@ -942,29 +1121,13 @@ document.getElementById('modal-order-sub').textContent =
 `${selectedOrder.buyerEmail || ''} • ${
 selectedOrder.phone || ''
 }`;
+const canEditItems = !['DISPATCHED','DELIVERED','CANCELLED','REJECTED'].includes(currentStatus);
 const itemsHtml = (selectedOrder.items || [])
-.map(
-item => `
-<div class="border rounded-lg p-3 bg-gray-50">
-<div class="font-semibold">
-${escapeHtml(item.name || 'Product')}
-</div>
-<div class="text-gray-500 mt-1">
-${escapeHtml(item.size || '')}
-${item.qty ? ` × ${escapeHtml(item.qty)}` : ''}
-</div>
-${
-item.price !== undefined
-? `
-<div class="font-bold mt-1">
-${formatINR(item.price)}
-</div>
-`
-: ''
-}
-</div>
-`
-)
+.map((item, index) => {
+const sourceIndex = item.__adminNew ? '' : String(item.__orderSourceIndex ?? index);
+if (!canEditItems) return `<div class="border rounded-lg p-3 bg-gray-50"><div class="font-semibold">${escapeHtml(item.name || 'Product')}</div><div class="text-gray-500 mt-1">${escapeHtml(item.size || '')}${item.qty ? ` × ${escapeHtml(item.qty)}` : ''}</div>${item.price !== undefined ? `<div class="font-bold mt-1">${formatINR(item.price)}</div>` : ''}</div>`;
+return `<div class="border rounded-lg p-3 bg-gray-50 admin-order-item-edit" data-item-index="${index}" data-source-index="${sourceIndex}"><div class="flex items-start justify-between gap-2 mb-2"><div class="tiny font-semibold uppercase tracking-wide ${item.__adminNew ? 'text-green-700' : 'text-gray-500'}">${item.__adminNew ? 'New catalogue item' : 'Existing item · catalogue details locked'}</div><button type="button" onclick="removeOrderItem(${index})" class="admin-order-item-remove px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 tiny font-bold"><i class="fas fa-trash mr-1"></i>Remove</button></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="tiny font-semibold">Product name<input data-item-field="name" readonly value="${escapeHtml(item.name || 'Product')}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Size<input data-item-field="size" readonly value="${escapeHtml(item.size || '')}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Quantity<input data-item-field="qty" type="number" min="1" max="999" value="${Number(item.qty || 1)}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Unit price<input data-item-field="price" readonly value="${Number(item.price || 0)}" class="w-full p-2 border rounded mt-1"></label></div></div>`;
+})
 .join('');
 const supportHtml = (selectedOrder.supportRequests || [])
 .map(r => `
@@ -1236,12 +1399,14 @@ class="tiny mt-2"
 <h4 class="font-bold text-base mb-3">
 Ordered Items
 </h4>
+${canEditItems ? '<p class="tiny text-gray-500 mb-3">Catalogue name, size and price are locked. You can change quantity, remove a line, or add another product from the catalogue.</p>' : ''}
 <div class="space-y-2">
 ${
 itemsHtml ||
 '<div class="text-gray-500">No items found.</div>'
 }
 </div>
+${canEditItems ? `<div class="flex flex-wrap gap-2 mt-4"><button type="button" onclick="openOrderProductPicker()" class="px-4 py-2 border border-yellow-500 text-yellow-700 rounded font-semibold hover:bg-yellow-50"><i class="fas fa-plus mr-1"></i>Add product from catalogue</button><button type="button" onclick="saveOrderItems('${orderId}')" id="save-order-items-btn" class="px-4 py-2 bg-black text-white rounded font-semibold hover:text-yellow-500"><i class="fas fa-save mr-1"></i>Save item changes</button></div><p id="order-items-save-message" class="tiny mt-2"></p>` : '<p class="tiny text-gray-500 mt-3">Item editing is locked after dispatch.</p>'}
 </div>
 <!-- NORMAL WORKFLOW BUTTONS -->
 <div class="border rounded-xl p-4">
@@ -1324,6 +1489,38 @@ document
 .getElementById('order-modal')
 .classList.remove('hidden');
 document.body.style.overflow = 'hidden';
+}
+async function saveOrderItems(id) {
+const message = document.getElementById('order-items-save-message');
+const button = document.getElementById('save-order-items-btn');
+const items = [...document.querySelectorAll('#modal-body .admin-order-item-edit')].map(row => {
+const get = field => row.querySelector(`[data-item-field="${field}"]`)?.value || '';
+const itemIndex = Number(row.dataset.itemIndex);
+const current = selectedOrder?.items?.[itemIndex] || {};
+const sourceIndex = row.dataset.sourceIndex || '';
+const payload = { ...current, name: get('name').trim(), size: get('size').trim(), qty: Number(get('qty')) || 1 };
+delete payload.__adminNew;
+delete payload.__orderSourceIndex;
+if (sourceIndex !== '') payload.sourceIndex = Number(sourceIndex);
+return payload;
+});
+if (!items.length) return;
+try {
+button.disabled = true;
+if (message) { message.textContent = 'Saving item changes…'; message.className = 'tiny mt-2 text-gray-600'; }
+const { ok, body } = await adminFetch(`/api/admin/orders/${id}/items`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ items }) });
+if (!ok) throw new Error(body.error || 'Could not update order items');
+if (body.order) {
+selectedOrder = body.order;
+const index = orders.findIndex(order => String(order._id) === String(body.order._id) || String(order.orderId) === String(body.order.orderId));
+if (index !== -1) orders[index] = body.order;
+}
+if (message) { message.textContent = 'Items updated using catalogue pricing. A confirmation email was queued for the customer.'; message.className = 'tiny mt-2 text-green-700 font-semibold'; }
+await loadOrders();
+await loadDashboard();
+const fresh = orders.find(order => String(order._id) === String(id) || String(order.orderId) === String(id));
+if (fresh) openOrderModal(fresh._id || fresh.orderId);
+} catch (error) { if (message) { message.textContent = error.message; message.className = 'tiny mt-2 text-red-600'; } } finally { button.disabled = false; }
 }
 /* ================== SAVE COURIER DETAILS ================== */
 async function saveCourierDetails(id) {
@@ -1560,7 +1757,7 @@ await navigator.clipboard.writeText(awb);
 console.error('Could not copy AWB:', err);
 }
 }
-function closeOrderModal() { document.getElementById('order-modal').classList.add('hidden'); }
+function closeOrderModal() { document.getElementById('order-modal').classList.add('hidden'); closeOrderProductPicker(); selectedOrder = null; }
 async function acceptOrder(id) {
 const { ok, body } = await adminFetch(`/api/admin/orders/${id}`, {
 method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'PROCESSING' })
@@ -1974,13 +2171,38 @@ if(!document.getElementById('admin-products-link')){const link=document.createEl
 const addCard=document.getElementById('btn-add-product')?.closest('.card'),stockCard=document.getElementById('products-tbody')?.closest('.card');
 if(!PRODUCT_CATALOGUE_PAGE){addCard?.classList.add('hidden');stockCard?.classList.add('hidden');if(!document.getElementById('product-catalogue-shortcut')){const shortcut=document.createElement('a');shortcut.id='product-catalogue-shortcut';shortcut.href='/admin/products';shortcut.className='card p-5 border-l-4 border-yellow-500 flex items-center justify-between gap-4 hover:bg-yellow-50 transition';shortcut.innerHTML='<div><b class="text-lg">Product Catalogue, Stock & Pricing</b><p class="tiny text-gray-500 mt-1">Control product stock, base prices and shared size factors from one inventory workspace.</p></div><span class="px-4 py-2 bg-black text-yellow-400 rounded font-bold whitespace-nowrap">Open Catalogue →</span>';dashboardEl.insertBefore(shortcut,dashboardEl.children[1]||null);}return;}
 document.title='Product Catalogue — Eternal Essence Admin';
-if(!stockCard||document.getElementById('product-catalogue-page'))return;
+if(!stockCard||document.getElementById('product-catalogue-page')){dashboardEl.classList.add('ee-route-ready');return;}
 [...dashboardEl.children].forEach(child=>child.classList.add('hidden'));
 const page=document.createElement('section');page.id='product-catalogue-page';page.className='space-y-6';page.innerHTML='<div class="card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-yellow-500"><div><span class="tiny uppercase tracking-widest text-yellow-700 font-bold">Inventory workspace</span><h1 class="text-3xl font-bold mt-1">Product Catalogue, Stock & Pricing</h1><p class="text-sm text-gray-500 mt-2">Update stock, each product base price, and category-wide size factors from the same table.</p></div><a href="/admin" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold text-center">Back to Dashboard</a></div>';
 if(addCard){addCard.classList.remove('hidden','mt-8');page.appendChild(addCard);}
 stockCard.classList.remove('hidden','mt-8');const title=stockCard.querySelector('h3');if(title)title.textContent='Variant Stock & Pricing Management';page.appendChild(stockCard);dashboardEl.appendChild(page);ensureInventoryBulkControls();
+dashboardEl.classList.add('ee-route-ready');
+}
+function setupAnalyticsPage(){
+if(!document.getElementById('admin-analytics-link')){const link=document.createElement('a');link.id='admin-analytics-link';link.href=ANALYTICS_PAGE?'/admin':'/admin/analytics';link.className='px-3 py-2 border border-yellow-500 rounded text-sm font-bold text-yellow-400 hover:bg-yellow-500 hover:text-black';link.textContent=ANALYTICS_PAGE?'Back to Dashboard':'Analytics';btnLogout?.parentElement?.insertBefore(link,btnLogout);}
+if(!ANALYTICS_PAGE){if(!PRODUCT_CATALOGUE_PAGE&&!document.getElementById('analytics-shortcut')){const shortcut=document.createElement('a');shortcut.id='analytics-shortcut';shortcut.href='/admin/analytics';shortcut.className='card p-5 border-l-4 border-blue-500 flex items-center justify-between gap-4 hover:bg-blue-50 transition';shortcut.innerHTML='<div><b class="text-lg">Analytics & visitor intelligence</b><p class="tiny text-gray-500 mt-1">Explore revenue trends, customer behaviour, visitor IPs, locations and searches.</p></div><span class="px-4 py-2 bg-black text-yellow-400 rounded font-bold whitespace-nowrap">Open Analytics →</span>';dashboardEl.insertBefore(shortcut,dashboardEl.children[1]||null);}return;}
+if(document.getElementById('analytics-page')){dashboardEl.classList.add('ee-route-ready');return;}
+const page=document.createElement('section');page.id='analytics-page';page.className='space-y-6';page.innerHTML='<div class="card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-blue-500"><div><span class="tiny uppercase tracking-widest text-blue-700 font-bold">Business intelligence</span><h1 class="text-3xl font-bold mt-1">Analytics & visitor intelligence</h1><p class="text-sm text-gray-500 mt-2">Revenue, orders, customer behaviour, searches, visitor IPs and approximate locations.</p></div><a href="/admin" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold text-center">Back to Dashboard</a></div>';
+[...dashboardEl.children].forEach(child=>child.classList.add('hidden'));
+dashboardEl.appendChild(page);
+dashboardEl.classList.add('ee-route-ready');
+}
+function finalizeAnalyticsPage(){
+setupAnalyticsPage();
+const page=document.getElementById('analytics-page');
+if(!page)return;
+['advanced-analytics','visitor-analytics-section'].forEach(id=>{const section=document.getElementById(id);if(section){section.classList.remove('hidden');page.appendChild(section);}});
+dashboardEl.classList.add('ee-route-ready');
+}
+function finalizeProductCataloguePage(){
+const page=document.getElementById('product-catalogue-page');
+if(!page)return;
+[...dashboardEl.children].forEach(child=>{if(child!==page&&!child.closest('#product-catalogue-page'))child.classList.add('hidden');});
+page.classList.remove('hidden');
+dashboardEl.classList.add('ee-route-ready');
 }
 setupProductCataloguePage();
+setupAnalyticsPage();
 (function init() {
 function setupOrderManagementControls() {
 const search = document.getElementById('q-search');

@@ -1992,11 +1992,12 @@ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify
 const data = await res.json().catch(()=> ({}));
 if (!res.ok || !data.success) {
 if (res.status === 409 && data.error) { throw new Error(data.error); }
+if (res.status === 502 && data.error) { throw new Error(data.error); }
 const fallback = await fetch(`${BACKEND_BASE_URL}/api/auth/send-otp`, {
 method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, phone, purpose: 'signup' })
 });
 const fb = await fallback.json().catch(()=>({}));
-if (!fallback.ok || !fb.success) throw new Error(fb.error || data.error || 'Could not send OTP.');
+if (!fallback.ok || !fb.success) throw new Error(fb.error || data.error || `Could not send OTP (HTTP ${fallback.status}).`);
 msgEl.textContent = fb.message || 'OTP sent to your email.';
 msgEl.className = 'text-xs mt-2 text-green-600';
 otpSection.classList.remove('hidden');
@@ -3519,12 +3520,16 @@ String(order.status).toUpperCase().includes('DELIVERED');
 const detailStatus = String(order.status || '').toUpperCase();
 const canRetryPayment = ['PAYMENT_FAILED', 'FAILED', 'PENDING_PAYMENT'].includes(detailStatus);
 const canCancelOrder = ['PAID', 'ORDER_PLACED', 'PROCESSING', 'PENDING_PAYMENT', 'PAYMENT_FAILED'].includes(detailStatus);
+const courierName = String(order.deliveryPartner || '').toLowerCase();
+const awbCode = encodeURIComponent(String(order.awb || '').trim());
+const shipmentLink = awbCode && courierName.includes('delhivery') ? `https://www.delhivery.com/track/package/${awbCode}` : awbCode && courierName.includes('shiprocket') ? `https://shiprocket.co/tracking/${awbCode}` : awbCode && courierName.includes('dtdc') ? `https://www.dtdc.in/tracking.asp?strCnno=${awbCode}` : awbCode && courierName.includes('xpressbees') ? `https://www.xpressbees.com/shipmenttracking?awbNo=${awbCode}` : '';
 const trackingHtml = (order.deliveryPartner || order.awb || order.trackingOrderId) ? `
 <div class="bg-gray-50 border rounded p-3 text-sm mb-4">
 <div class="font-bold mb-1">Courier Details</div>
 ${order.trackingOrderId ? `<div>Courier Order ID: <strong>${escapeHtml(order.trackingOrderId)}</strong></div>` : ''}
 ${order.deliveryPartner ? `<div>Delivery Partner: <strong>${escapeHtml(order.deliveryPartner)}</strong></div>` : ''}
 ${order.awb ? `<div>AWB: <strong>${escapeHtml(order.awb)}</strong></div>` : ''}
+${shipmentLink ? `<a href="${shipmentLink}" target="_blank" rel="noopener" class="inline-block mt-2 px-3 py-2 bg-black text-yellow-400 rounded font-bold text-xs">Track shipment ↗</a>` : ''}
 </div>` : '';
 const supportHtml = (order.supportRequests || []).length
 ? `<div class="mb-4 text-xs bg-yellow-50 border border-yellow-200 rounded p-3"><div class="font-bold mb-1">Your support queries</div>${order.supportRequests.map(r => `<div class="mb-2 border-b border-yellow-200 pb-2">${escapeHtml(r.message || '')} <span class="text-gray-500">(${escapeHtml(r.status || 'Open')})</span>${r.reply ? `<div class="mt-1 rounded bg-white p-2"><strong>Admin reply:</strong> ${escapeHtml(r.reply)}</div>` : ''}</div>`).join('')}</div>`
