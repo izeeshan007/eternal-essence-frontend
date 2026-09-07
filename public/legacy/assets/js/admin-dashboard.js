@@ -27,6 +27,7 @@ let inventoryByProductId = new Map();
 let inventoryRows = [];
 let selectedInventoryIds = new Set();
 let adminOffers = [];
+let emailCampaignState = null;
 let editingCouponId = null;
 let editingOfferId = null;
 let selectedOrder = null;
@@ -151,11 +152,12 @@ return {
 adminOffers: body.apiVersion >= 2 && body.features?.adminOffers === true,
 adminCouponMutations: body.apiVersion >= 2 && body.features?.adminCouponMutations === true,
 adminWhatsAppCampaigns: body.apiVersion >= 2 && body.features?.adminWhatsAppCampaigns === true,
-adminWhatsAppPopupSetting: body.apiVersion >= 2 && body.features?.adminWhatsAppPopupSetting === true
+adminWhatsAppPopupSetting: body.apiVersion >= 2 && body.features?.adminWhatsAppPopupSetting === true,
+adminEmailCampaigns: body.apiVersion >= 2 && body.features?.adminEmailCampaigns === true
 };
 } catch (err) {
 console.warn('Could not confirm the current backend feature set:', err);
-return { adminOffers: false, adminCouponMutations: false, adminWhatsAppCampaigns: false, adminWhatsAppPopupSetting: false };
+return { adminOffers: false, adminCouponMutations: false, adminWhatsAppCampaigns: false, adminWhatsAppPopupSetting: false, adminEmailCampaigns: false };
 }
 }
 function outdatedBackendMessage() {
@@ -535,7 +537,7 @@ adminInitialLoadDone = true;
 setAdminLoading(false);
 const secondaryLoads = ADMIN_DEDICATED_PAGE
 ? (ANALYTICS_PAGE ? [loadVisitorAnalytics()] : [])
-: [loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), loadVisitorAnalytics(), loadWhatsAppCampaigns()];
+: [loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), loadVisitorAnalytics(), loadWhatsAppCampaigns(), loadEmailCampaigns()];
 Promise.allSettled(secondaryLoads)
 .then(() => { if (ANALYTICS_PAGE) finalizeAnalyticsPage(); else if (PRODUCT_CATALOGUE_PAGE) finalizeProductCataloguePage(); else ensureAdminTabs(); })
 .catch(err => console.warn('Secondary admin data load failed:', err));
@@ -732,7 +734,64 @@ const couponGrid = couponHeading?.nextElementSibling;
 couponGrid?.insertAdjacentHTML('afterend', `<section id="offers-admin-section"><h2 class="text-xl font-bold text-gray-800 mt-8">Offers & Promotions</h2><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="card p-6"><h3 id="o-form-title" class="text-lg font-bold mb-4">Create Working Offer</h3><input id="o-name" placeholder="Offer name" class="w-full p-2 border rounded mb-3"><input id="o-code" placeholder="Offer code" class="w-full p-2 border rounded mb-3 uppercase"><textarea id="o-description" rows="2" placeholder="Customer-facing description" class="w-full p-2 border rounded mb-3"></textarea><select id="o-type" onchange="syncOfferForm()" class="w-full p-2 border rounded mb-3"><option value="buy_x_get_y">Buy X Get Y</option><option value="percentage">Percentage discount</option><option value="fixed">Fixed discount</option></select><div id="o-quantity-fields" class="grid grid-cols-2 gap-2 mb-3"><input id="o-required" type="number" min="1" placeholder="Buy quantity" class="p-2 border rounded"><input id="o-free" type="number" min="1" placeholder="Free quantity" class="p-2 border rounded"></div><div id="o-discount-fields" class="hidden mb-3"><input id="o-discount" type="number" min="0" placeholder="Discount value" class="w-full p-2 border rounded"></div><input id="o-min" type="number" min="0" placeholder="Minimum cart value" class="w-full p-2 border rounded mb-3"><input id="o-categories" placeholder="Categories (comma separated)" class="w-full p-2 border rounded mb-3"><input id="o-products" placeholder="Product IDs (optional, comma separated)" class="w-full p-2 border rounded mb-3"><input id="o-variants" placeholder="Variant keys e.g. 30ml, 30mlgift" class="w-full p-2 border rounded mb-3"><select id="o-eligibility" class="w-full p-2 border rounded mb-3"><option value="all">All customers</option><option value="first_order">First-order customers only</option></select><div class="grid grid-cols-2 gap-2 mb-3"><input id="o-start" type="datetime-local" class="p-2 border rounded text-xs"><input id="o-end" type="datetime-local" class="p-2 border rounded text-xs"></div><input id="o-priority" type="number" value="0" placeholder="Priority" class="w-full p-2 border rounded mb-3"><label class="flex items-center gap-2 text-sm mb-2"><input id="o-popup" type="checkbox" class="accent-yellow-500"> Show in offer popup</label><label class="flex items-center gap-2 text-sm mb-4"><input id="o-active" type="checkbox" class="accent-yellow-500" checked> Active and enforced at checkout</label><button id="o-submit" onclick="createOffer()" class="w-full bg-black text-white px-4 py-2 rounded font-semibold hover:text-yellow-500">Create Offer</button><button id="o-cancel-edit" onclick="cancelOfferEdit()" class="hidden w-full mt-2 border px-4 py-2 rounded font-semibold">Cancel edit</button><p id="o-msg" class="text-xs mt-2"></p></div><div class="card p-6 lg:col-span-2"><h3 class="text-lg font-bold mb-1">Current Offers</h3><p class="text-xs text-gray-500 mb-4">Active offers are calculated on the server; popup status only controls presentation.</p><div id="offers-list" class="space-y-3"></div></div></div></section>`);
 syncOfferForm();
 }
+ensureEmailCampaignUI();
 }
+function ensureEmailCampaignUI() {
+if (ADMIN_DEDICATED_PAGE || document.getElementById('email-campaign-section')) return;
+const anchor = document.getElementById('offers-admin-section') || document.getElementById('whatsapp-campaign-section');
+if (!anchor) return;
+anchor.insertAdjacentHTML('afterend', `<section id="email-campaign-section" class="mt-8"><div class="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3"><div><h2 class="text-xl font-bold text-gray-800"><i class="fas fa-envelope text-yellow-700 mr-2"></i>Email Offers & Promotions</h2><p class="text-xs text-gray-500 mt-1">Send a branded offer email to verified Eternal Essence account holders. Messages can be scheduled and include a campaign image.</p></div><button type="button" onclick="loadEmailCampaigns()" class="px-3 py-2 border rounded tiny font-bold bg-white">Refresh</button></div><div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4"><div class="card p-4 border-l-4 border-yellow-500"><span class="tiny uppercase text-gray-500">Verified recipients</span><b id="email-recipient-count" class="block text-2xl mt-1">0</b></div><div class="card p-4 border-l-4 border-blue-500"><span class="tiny uppercase text-gray-500">Queued</span><b id="email-queued-count" class="block text-2xl mt-1">0</b></div><div class="card p-4 border-l-4 border-green-500"><span class="tiny uppercase text-gray-500">Sent</span><b id="email-sent-count" class="block text-2xl mt-1">0</b></div><div class="card p-4 border-l-4 border-gray-500"><span class="tiny uppercase text-gray-500">Safety limit</span><b id="email-limit-count" class="block text-2xl mt-1">500</b></div></div><div id="email-runtime-note" class="hidden mb-4 rounded border p-3 text-sm"></div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="card p-5"><h3 class="font-bold text-lg">Create email campaign</h3><p class="tiny text-gray-500 mt-1 mb-4">Only verified account emails are eligible.</p><label class="block tiny font-bold mb-1">CAMPAIGN NAME</label><input id="email-campaign-name" maxlength="120" placeholder="September fragrance offer" class="w-full p-2 border rounded mb-3"><label class="block tiny font-bold mb-1">EMAIL SUBJECT</label><input id="email-subject" maxlength="180" placeholder="A little luxury, just for you" class="w-full p-2 border rounded mb-3"><label class="block tiny font-bold mb-1">PREHEADER (OPTIONAL)</label><input id="email-preheader" maxlength="220" placeholder="Your exclusive Eternal Essence offer" class="w-full p-2 border rounded mb-3"><label class="block tiny font-bold mb-1">OFFER MESSAGE</label><textarea id="email-offer-text" maxlength="1200" rows="3" placeholder="Enjoy 20% off your next fragrance order" class="w-full p-2 border rounded mb-3"></textarea><div class="grid grid-cols-2 gap-2"><div><label class="block tiny font-bold mb-1">COUPON CODE</label><input id="email-coupon-code" maxlength="40" placeholder="SAVE20" class="w-full p-2 border rounded mb-3 uppercase"></div><div><label class="block tiny font-bold mb-1">EXPIRY TEXT</label><input id="email-expiry-text" maxlength="100" placeholder="30 September" class="w-full p-2 border rounded mb-3"></div></div><label class="block tiny font-bold mb-1">WEBSITE LINK</label><input id="email-destination-url" value="/collections" maxlength="1000" class="w-full p-2 border rounded mb-3"><label class="block tiny font-bold mb-1">CAMPAIGN IMAGE (OPTIONAL)</label><input id="email-image-file" type="file" accept="image/png,image/jpeg,image/webp" class="w-full p-2 border rounded mb-2"><img id="email-image-preview" class="hidden max-h-36 w-full object-cover rounded border mb-3" alt="Offer preview"><label class="block tiny font-bold mb-1">SEND NOW OR SCHEDULE</label><input id="email-scheduled-at" type="datetime-local" class="w-full p-2 border rounded mb-3"><label class="flex items-start gap-2 tiny mb-3"><input id="email-confirm-campaign" type="checkbox" class="mt-1 accent-yellow-600"><span>I confirm this is a promotional email for verified account holders and the offer details are correct.</span></label><button id="email-queue-button" type="button" onclick="queueEmailCampaign()" class="w-full bg-black text-yellow-500 px-4 py-3 rounded font-bold hover:bg-yellow-500 hover:text-black">Queue Email Offer</button><p id="email-campaign-msg" class="text-xs mt-2"></p></div><div class="card p-5 xl:col-span-2"><div class="flex items-center justify-between gap-3"><div><h3 class="font-bold text-lg">Email campaign history</h3><p class="tiny text-gray-500">Delivery counts update after the backend email worker processes the campaign.</p></div></div><div id="email-campaign-list" class="space-y-3 mt-4"></div></div></div></section>`);
+const file = document.getElementById('email-image-file');
+file?.addEventListener('change', handleEmailCampaignImage);
+}
+let emailCampaignImageData = '';
+function handleEmailCampaignImage(event) {
+const file = event.target.files?.[0];
+const preview = document.getElementById('email-image-preview');
+if (!file) { emailCampaignImageData = ''; preview?.classList.add('hidden'); return; }
+if (!/^image\/(?:png|jpeg|webp)$/i.test(file.type) || file.size > 750 * 1024) {
+event.target.value = '';
+emailCampaignImageData = '';
+preview?.classList.add('hidden');
+return alert('Please choose a PNG, JPG or WEBP image smaller than 750 KB.');
+}
+const reader = new FileReader();
+reader.onload = () => { emailCampaignImageData = String(reader.result || ''); if (preview) { preview.src = emailCampaignImageData; preview.classList.remove('hidden'); } };
+reader.readAsDataURL(file);
+}
+async function loadEmailCampaigns() {
+ensurePromotionAdminUI();
+const list = document.getElementById('email-campaign-list');
+if (!list || !adminCapabilities?.adminEmailCampaigns) { if (list) list.innerHTML = '<p class="text-amber-700 text-sm">Deploy the latest backend to enable email campaigns.</p>'; return; }
+try {
+const { ok, body } = await adminFetch('/api/admin/email-campaigns');
+if (!ok) throw new Error(body.error || 'Could not load email campaigns');
+emailCampaignState = body;
+const campaigns = body.campaigns || [];
+document.getElementById('email-recipient-count').textContent = Number(body.verifiedRecipients || 0).toLocaleString('en-IN');
+document.getElementById('email-limit-count').textContent = Number(body.maxRecipients || 500).toLocaleString('en-IN');
+document.getElementById('email-queued-count').textContent = campaigns.filter(item => ['queued', 'sending'].includes(item.status)).length.toLocaleString('en-IN');
+document.getElementById('email-sent-count').textContent = campaigns.reduce((sum, item) => sum + Number(item.sentCount || 0), 0).toLocaleString('en-IN');
+const note = document.getElementById('email-runtime-note');
+const tooMany = Number(body.verifiedRecipients || 0) > Number(body.maxRecipients || 500);
+note.textContent = tooMany ? `There are ${body.verifiedRecipients} verified users. Create a smaller audience or increase EMAIL_CAMPAIGN_MAX_RECIPIENTS before sending.` : 'Emails are sent only to verified account holders and are processed by the backend worker.';
+note.className = `mb-4 rounded border p-3 text-sm ${tooMany ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-green-300 bg-green-50 text-green-800'}`;
+list.innerHTML = campaigns.map(item => `<article class="border rounded-lg p-4"><div class="flex flex-col md:flex-row md:items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><b>${escapeHtml(item.name)}</b><span class="tiny rounded px-2 py-1 bg-gray-100">${escapeHtml(item.status)}</span></div><p class="text-sm mt-2">${escapeHtml(item.subject)}</p><p class="tiny text-gray-500 mt-1">${item.scheduledAt ? new Date(item.scheduledAt).toLocaleString('en-IN') : '—'} · ${item.recipientCount || 0} recipients</p><p class="tiny mt-2">Sent ${item.sentCount || 0} · Failed ${item.failedCount || 0}</p>${item.lastError ? `<p class="tiny text-red-600 mt-1">${escapeHtml(item.lastError)}</p>` : ''}</div>${['queued','sending'].includes(item.status) ? `<button onclick="cancelEmailCampaign('${item._id}')" class="px-3 py-2 border border-red-200 text-red-700 rounded tiny font-bold">Cancel</button>` : ''}</div></article>`).join('') || '<p class="text-sm text-gray-500">No email campaigns have been created.</p>';
+} catch (error) { list.innerHTML = `<p class="text-red-600 text-sm">${escapeHtml(error.message)}</p>`; }
+}
+async function queueEmailCampaign() {
+const msg = document.getElementById('email-campaign-msg');
+if (!adminCapabilities?.adminEmailCampaigns) { msg.textContent = 'Deploy the latest backend to enable email campaigns.'; msg.className = 'text-amber-700 text-xs mt-2'; return; }
+const payload = { name: document.getElementById('email-campaign-name').value.trim(), subject: document.getElementById('email-subject').value.trim(), preheader: document.getElementById('email-preheader').value.trim(), offerText: document.getElementById('email-offer-text').value.trim(), couponCode: document.getElementById('email-coupon-code').value.trim(), expiryText: document.getElementById('email-expiry-text').value.trim(), destinationUrl: document.getElementById('email-destination-url').value.trim(), imageData: emailCampaignImageData, scheduledAt: document.getElementById('email-scheduled-at').value || null, confirm: document.getElementById('email-confirm-campaign').checked };
+if (!payload.name || !payload.subject || !payload.offerText) { msg.textContent = 'Complete the campaign name, subject and offer message.'; msg.className = 'text-red-600 text-xs mt-2'; return; }
+if (!payload.confirm) { msg.textContent = 'Confirm the verified-recipient checkbox before queueing.'; msg.className = 'text-red-600 text-xs mt-2'; return; }
+const recipients = Number(emailCampaignState?.verifiedRecipients || 0);
+if (!recipients) { msg.textContent = 'There are no verified email recipients yet.'; msg.className = 'text-red-600 text-xs mt-2'; return; }
+if (!confirm(`Queue this email offer for ${recipients} verified customer${recipients === 1 ? '' : 's'}?`)) return;
+const button = document.getElementById('email-queue-button'); button.disabled = true; msg.textContent = 'Queueing campaign...'; msg.className = 'text-gray-600 text-xs mt-2';
+try { const { ok, body } = await adminFetch('/api/admin/email-campaigns', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!ok) throw new Error(body.error || 'Could not queue email campaign'); msg.textContent = `Campaign queued for ${body.recipientCount || recipients} recipients.`; msg.className = 'text-green-700 text-xs mt-2'; document.getElementById('email-confirm-campaign').checked = false; emailCampaignImageData = ''; const imageFile = document.getElementById('email-image-file'); if (imageFile) imageFile.value = ''; document.getElementById('email-image-preview')?.classList.add('hidden'); await loadEmailCampaigns(); } catch (error) { msg.textContent = error.message; msg.className = 'text-red-600 text-xs mt-2'; } finally { button.disabled = false; }
+}
+async function cancelEmailCampaign(id) { if (!confirm('Cancel this queued email campaign? Already-sent emails cannot be recalled.')) return; const { ok, body } = await adminFetch(`/api/admin/email-campaigns/${id}/cancel`, { method: 'POST' }); if (!ok) return alert(body.error || 'Could not cancel email campaign'); await loadEmailCampaigns(); }
 async function loadCoupons() {
 ensurePromotionAdminUI();
 try {

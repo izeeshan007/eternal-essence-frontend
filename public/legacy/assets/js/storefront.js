@@ -3720,11 +3720,22 @@ image.onload = resolve;
 image.onerror = reject;
 });
 const canvas = document.createElement('canvas');
-canvas.width = image.naturalWidth || image.width;
-canvas.height = image.naturalHeight || image.height;
+// Use a fixed square canvas with a white background. This keeps the
+// transparent WEBP logo from becoming a black rectangle in jsPDF and keeps
+// its proportions consistent with the ERP invoice.
+canvas.width = 256;
+canvas.height = 256;
 const context = canvas.getContext('2d');
-if (!context || !canvas.width || !canvas.height) return null;
-context.drawImage(image, 0, 0);
+if (!context) return null;
+context.fillStyle = '#ffffff';
+context.fillRect(0, 0, canvas.width, canvas.height);
+const sourceWidth = image.naturalWidth || image.width;
+const sourceHeight = image.naturalHeight || image.height;
+if (!sourceWidth || !sourceHeight) return null;
+const scale = Math.min(220 / sourceWidth, 220 / sourceHeight);
+const width = sourceWidth * scale;
+const height = sourceHeight * scale;
+context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
 return canvas.toDataURL('image/png');
 } catch (_) {
 return null;
