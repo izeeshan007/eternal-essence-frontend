@@ -530,10 +530,13 @@ setTimeout(() => Notification.requestPermission().catch(() => {}), 1500);
 setAdminLoading(true);
 try {
 adminCapabilities = await loadAdminCapabilities();
-await Promise.allSettled([loadDashboard(), loadOrders()]);
+await Promise.allSettled(ADMIN_DEDICATED_PAGE ? [loadDashboard()] : [loadDashboard(), loadOrders()]);
 adminInitialLoadDone = true;
 setAdminLoading(false);
-Promise.allSettled([loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), PRODUCT_CATALOGUE_PAGE ? Promise.resolve() : loadVisitorAnalytics(), ADMIN_DEDICATED_PAGE ? Promise.resolve() : loadWhatsAppCampaigns()])
+const secondaryLoads = ADMIN_DEDICATED_PAGE
+? (ANALYTICS_PAGE ? [loadVisitorAnalytics()] : [])
+: [loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), loadVisitorAnalytics(), loadWhatsAppCampaigns()];
+Promise.allSettled(secondaryLoads)
 .then(() => { if (ANALYTICS_PAGE) finalizeAnalyticsPage(); else if (PRODUCT_CATALOGUE_PAGE) finalizeProductCataloguePage(); else ensureAdminTabs(); })
 .catch(err => console.warn('Secondary admin data load failed:', err));
 loadHardcodedProducts()

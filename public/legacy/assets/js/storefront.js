@@ -3500,13 +3500,42 @@ function orderFlowHtml(order) {
 if (['CANCELLED', 'REJECTED'].includes(String(order.status || '').toUpperCase())) return `<div class="mb-5 rounded border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">${String(order.status).toUpperCase() === 'REJECTED' ? `Order Rejected${order.rejectionReason ? `: ${escapeHtml(order.rejectionReason)}` : ''}` : 'Order Cancelled'}</div>`;
 const stage = orderStage(order.status);
 const steps = [order.paymentMethod === 'Cash on Delivery' ? 'Cash on Delivery' : 'Payment Done', 'Order Placed', 'Processing', 'Dispatched', 'Delivered'];
-return `<div class="mb-5 overflow-x-auto"><div class="flex min-w-[540px] items-center">${steps.map((step, index) => `<div class="flex flex-1 items-center last:flex-none"><div class="text-center"><div class="mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${index + 1 <= stage ? 'bg-yellow-500 text-black' : 'bg-gray-200 text-gray-500'}">${index + 1 <= stage ? '✓' : index + 1}</div><div class="mt-1 whitespace-nowrap text-[10px] font-bold ${index + 1 <= stage ? 'text-gray-800' : 'text-gray-400'}">${step}</div></div>${index < steps.length - 1 ? `<div class="mx-2 h-1 flex-1 ${index + 1 < stage ? 'bg-yellow-500' : 'bg-gray-200'}"></div>` : ''}</div>`).join('')}</div></div>`;
+return `<div class="storefront-order-flow mb-4 overflow-x-auto"><div class="order-flow-steps flex min-w-[540px] items-center">${steps.map((step, index) => `<div class="order-flow-step flex flex-1 items-center last:flex-none"><div class="text-center"><div class="mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${index + 1 <= stage ? 'bg-yellow-500 text-black' : 'bg-gray-200 text-gray-500'}">${index + 1 <= stage ? '✓' : index + 1}</div><div class="order-flow-step-label mt-1 whitespace-nowrap text-[10px] font-bold ${index + 1 <= stage ? 'text-gray-800' : 'text-gray-400'}">${escapeHtml(step)}</div></div>${index < steps.length - 1 ? `<div class="order-flow-connector mx-2 h-1 flex-1 ${index + 1 < stage ? 'bg-yellow-500' : 'bg-gray-200'}"></div>` : ''}</div>`).join('')}</div></div>`;
 }
 function cleanShippingAddress(order) {
 const lines = String(order.shippingAddress || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 if (lines[0] === String(order.name || '').trim()) lines.shift();
 if (/^phone\s*:/i.test(lines[0] || '') || lines[0] === String(order.phone || '').trim()) lines.shift();
 return lines.join('\n');
+}
+function storefrontOrderItemQuantity(item) {
+const raw = item?.itemType === 'perfume_card' ? item?.cardMeta?.qty : (item?.qty ?? item?.quantity);
+const qty = Math.floor(Number(raw || 1));
+return Number.isFinite(qty) && qty > 0 ? qty : 1;
+}
+function storefrontOrderItemLineTotal(item) {
+const price = Number(item?.price || 0);
+const qty = storefrontOrderItemQuantity(item);
+// Perfume-card prices are already the discounted total for cardMeta.qty.
+return item?.itemType === 'perfume_card' ? price : price * qty;
+}
+function encodeOrderItemValue(value) {
+return encodeURIComponent(String(value || '')).replace(/'/g, '%27');
+}
+function openOrderProduct(productId, size = '', productName = '') {
+const decodedId = decodeURIComponent(String(productId || ''));
+const decodedSize = decodeURIComponent(String(size || ''));
+const decodedName = decodeURIComponent(String(productName || ''));
+const product = findProductByAnyId(decodedId) || allProducts.find(item => decodedName && normalize(item.name) === normalize(decodedName));
+if (!product) {
+showToast('This product is no longer available.', 'error');
+return;
+}
+if (window.eeNavigateToProduct) {
+window.eeNavigateToProduct(product, { size: decodedSize, name: product.name });
+return;
+}
+openProduct(product.id || product._id);
 }
 function openOrderDetails(order) {
 const modal = document.getElementById('order-details-modal');
@@ -3524,7 +3553,7 @@ const courierName = String(order.deliveryPartner || '').toLowerCase();
 const awbCode = encodeURIComponent(String(order.awb || '').trim());
 const shipmentLink = awbCode && courierName.includes('delhivery') ? `https://www.delhivery.com/track/package/${awbCode}` : awbCode && courierName.includes('shiprocket') ? `https://shiprocket.co/tracking/${awbCode}` : awbCode && courierName.includes('dtdc') ? `https://www.dtdc.in/tracking.asp?strCnno=${awbCode}` : awbCode && courierName.includes('xpressbees') ? `https://www.xpressbees.com/shipmenttracking?awbNo=${awbCode}` : '';
 const trackingHtml = (order.deliveryPartner || order.awb || order.trackingOrderId) ? `
-<div class="bg-gray-50 border rounded p-3 text-sm mb-4">
+<div class="storefront-order-tracking bg-gray-50 border rounded p-3 text-sm mb-3">
 <div class="font-bold mb-1">Courier Details</div>
 ${order.trackingOrderId ? `<div>Courier Order ID: <strong>${escapeHtml(order.trackingOrderId)}</strong></div>` : ''}
 ${order.deliveryPartner ? `<div>Delivery Partner: <strong>${escapeHtml(order.deliveryPartner)}</strong></div>` : ''}
@@ -3535,37 +3564,45 @@ const supportHtml = (order.supportRequests || []).length
 ? `<div class="mb-4 text-xs bg-yellow-50 border border-yellow-200 rounded p-3"><div class="font-bold mb-1">Your support queries</div>${order.supportRequests.map(r => `<div class="mb-2 border-b border-yellow-200 pb-2">${escapeHtml(r.message || '')} <span class="text-gray-500">(${escapeHtml(r.status || 'Open')})</span>${r.reply ? `<div class="mt-1 rounded bg-white p-2"><strong>Admin reply:</strong> ${escapeHtml(r.reply)}</div>` : ''}</div>`).join('')}</div>`
 : '';
 body.innerHTML = `
-<h3 class="text-lg font-bold mb-2">
-Order ${order.orderId || order._id}
+<h3 class="storefront-order-title text-lg font-bold mb-2">
+Order ${escapeHtml(order.orderId || order._id || '')}
 </h3>
 ${orderFlowHtml(order)}
-<p class="text-sm mb-4">Current status: <span class="font-bold ${isDelivered ? 'text-green-600' : 'text-gray-600'}">${displayOrderStatus(order.status)}</span></p>
-<p class="text-xs mb-4 rounded border border-red-100 bg-red-50 p-2 text-red-700 font-semibold">Cancellation is available only before dispatch/shipping.</p>
+<p class="text-sm mb-3">Current status: <span class="font-bold ${isDelivered ? 'text-green-600' : 'text-gray-600'}">${displayOrderStatus(order.status)}</span></p>
 ${trackingHtml}
 ${supportHtml}
-<div class="flex flex-wrap gap-2 mb-4">
+<div class="storefront-order-actions flex flex-wrap gap-2 mb-3">
 ${canRetryPayment ? `<button onclick="retryPayment('${order._id}')" class="px-3 py-2 bg-yellow-500 text-black text-xs font-bold rounded hover:bg-black hover:text-yellow-500">Retry Payment</button>` : ''}
 ${canCancelOrder ? `<button onclick="cancelOrder('${order._id}')" class="px-3 py-2 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">Cancel Order</button>` : ''}
 <button onclick='openSupportModal(${JSON.stringify(order.orderId || order._id)}, ${JSON.stringify((order.items || []).map(item => item.name).filter(Boolean).join(', '))})' class="px-3 py-2 border border-yellow-500 text-yellow-700 text-xs font-bold rounded hover:bg-yellow-500 hover:text-black">Support Query</button>
 ${isDelivered ? `<button onclick="downloadOrderInvoice('${order._id || order.orderId}')" class="px-3 py-2 bg-black text-white text-xs font-bold rounded hover:bg-yellow-500 hover:text-black">Download Invoice</button>` : ''}
 </div>
-<div class="space-y-4">
-${(order.items || []).map(item => `
-<div class="flex gap-4 border p-3 rounded">
+<div class="space-y-3">
+${(order.items || []).map(item => {
+const quantity = storefrontOrderItemQuantity(item);
+const lineTotal = storefrontOrderItemLineTotal(item);
+const isCatalogProduct = item.itemType === 'product' || (!item.itemType && item.productId);
+const encodedProductId = encodeOrderItemValue(item.productId);
+const encodedSize = encodeOrderItemValue(item.size);
+const encodedName = encodeOrderItemValue(item.name);
+const clickAttrs = isCatalogProduct ? `role="button" tabindex="0" onclick="openOrderProduct('${encodedProductId}','${encodedSize}','${encodedName}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderProduct('${encodedProductId}','${encodedSize}','${encodedName}')}"` : '';
+return `
+<div class="storefront-order-item flex gap-3 border p-3 rounded ${isCatalogProduct ? 'cursor-pointer hover:border-yellow-500' : ''}" ${clickAttrs}>
 ${item.itemType === 'perfume_card' && item.cardMeta
 ? renderPerfumeCardVisual(item.cardMeta, true)
 : item.itemType === 'bundle' && item.bundleMeta
 ? renderCustomSetVisual((item.bundleMeta.items || []).map(p => ({ product: { ...p, image: p.image, images: [p.image], name: p.name, bottleImage: p.bottleImage }, qty: p.qty })), item.bundleMeta.previewSizeMl || item.bundleMeta.sizeMl || 8, true)
-: `<img src="${item.image}" class="w-16 h-16 object-cover rounded">`}
+: `<img src="${escapeHtml(resolveImage(item.image || ''))}" alt="${escapeHtml(item.name || 'Ordered item')}" class="w-16 h-16 object-cover rounded">`}
 <div class="flex-1">
-<p class="font-semibold">${item.name}</p>
-<p class="text-xs text-gray-500">${item.size || ''}</p>
+<p class="storefront-order-item-name font-semibold">${escapeHtml(item.name || 'Ordered item')}</p>
+<p class="text-xs text-gray-500">${escapeHtml(item.size || '')}</p>
+<p class="mt-1 text-xs text-gray-600">Qty: <strong>${quantity}</strong>${Number.isFinite(lineTotal) && lineTotal > 0 ? ` · ₹${lineTotal.toFixed(2)}` : ''}</p>
 ${
-isDelivered
+isDelivered && isCatalogProduct
 ? `
 <button
 class="mt-2 px-3 py-1 bg-black text-white text-xs rounded"
-onclick="openReviewModal('${item.productId}')">
+onclick="event.stopPropagation(); openReviewModal('${encodedProductId}', '${encodedName}')">
 Write Review
 </button>`
 : `
@@ -3575,8 +3612,9 @@ Review available after delivery
 }
 </div>
 </div>
-`).join('')}
+`; }).join('')}
 </div>
+${!isDelivered && canCancelOrder ? '<p class="storefront-order-cancellation mt-3 text-[10px] text-gray-500">Cancellation is available only before dispatch/shipping.</p>' : ''}
 `;
 modal.classList.remove('hidden');
 document.body.style.overflow = 'hidden';
@@ -3672,6 +3710,26 @@ await generateOrderInvoicePDF(order);
 alert(err.message || 'Could not generate invoice.');
 }
 }
+async function loadInvoiceLogoDataUrl() {
+try {
+const image = new Image();
+image.decoding = 'async';
+image.src = '/products/ee-brand-20260819.webp';
+await new Promise((resolve, reject) => {
+image.onload = resolve;
+image.onerror = reject;
+});
+const canvas = document.createElement('canvas');
+canvas.width = image.naturalWidth || image.width;
+canvas.height = image.naturalHeight || image.height;
+const context = canvas.getContext('2d');
+if (!context || !canvas.width || !canvas.height) return null;
+context.drawImage(image, 0, 0);
+return canvas.toDataURL('image/png');
+} catch (_) {
+return null;
+}
+}
 async function generateOrderInvoicePDF(order) {
 await window.eeLoadPdfEngine?.();
 if (!window.jspdf?.jsPDF) throw new Error('Invoice generator is still loading. Try again in a moment.');
@@ -3679,15 +3737,27 @@ const doc = new window.jspdf.jsPDF();
 const pageWidth = doc.internal.pageSize.getWidth();
 const gold = [212, 175, 55];
 const textDark = [50, 50, 50];
+const logoDataUrl = await loadInvoiceLogoDataUrl();
+const brandX = logoDataUrl ? 48 : 15;
+
+// Keep this header and summary structure identical to the ERP invoice.
+doc.setFillColor(255, 255, 255);
+doc.rect(0, 0, pageWidth, 50, 'F');
+if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 15, 12, 28, 28);
 doc.setFont('times', 'bold');
 doc.setFontSize(26);
 doc.setTextColor(...gold);
-doc.text('ETERNAL ESSENCE', 15, 24);
+doc.text('ETERNAL ESSENCE', brandX, 24);
+doc.setFont('times', 'normal');
+doc.setFontSize(11);
+doc.setTextColor(150, 150, 150);
+doc.text('FRAGRANCES', brandX + 1, 30, { charSpace: 2 });
 doc.setFont('helvetica', 'normal');
 doc.setFontSize(9);
 doc.setTextColor(100, 100, 100);
-doc.text('Mumbai, Maharashtra 400011', 15, 36);
-doc.text('Phone: +91 7303862657 | Insta: @eternal_essense', 15, 42);
+doc.text('Mumbai, Maharashtra 400011', brandX, 38);
+doc.text('Phone: +91 7303862657  |  Insta: @eternal_essense', brandX, 43);
+
 doc.setFontSize(22);
 doc.setFont('helvetica', 'bold');
 doc.setTextColor(...gold);
@@ -3696,40 +3766,110 @@ doc.setFontSize(10);
 doc.setFont('helvetica', 'normal');
 doc.setTextColor(...textDark);
 doc.text(`No: ${order.orderId || order._id}`, pageWidth - 14, 34, { align: 'right' });
-doc.text(`Date: ${new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}`, pageWidth - 14, 40, { align: 'right' });
+doc.text(`Date: ${new Date(order.createdAt || Date.now()).toLocaleDateString()}`, pageWidth - 14, 40, { align: 'right' });
 doc.setDrawColor(...gold);
+doc.setLineWidth(0.5);
 doc.line(14, 48, pageWidth - 14, 48);
+
+doc.setFontSize(11);
 doc.setFont('helvetica', 'bold');
+doc.setTextColor(...textDark);
 doc.text('BILLED TO:', 14, 58);
+doc.setFontSize(10);
 doc.setFont('helvetica', 'normal');
 doc.text(order.name || 'Customer', 14, 64);
-doc.text(order.phone ? `Ph: ${order.phone}` : '', 14, 70);
-doc.text(doc.splitTextToSize(cleanShippingAddress(order), 90), 14, 76);
-const rows = (order.items || []).map((item, index) => [
+let currentYOffset = 69;
+if (order.phone) {
+doc.text(`Ph: ${order.phone}`, 14, currentYOffset);
+currentYOffset += 5;
+}
+const address = cleanShippingAddress(order);
+if (address) {
+const splitAddress = doc.splitTextToSize(address, 90);
+doc.text(splitAddress, 14, currentYOffset);
+currentYOffset += splitAddress.length * 4.5;
+}
+
+const items = Array.isArray(order.items) ? order.items : [];
+const rows = items.map((item, index) => [
 index + 1,
-`${item.name || 'Item'} ${item.size || ''}`,
-item.itemType === 'perfume_card' ? 'Perfume Card' : (item.itemType === 'bundle' ? 'Custom Set' : 'Product'),
-item.cardMeta?.qty || 1,
-`Rs ${Number(item.price || 0).toFixed(2)}`
+`${item.name || 'Item'}${item.size ? ` ${item.size}` : ''}`,
+item.category || item.type || (item.itemType === 'perfume_card' ? 'Perfume Card' : item.itemType === 'bundle' ? 'Custom Set' : 'Perfume'),
+storefrontOrderItemQuantity(item),
+`Rs ${storefrontOrderItemLineTotal(item).toFixed(2)}`
 ]);
+const computedSubtotal = items.reduce((sum, item) => sum + storefrontOrderItemLineTotal(item), 0);
+const subtotal = Number.isFinite(Number(order.subtotal)) ? Number(order.subtotal) : computedSubtotal;
+const discount = Number(order.discount || 0);
+const shipping = Number(order.shipping || 0);
+const startTableY = Math.max(90, currentYOffset + 8);
 doc.autoTable({
-startY: 96,
+startY: startTableY,
 head: [['#', 'Item Description', 'Type', 'Qty', 'Gross Total']],
 body: rows,
 theme: 'plain',
-headStyles: { fillColor: [250,250,250], textColor: gold, fontStyle: 'bold' },
+headStyles: { fillColor: [250, 250, 250], textColor: gold, fontStyle: 'bold', lineWidth: 0.1, lineColor: [220, 220, 220] },
+bodyStyles: { textColor: textDark, fontSize: 10 },
+columnStyles: {
+0: { cellWidth: 10 },
+2: { cellWidth: 25, halign: 'center' },
+3: { cellWidth: 15, halign: 'center' },
+4: { halign: 'right' }
+},
 margin: { left: 14, right: 14 }
 });
-const finalY = doc.lastAutoTable.finalY || 120;
-const rightX = pageWidth - 14;
-let y = finalY + 12;
-doc.text('Subtotal:', pageWidth - 90, y); doc.text(`Rs ${Number(order.subtotal || 0).toFixed(2)}`, rightX, y, { align: 'right' }); y += 6;
-if (Number(order.discount || 0) > 0) { doc.text('Discount:', pageWidth - 90, y); doc.text(`- Rs ${Number(order.discount).toFixed(2)}`, rightX, y, { align: 'right' }); y += 6; }
-doc.text('Shipping:', pageWidth - 90, y); doc.text(`Rs ${Number(order.shipping || 0).toFixed(2)}`, rightX, y, { align: 'right' }); y += 8;
+
+const finalY = doc.lastAutoTable.finalY || startTableY;
+const rightAlignX = pageWidth - 14;
+const boxX = pageWidth - 90;
+const showDiscount = discount > 0;
+const showShipping = shipping !== 0;
+const boxHeight = 15 + (showDiscount ? 12 : 0) + (showShipping ? 6 : 0);
+let sumY = finalY + 12;
+doc.setFillColor(250, 250, 250);
+doc.setDrawColor(220, 220, 220);
+doc.roundedRect(boxX + 3, sumY - 6, 80, boxHeight + 8, 3, 3, 'FD');
+doc.setFontSize(10);
+doc.setFont('helvetica', 'normal');
+doc.setTextColor(0, 0, 0);
+const labelX = boxX + 5;
+doc.text('Subtotal:', labelX, sumY);
+doc.text(`Rs ${subtotal.toFixed(2)}`, rightAlignX, sumY, { align: 'right' });
+sumY += 6;
+if (showDiscount) {
+doc.text('Discount:', labelX, sumY);
+doc.text(`- Rs ${discount.toFixed(2)}`, rightAlignX, sumY, { align: 'right' });
+sumY += 6;
 doc.setFont('helvetica', 'bold');
+doc.text('Taxable Value:', labelX, sumY);
+doc.text(`Rs ${(subtotal - discount).toFixed(2)}`, rightAlignX, sumY, { align: 'right' });
+sumY += 6;
+doc.setFont('helvetica', 'normal');
+}
+if (showShipping) {
+doc.text('Shipping:', labelX, sumY);
+doc.text(`Rs ${shipping.toFixed(2)}`, rightAlignX, sumY, { align: 'right' });
+sumY += 6;
+}
+doc.setDrawColor(...gold);
+doc.setLineWidth(0.5);
+doc.line(labelX, sumY, rightAlignX, sumY);
+sumY += 7;
 doc.setFontSize(14);
-doc.text('Grand Total:', pageWidth - 90, y);
-doc.text(`Rs ${Number(order.total || 0).toFixed(2)}`, rightX, y, { align: 'right' });
+doc.setFont('helvetica', 'bold');
+const grandTotal = Number.isFinite(Number(order.total)) ? Number(order.total) : subtotal - discount + shipping;
+doc.text('Grand Total:', labelX, sumY);
+doc.text(`Rs ${Math.round(grandTotal).toFixed(2)}`, rightAlignX, sumY, { align: 'right' });
+doc.setFontSize(10);
+doc.setFont('helvetica', 'normal');
+doc.setTextColor(150);
+doc.text('Authorized Signatory', rightAlignX, sumY + 30, { align: 'right' });
+doc.line(rightAlignX - 40, sumY + 25, rightAlignX, sumY + 25);
+doc.setFontSize(8);
+doc.setTextColor(200);
+const revision = order.revisionCount || 0;
+const updated = order.updatedAt || order.createdAt || Date.now();
+doc.text(`Rev: ${revision} | Updated: ${new Date(updated).toLocaleDateString()} | Printed: ${new Date().toLocaleDateString()}`, 14, 290);
 doc.setFont('times', 'italic');
 doc.setFontSize(11);
 doc.setTextColor(100);
@@ -3738,6 +3878,7 @@ doc.save(`Invoice_${order.orderId || order._id}.pdf`);
 }
 function closeOrderModal() {
 document.getElementById('order-details-modal').classList.add('hidden');
+document.body.style.overflow = '';
 }
 let reviewProductId = null;
 function openReviewModal(productId, productName = '') {
@@ -3767,28 +3908,7 @@ document.getElementById('review-modal').classList.add('hidden');
 reviewImagePayload = [];
 }
 function openOrderModal(order) {
-const modal = document.getElementById('order-modal');
-const itemsContainer = document.getElementById('order-items');
-let itemsHtml = '';
-order.items.forEach(item => {
-itemsHtml += `
-<div class="flex justify-between items-center border-b py-2">
-<div>
-<div class="font-semibold">${item.name}</div>
-<div class="text-xs text-gray-500">${item.size}</div>
-</div>
-${
-order.status === 'Delivered'
-? `<button
-class="text-xs bg-black text-white px-3 py-1 rounded"
-onclick="openReviewModal(${item.productId}, '${item.name}')">
-Write Review
-</button>`
-: ''
-}
-</div>
-`;
-});
+return openOrderDetails(order);
 }
 function getSeries(price){
 if(price <= 65) return "Essential Series";
