@@ -15,8 +15,24 @@
   #orders-list-container td:last-child:empty{display:none}
   #orders-list-container td:last-child button{width:100%;min-height:2.5rem;font-size:.72rem!important}
   #order-details-modal{padding:.5rem}
-  #order-details-modal>div{max-height:95vh;padding:1rem;border-radius:.85rem}
-  #order-details-body>.flex.flex-wrap button{flex:1 1 45%;min-height:2.5rem}
+  #order-details-modal>div{width:min(100%,680px);max-height:calc(100dvh - .7rem);padding:.9rem;border-radius:1rem;display:flex;flex-direction:column}
+  #order-details-body{overflow-y:auto;min-height:0;margin-top:.35rem!important;padding-right:.1rem}
+  #order-details-body .storefront-order-title{font-size:1.25rem;line-height:1.25;margin-bottom:.35rem}
+  #order-details-body .storefront-order-flow{margin-bottom:.65rem!important;overflow:visible}
+  #order-details-body .order-flow-steps{min-width:0!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+  #order-details-body .order-flow-step{min-width:0;display:flex!important;align-items:start;justify-content:center}
+  #order-details-body .order-flow-step>div:first-child{width:100%}
+  #order-details-body .order-flow-step-label{font-size:8px!important;line-height:1.15;white-space:normal!important;text-align:center}
+  #order-details-body .order-flow-connector{display:none!important}
+  #order-details-body .storefront-order-tracking{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.2rem .8rem;padding:.65rem!important;margin-bottom:.65rem!important}
+  #order-details-body .storefront-order-tracking>div:first-child{grid-column:1/-1}
+  #order-details-body .storefront-order-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;margin-bottom:.65rem!important}
+  #order-details-body .storefront-order-actions button{width:100%;min-height:2.5rem;padding:.55rem .45rem!important}
+  #order-details-body .storefront-order-item{padding:.65rem!important;gap:.7rem!important;transition:border-color .18s ease,box-shadow .18s ease}
+  #order-details-body .storefront-order-item:hover{border-color:#d4af37;box-shadow:0 5px 16px rgba(15,23,42,.08)}
+  #order-details-body .storefront-order-item img{width:4rem!important;height:4rem!important}
+  #order-details-body .storefront-order-item-name{font-size:.9rem!important;line-height:1.25}
+  #order-details-body .storefront-order-cancellation{font-size:10px!important;color:#6b7280!important;background:transparent!important;border:0!important;padding:.2rem 0!important;margin-top:.55rem!important;font-weight:400!important}
 }
 html,body,#root{min-height:100%;margin:0}
 body{background:#fff;font-family:Lato,Arial,sans-serif}
