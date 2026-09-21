@@ -125,8 +125,13 @@ async function adminFetch(path, opts = {}) {
 const headers = new Headers(opts.headers || {});
 if (adminToken) headers.set('Authorization', `Bearer ${adminToken}`);
 try {
-const res = await adminBackendFetch(path, { ...opts, headers });
-const json = await res.json().catch(() => ({}));
+const res = await adminBackendFetch(path, { cache: 'no-store', ...opts, headers });
+const contentType=String(res.headers.get('content-type')||'');
+let json;
+try { json=contentType.includes('json')?await res.json():null; } catch { json=null; }
+if (!json || typeof json!=='object') {
+  return {ok:false,status:res.status,body:{error:'The backend returned '+res.status+' without JSON for '+path.split('?')[0]+'. Check the API Worker route and backend deployment.'}};
+}
 if (res.status === 401) {
 const msg = String(json.error || '').toLowerCase();
 const realAuthFailure =
@@ -146,7 +151,7 @@ throw err;
 }
 async function loadAdminCapabilities() {
 try {
-const { ok, body } = await adminFetch('/api/health');
+const { ok, body } = await adminFetch('/api/health?adminCheck='+Date.now());
 if (!ok) throw new Error('Health check failed');
 return {
 adminOffers: body.apiVersion >= 2 && body.features?.adminOffers === true,
@@ -537,7 +542,7 @@ adminInitialLoadDone = true;
 setAdminLoading(false);
 const secondaryLoads = ADMIN_DEDICATED_PAGE
 ? (ANALYTICS_PAGE ? [loadVisitorAnalytics()] : [])
-: [loadUsers(), loadCoupons(), adminCapabilities.adminOffers ? loadOffers() : showOutdatedOffersNotice(), loadBundleRules(), loadDealers(), loadVisitorAnalytics(), loadWhatsAppCampaigns(), loadEmailCampaigns()];
+: [loadUsers(), loadCoupons(), loadOffers(), loadBundleRules(), loadDealers(), loadVisitorAnalytics(), loadWhatsAppCampaigns(), loadEmailCampaigns()];
 Promise.allSettled(secondaryLoads)
 .then(() => { if (ANALYTICS_PAGE) finalizeAnalyticsPage(); else if (PRODUCT_CATALOGUE_PAGE) finalizeProductCataloguePage(); else ensureAdminTabs(); })
 .catch(err => console.warn('Secondary admin data load failed:', err));
@@ -712,7 +717,7 @@ const popupNote=document.getElementById('wa-runtime-note');popupNote?.insertAdja
 }
 function updateWhatsAppCampaignPreview(){const offer=document.getElementById('wa-offer-text')?.value.trim()||'[offer details]';const code=document.getElementById('wa-coupon-code')?.value.trim().toUpperCase()||'[coupon]';const expiry=document.getElementById('wa-expiry-text')?.value.trim()||'[expiry]';const destination=document.getElementById('wa-destination-url')?.value.trim()||'/collections';const preview=document.getElementById('wa-message-preview');if(preview)preview.textContent=`Hi [Customer], ${offer}. Use code ${code} before ${expiry}. Shop now: ${destination}\n\nReply STOP to opt out.`;}
 function whatsappJobTotal(campaigns,status){return(campaigns||[]).reduce((sum,item)=>sum+Number(item.jobs?.[status]||0),0);}
-async function loadWhatsAppPopupSetting(){const checkbox=document.getElementById('wa-popup-enabled');const msg=document.getElementById('wa-popup-setting-msg');if(!checkbox||!msg)return;if(!adminCapabilities?.adminWhatsAppPopupSetting){checkbox.disabled=true;msg.textContent='Deploy the latest backend to manage this setting.';msg.className='text-xs text-amber-700';return;}try{const{ok,body}=await adminFetch('/api/admin/whatsapp/popup-setting');if(!ok)throw new Error(body.error||'Could not load popup setting');checkbox.checked=body.enabled===true;msg.textContent=checkbox.checked?'Currently ON':'Currently OFF';msg.className=`text-xs ${checkbox.checked?'text-green-700':'text-gray-500'}`;}catch(error){checkbox.disabled=true;msg.textContent=error.message;msg.className='text-xs text-red-600';}}
+async function loadWhatsAppPopupSetting(){const checkbox=document.getElementById('wa-popup-enabled');const msg=document.getElementById('wa-popup-setting-msg');if(!checkbox||!msg)return;try{const{ok,body}=await adminFetch('/api/admin/whatsapp/popup-setting');if(!ok)throw new Error(body.error||'Could not load popup setting');adminCapabilities={...adminCapabilities,adminWhatsAppPopupSetting:true};checkbox.disabled=false;checkbox.checked=body.enabled===true;msg.textContent=checkbox.checked?'Currently ON':'Currently OFF';msg.className=`text-xs ${checkbox.checked?'text-green-700':'text-gray-500'}`;}catch(error){checkbox.disabled=true;msg.textContent=error.message;msg.className='text-xs text-red-600';}}
 async function updateWhatsAppPopupSetting(enabled){const checkbox=document.getElementById('wa-popup-enabled');const msg=document.getElementById('wa-popup-setting-msg');if(!checkbox||!msg)return;checkbox.disabled=true;msg.textContent='Saving...';msg.className='text-xs text-gray-500';try{const{ok,body}=await adminFetch('/api/admin/whatsapp/popup-setting',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:Boolean(enabled)})});if(!ok)throw new Error(body.error||'Could not update popup setting');checkbox.checked=body.enabled===true;msg.textContent=body.enabled?'Currently ON':'Currently OFF';msg.className=`text-xs ${body.enabled?'text-green-700':'text-gray-500'}`;}catch(error){checkbox.checked=!enabled;msg.textContent=error.message;msg.className='text-xs text-red-600';}finally{checkbox.disabled=false;}}
 async function loadWhatsAppCampaigns(){ensureWhatsAppCampaignUI();const list=document.getElementById('wa-campaign-list');if(!adminCapabilities?.adminWhatsAppCampaigns){if(list)list.innerHTML='<p class="text-amber-700 text-sm">Deploy the latest backend to enable WhatsApp campaigns.</p>';return;}try{const{ok,body}=await adminFetch('/api/admin/whatsapp/campaigns');if(!ok)throw new Error(body.error||'Could not load WhatsApp campaigns');whatsappCampaignState=body;const campaigns=body.campaigns||[];document.getElementById('wa-active-consents').textContent=Number(body.activeConsents||0).toLocaleString('en-IN');document.getElementById('wa-pending-jobs').textContent=whatsappJobTotal(campaigns,'pending').toLocaleString('en-IN');document.getElementById('wa-sent-jobs').textContent=whatsappJobTotal(campaigns,'sent').toLocaleString('en-IN');document.getElementById('wa-template-name').textContent=body.config?.templateName||'Not configured';document.getElementById('wa-runtime-mode').textContent=body.config?.dryRun?'DRY RUN':(body.config?.workerEnabled?'LIVE':'PAUSED');const note=document.getElementById('wa-runtime-note');const problems=[];if(!body.config?.enabled)problems.push('WHATSAPP_ENABLED is false.');if(body.config?.mode!=='cloud_api')problems.push('WHATSAPP_MODE must be cloud_api.');if(!body.config?.workerEnabled)problems.push('The worker is disabled, so queued jobs will remain pending.');if(body.config?.dryRun)problems.push('Dry-run is active: jobs will be evaluated but Meta will not send messages.');note.textContent=problems.join(' ');note.className=`mb-4 rounded border p-3 text-sm ${problems.length?'border-amber-300 bg-amber-50 text-amber-800':'border-green-300 bg-green-50 text-green-800'}`;list.innerHTML=campaigns.map(item=>{const jobs=item.jobs||{};const waiting=Number(jobs.pending||0)+Number(jobs.processing||0);const delivered=Number(jobs.delivery_delivered||0);const read=Number(jobs.delivery_read||0);return `<article class="border rounded-lg p-4"><div class="flex flex-col md:flex-row md:items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><b>${escapeHtml(item.name)}</b><code class="tiny bg-gray-100 px-2 py-1 rounded">${escapeHtml(item.couponCode)}</code><span class="tiny ${item.status==='cancelled'?'text-red-600':'text-green-700'}">${escapeHtml(item.status)}</span>${item.dryRunAtCreation?'<span class="tiny text-amber-700">created in dry-run</span>':''}</div><p class="text-sm mt-2">${escapeHtml(item.offerText)}</p><p class="tiny text-gray-500 mt-1">${new Date(item.scheduledAt).toLocaleString('en-IN')} · ${item.recipientCount} recipients · ${escapeHtml(item.templateName)}</p><p class="tiny mt-2">Pending ${waiting} · Sent ${Number(jobs.sent||0)} · Delivered ${delivered} · Read ${read} · Failed ${Number(jobs.failed||0)} · Dry-run ${Number(jobs.dry_run||0)} · Cancelled ${Number(jobs.cancelled||0)}</p></div>${item.status==='queued'&&waiting?`<button onclick="cancelWhatsAppCampaign('${item._id}')" class="px-3 py-2 border border-red-200 text-red-700 rounded tiny font-bold">Cancel pending</button>`:''}</div></article>`}).join('')||'<p class="text-sm text-gray-500">No WhatsApp offer campaigns have been created.</p>';document.getElementById('wa-subscriber-list').innerHTML=(body.recentConsents||[]).map(item=>`<div class="border rounded p-3"><b class="text-sm">${escapeHtml(item.normalizedPhone)}</b><div class="tiny text-gray-500">Opted in ${item.optInAt?new Date(item.optInAt).toLocaleString('en-IN'):'—'} · ${escapeHtml(item.optInSource||'website')}</div></div>`).join('')||'<p class="tiny text-gray-500">No active WhatsApp subscribers.</p>';const queue=document.getElementById('wa-queue-button');queue.disabled=!body.config?.enabled||body.config?.mode!=='cloud_api'||!body.activeConsents;queue.classList.toggle('opacity-50',queue.disabled);}catch(error){if(list)list.innerHTML=`<p class="text-red-600 text-sm">${escapeHtml(error.message)}</p>`;}}
 async function queueWhatsAppCampaign(){const msg=document.getElementById('wa-campaign-msg');const payload={name:document.getElementById('wa-campaign-name').value.trim(),offerText:document.getElementById('wa-offer-text').value.trim(),couponCode:document.getElementById('wa-coupon-code').value.trim(),expiryText:document.getElementById('wa-expiry-text').value.trim(),destinationUrl:document.getElementById('wa-destination-url').value.trim(),scheduledAt:document.getElementById('wa-scheduled-at').value||null,confirm:document.getElementById('wa-confirm-campaign').checked};if(!payload.name||!payload.offerText||!payload.couponCode||!payload.expiryText){msg.textContent='Complete the campaign name, offer, coupon and expiry.';msg.className='text-xs mt-2 text-red-600';return;}if(!payload.confirm){msg.textContent='Confirm the consent/template checkbox before queueing.';msg.className='text-xs mt-2 text-red-600';return;}const recipients=Number(whatsappCampaignState?.activeConsents||0);if(!confirm(`Queue this approved-template offer for ${recipients} opted-in customer${recipients===1?'':'s'}?`))return;const button=document.getElementById('wa-queue-button');button.disabled=true;msg.textContent='Queueing campaign safely...';msg.className='text-xs mt-2 text-gray-600';try{const{ok,body}=await adminFetch('/api/admin/whatsapp/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!ok)throw new Error(body.error||'Could not queue campaign');msg.textContent=`${body.message} ${body.recipients} recipient${body.recipients===1?'':'s'}.`;msg.className='text-xs mt-2 text-green-700';document.getElementById('wa-confirm-campaign').checked=false;await loadWhatsAppCampaigns();}catch(error){msg.textContent=error.message;msg.className='text-xs mt-2 text-red-600';}finally{const config=whatsappCampaignState?.config||{};button.disabled=!config.enabled||config.mode!=='cloud_api'||!Number(whatsappCampaignState?.activeConsents||0);button.classList.toggle('opacity-50',button.disabled);}}
@@ -766,10 +771,21 @@ reader.readAsDataURL(file);
 async function loadEmailCampaigns() {
 ensurePromotionAdminUI();
 const list = document.getElementById('email-campaign-list');
-if (!list || !adminCapabilities?.adminEmailCampaigns) { if (list) list.innerHTML = '<p class="text-amber-700 text-sm">Deploy the latest backend to enable email campaigns.</p>'; return; }
+if (!list) return;
+const queueButton=document.getElementById('email-queue-button');
+queueButton.disabled=true;
+emailCampaignState=null;
+list.textContent='Checking email campaign service…';
+for(const id of ['email-recipient-count','email-queued-count','email-sent-count'])document.getElementById(id).textContent='—';
 try {
-const { ok, body } = await adminFetch('/api/admin/email-campaigns');
-if (!ok) throw new Error(body.error || 'Could not load email campaigns');
+const { ok, status, body } = await adminFetch('/api/admin/email-campaigns');
+if (!ok) {
+  const reason=status===404?'Email campaign route is missing on the backend reached by this domain. Check Railway’s deployed commit and the Worker destination.':status===401?'Your admin login has expired. Sign in again.':status===403?'This account does not have permission to manage email campaigns.':body.error||'Email campaign service is temporarily unavailable.';
+  throw new Error(reason);
+}
+if(!Array.isArray(body.campaigns)||!Number.isFinite(Number(body.verifiedRecipients)))throw new Error('The email endpoint returned an unexpected response. Check that this domain routes to the correct backend.');
+adminCapabilities={...adminCapabilities,adminEmailCampaigns:true};
+queueButton.disabled=false;
 emailCampaignState = body;
 const campaigns = body.campaigns || [];
 document.getElementById('email-recipient-count').textContent = Number(body.verifiedRecipients || 0).toLocaleString('en-IN');
@@ -781,11 +797,15 @@ const tooMany = Number(body.verifiedRecipients || 0) > Number(body.maxRecipients
 note.textContent = tooMany ? `There are ${body.verifiedRecipients} verified customers. Create a smaller audience or increase EMAIL_CAMPAIGN_MAX_RECIPIENTS before sending.` : 'Emails are sent only to verified, non-admin customer accounts and are processed by the backend worker.';
 note.className = `mb-4 rounded border p-3 text-sm ${tooMany ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-green-300 bg-green-50 text-green-800'}`;
 list.innerHTML = campaigns.map(item => `<article class="border rounded-lg p-4"><div class="flex flex-col md:flex-row md:items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><b>${escapeHtml(item.name)}</b><span class="tiny rounded px-2 py-1 bg-gray-100">${escapeHtml(item.status)}</span></div><p class="text-sm mt-2">${escapeHtml(item.subject)}</p><p class="tiny text-gray-500 mt-1">${item.scheduledAt ? new Date(item.scheduledAt).toLocaleString('en-IN') : '—'} · ${item.recipientCount || 0} recipients</p><p class="tiny mt-2">Sent ${item.sentCount || 0} · Failed ${item.failedCount || 0}</p>${item.lastError ? `<p class="tiny text-red-600 mt-1">${escapeHtml(item.lastError)}</p>` : ''}</div>${['queued','sending'].includes(item.status) ? `<button onclick="cancelEmailCampaign('${item._id}')" class="px-3 py-2 border border-red-200 text-red-700 rounded tiny font-bold">Cancel</button>` : ''}</div></article>`).join('') || '<p class="text-sm text-gray-500">No email campaigns have been created.</p>';
-} catch (error) { list.innerHTML = `<p class="text-red-600 text-sm">${escapeHtml(error.message)}</p>`; }
+} catch (error) {
+adminCapabilities={...adminCapabilities,adminEmailCampaigns:false};
+document.getElementById('email-runtime-note')?.classList.add('hidden');
+list.innerHTML='<p class="text-red-600 text-sm">'+escapeHtml(error.message)+'</p><p class="text-sm mt-2">No messages have been sent. Resolve the connection and use Refresh to retry.</p>';
+}
 }
 async function queueEmailCampaign() {
 const msg = document.getElementById('email-campaign-msg');
-if (!adminCapabilities?.adminEmailCampaigns) { msg.textContent = 'Deploy the latest backend to enable email campaigns.'; msg.className = 'text-amber-700 text-xs mt-2'; return; }
+if (!emailCampaignState) { msg.textContent = 'Use Refresh to reconnect to the email service before queueing a campaign.'; msg.className = 'text-amber-700 text-xs mt-2'; return; }
 const payload = { name: document.getElementById('email-campaign-name').value.trim(), subject: document.getElementById('email-subject').value.trim(), preheader: document.getElementById('email-preheader').value.trim(), offerText: document.getElementById('email-offer-text').value.trim(), couponCode: document.getElementById('email-coupon-code').value.trim(), expiryText: document.getElementById('email-expiry-text').value.trim(), destinationUrl: document.getElementById('email-destination-url').value.trim(), imageData: emailCampaignImageData, scheduledAt: document.getElementById('email-scheduled-at').value || null, confirm: document.getElementById('email-confirm-campaign').checked };
 if (!payload.name || !payload.subject || !payload.offerText) { msg.textContent = 'Complete the campaign name, subject and offer message.'; msg.className = 'text-red-600 text-xs mt-2'; return; }
 if (!payload.confirm) { msg.textContent = 'Confirm the verified-recipient checkbox before queueing.'; msg.className = 'text-red-600 text-xs mt-2'; return; }
@@ -801,6 +821,7 @@ ensurePromotionAdminUI();
 try {
 const { ok, body } = await adminFetch('/api/admin/coupons');
 if (ok) {
+adminCapabilities={...adminCapabilities,adminCouponMutations:true};
 adminCoupons = body.coupons || [];
 document.getElementById('coupons-tbody').innerHTML = adminCoupons.map(c => `
 <tr class="hover:bg-gray-50 border-b border-gray-100">
@@ -849,7 +870,7 @@ await loadCoupons();
 }
 function syncOfferForm(){const type=document.getElementById('o-type')?.value;document.getElementById('o-quantity-fields')?.classList.toggle('hidden',type!=='buy_x_get_y');document.getElementById('o-discount-fields')?.classList.toggle('hidden',type==='buy_x_get_y');}
 function offerFormPayload(){const list=id=>document.getElementById(id).value.split(',').map(value=>value.trim()).filter(Boolean);return{name:document.getElementById('o-name').value.trim(),code:document.getElementById('o-code').value.trim(),description:document.getElementById('o-description').value.trim(),offerType:document.getElementById('o-type').value,requiredQuantity:Number(document.getElementById('o-required').value)||0,freeQuantity:Number(document.getElementById('o-free').value)||0,discountValue:Number(document.getElementById('o-discount').value)||0,minCartValue:Number(document.getElementById('o-min').value)||0,categories:list('o-categories'),productIds:list('o-products'),variantKeys:list('o-variants'),customerEligibility:document.getElementById('o-eligibility').value,startAt:document.getElementById('o-start').value||null,endAt:document.getElementById('o-end').value||null,priority:Number(document.getElementById('o-priority').value)||0,showInPopup:document.getElementById('o-popup').checked,isActive:document.getElementById('o-active').checked};}
-async function loadOffers(){ensurePromotionAdminUI();if(!adminCapabilities?.adminOffers)return showOutdatedOffersNotice();try{const{ok,body}=await adminFetch('/api/admin/offers');if(!ok)throw new Error(body.error||'Could not load offers');adminOffers=body.offers||[];document.getElementById('offers-list').innerHTML=adminOffers.map(offer=>`<article class="border rounded-lg p-4 flex items-start justify-between gap-3"><div><div class="flex items-center gap-2"><b>${escapeHtml(offer.name)}</b><code class="tiny bg-gray-100 px-2 py-1 rounded">${escapeHtml(offer.code)}</code></div><p class="tiny text-gray-500 mt-1">${escapeHtml(offer.description||'')}</p><div class="tiny mt-2">${offer.offerType==='buy_x_get_y'?`Buy ${offer.requiredQuantity}, get ${offer.freeQuantity}`:offer.offerType==='percentage'?`${offer.discountValue}% off`:`${formatINR(offer.discountValue)} off`} · Minimum ${formatINR(offer.minCartValue||0)} · Priority ${offer.priority||0}</div><div class="tiny mt-1"><span class="${offer.isActive?'text-green-600':'text-gray-400'}">${offer.isActive?'Active':'Inactive'}</span>${offer.showInPopup?' · Popup visible':''}</div></div><div class="flex flex-wrap gap-2 justify-end"><button onclick="editOffer('${offer._id}')" class="px-2 py-1 border rounded tiny text-blue-700">Edit</button><button onclick="toggleOffer('${offer._id}')" class="px-2 py-1 border rounded tiny">${offer.isActive?'Disable':'Enable'}</button><button onclick="deleteOffer('${offer._id}')" class="px-2 py-1 border rounded tiny text-red-600">Delete</button></div></article>`).join('')||'<p class="text-sm text-gray-500">No offers configured.</p>';}catch(err){const list=document.getElementById('offers-list');if(list)list.innerHTML=`<p class="text-red-600 text-sm">${escapeHtml(err.message)}</p>`;}}
+async function loadOffers(){ensurePromotionAdminUI();try{const{ok,body}=await adminFetch('/api/admin/offers');if(!ok)throw new Error(body.error||'Could not load offers');adminCapabilities={...adminCapabilities,adminOffers:true};const createButton=document.querySelector('#offers-admin-section button[onclick="createOffer()"]');if(createButton)createButton.disabled=false;adminOffers=body.offers||[];document.getElementById('offers-list').innerHTML=adminOffers.map(offer=>`<article class="border rounded-lg p-4 flex items-start justify-between gap-3"><div><div class="flex items-center gap-2"><b>${escapeHtml(offer.name)}</b><code class="tiny bg-gray-100 px-2 py-1 rounded">${escapeHtml(offer.code)}</code></div><p class="tiny text-gray-500 mt-1">${escapeHtml(offer.description||'')}</p><div class="tiny mt-2">${offer.offerType==='buy_x_get_y'?`Buy ${offer.requiredQuantity}, get ${offer.freeQuantity}`:offer.offerType==='percentage'?`${offer.discountValue}% off`:`${formatINR(offer.discountValue)} off`} · Minimum ${formatINR(offer.minCartValue||0)} · Priority ${offer.priority||0}</div><div class="tiny mt-1"><span class="${offer.isActive?'text-green-600':'text-gray-400'}">${offer.isActive?'Active':'Inactive'}</span>${offer.showInPopup?' · Popup visible':''}</div></div><div class="flex flex-wrap gap-2 justify-end"><button onclick="editOffer('${offer._id}')" class="px-2 py-1 border rounded tiny text-blue-700">Edit</button><button onclick="toggleOffer('${offer._id}')" class="px-2 py-1 border rounded tiny">${offer.isActive?'Disable':'Enable'}</button><button onclick="deleteOffer('${offer._id}')" class="px-2 py-1 border rounded tiny text-red-600">Delete</button></div></article>`).join('')||'<p class="text-sm text-gray-500">No offers configured.</p>';}catch(err){const list=document.getElementById('offers-list');if(list)list.innerHTML=`<p class="text-red-600 text-sm">${escapeHtml(err.message)}</p>`;}}
 async function createOffer(){const msg=document.getElementById('o-msg');if(!adminCapabilities?.adminOffers){msg.textContent=outdatedBackendMessage();msg.className='text-amber-700 text-xs mt-2';return;}const payload=offerFormPayload();if(!payload.name||!payload.code)return msg.textContent='Name and code are required.';const endpoint=editingOfferId?`/api/admin/offers/${editingOfferId}`:'/api/admin/offers';const{ok,body}=await adminFetch(endpoint,{method:editingOfferId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});msg.textContent=ok?(editingOfferId?'Offer updated.':'Offer created and ready for server validation.'):(body.error||'Could not save offer');msg.className=ok?'text-green-600 text-xs mt-2':'text-red-600 text-xs mt-2';if(ok){cancelOfferEdit();await loadOffers();}}
 function editOffer(id){const offer=adminOffers.find(item=>String(item._id)===String(id));if(!offer)return;editingOfferId=id;const set=(key,value)=>{const el=document.getElementById(key);if(el)el.value=value??'';};set('o-name',offer.name);set('o-code',offer.code);set('o-description',offer.description);set('o-type',offer.offerType);set('o-required',offer.requiredQuantity);set('o-free',offer.freeQuantity);set('o-discount',offer.discountValue);set('o-min',offer.minCartValue);set('o-categories',(offer.categories||[]).join(', '));set('o-products',(offer.productIds||[]).join(', '));set('o-variants',(offer.variantKeys||[]).join(', '));set('o-eligibility',offer.customerEligibility||'all');set('o-start',localDateTime(offer.startAt));set('o-end',localDateTime(offer.endAt));set('o-priority',offer.priority||0);document.getElementById('o-popup').checked=!!offer.showInPopup;document.getElementById('o-active').checked=offer.isActive!==false;document.getElementById('o-form-title').textContent=`Edit ${offer.name}`;document.getElementById('o-submit').textContent='Save Offer Changes';document.getElementById('o-cancel-edit').classList.remove('hidden');syncOfferForm();document.getElementById('o-form-title').scrollIntoView({behavior:'smooth',block:'start'});}
 function cancelOfferEdit(){editingOfferId=null;['o-name','o-code','o-description','o-required','o-free','o-discount','o-min','o-categories','o-products','o-variants','o-start','o-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('o-type').value='buy_x_get_y';document.getElementById('o-eligibility').value='all';document.getElementById('o-priority').value='0';document.getElementById('o-popup').checked=false;document.getElementById('o-active').checked=true;document.getElementById('o-form-title').textContent='Create Working Offer';document.getElementById('o-submit').textContent='Create Offer';document.getElementById('o-cancel-edit').classList.add('hidden');syncOfferForm();}
@@ -1119,8 +1140,8 @@ function orderCatalogueVariants(product) {
 const productId = String(product?._id || product?.id || product?.legacyId || '');
 const productName = String(product?.name || '').trim().toLowerCase();
 const rows = (inventoryRows || []).filter(row => String(row.productId || '') === productId || String(row.name || '').trim().toLowerCase() === productName);
-if (rows.length) return rows.map(row => ({ sizeLabel: row.sizeLabel || 'Default', variantKey: row.variantKey || 'default', price: Math.round(Number(row.basePrice || product.price || 0) * Number(row.priceMultiplier || 1)), image: row.image || product.images?.[0] || product.image || '' }));
-return adminInventoryVariants(product).map(variant => ({ sizeLabel: variant.sizeLabel || 'Default', variantKey: variant.variantKey || 'default', price: Math.round(Number(product.price || 0) * Number(variant.priceMultiplier || 1)), image: variant.image || product.images?.[0] || product.image || '' }));
+if (rows.length) return rows.map(row => ({ sizeLabel: row.sizeLabel || 'Default', variantKey: row.variantKey || 'default', price: inventorySellingPrice(row), image: row.image || product.images?.[0] || product.image || '' }));
+return (product.sizes?.length?product.sizes.map(size=>({...size,sizeLabel:size.value+' '+size.unit,variantKey:String(size.value)+String(size.unit).toLowerCase().replace(/\s+/g,'')})):adminInventoryVariants(product)).map(variant => ({ sizeLabel: variant.sizeLabel || 'Default', variantKey: variant.variantKey || 'default', price: Number(variant.websitePrice)>0?Number(variant.websitePrice):Math.round(Number(product.price || 0) * Number(variant.priceMultiplier || 1)), image: variant.image || product.images?.[0] || product.image || '' }));
 }
 function ensureOrderProductPickerUI() {
 if (document.getElementById('order-product-picker-modal')) return;
@@ -1991,27 +2012,145 @@ document.getElementById('products-tbody').innerHTML = `<tr><td colspan="7" class
 }
 }
 const ADMIN_FACTOR_SIZE_OPTIONS={Perfume:[['8ml','8 ml'],['20ml','20 ml'],['30ml','30 ml'],['50ml','50 ml'],['100ml','100 ml'],['30mlgift','30 ml Gift'],['50mlgift','50 ml Gift'],['100mlgift','100 ml Gift']],Attar:[['3ml','3 ml'],['6ml','6 ml'],['8ml','8 ml'],['12ml','12 ml']]};
-function syncSharedFactorSizes(resetToDefault=false){const category=document.getElementById('inventory-factor-category');const size=document.getElementById('inventory-factor-size');if(!category||!size)return;const options=ADMIN_FACTOR_SIZE_OPTIONS[category.value]||ADMIN_FACTOR_SIZE_OPTIONS.Perfume;const previous=size.value;size.innerHTML=options.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');size.value=!resetToDefault&&options.some(([value])=>value===previous)?previous:options[0][0];}
-function renderInventoryProducts() {
-ensureInventoryBulkControls();
-const rows=visibleInventoryRows();
-document.getElementById('inventory-selection-count').textContent=`${selectedInventoryIds.size} variant${selectedInventoryIds.size===1?'':'s'} selected`;
-document.getElementById('inventory-select-all').checked=!!rows.length&&rows.every(item=>selectedInventoryIds.has(String(item._id)));
-document.getElementById('products-tbody').innerHTML = rows.map(item => {
-const id=String(item._id),stock=Number(item.stock??12),available=Math.max(0,stock-Number(item.reserved||0)),basePrice=Number(item.basePrice||0),priceFactor=Number(item.priceMultiplier||1),sellingPrice=Math.round(basePrice*priceFactor);
-const state=available===0?'<span class="inline-flex px-2 py-1 rounded bg-red-100 text-red-700 font-bold">OUT OF STOCK</span>':available<=Number(item.lowStockThreshold||4)?'<span class="inline-flex px-2 py-1 rounded bg-amber-100 text-amber-700 font-bold">LOW STOCK</span>':'<span class="inline-flex px-2 py-1 rounded bg-green-100 text-green-700 font-bold">IN STOCK</span>';
-return `<tr class="hover:bg-gray-50 border-b border-gray-100 ${selectedInventoryIds.has(id)?'bg-yellow-50':''}"><td class="p-3"><input type="checkbox" aria-label="Select ${escapeHtml(item.name)} ${escapeHtml(item.sizeLabel)}" ${selectedInventoryIds.has(id)?'checked':''} onchange="toggleInventorySelection('${id}',this.checked)"></td><td class="p-3"><img src="${productImage(item)}" class="w-12 h-12 object-contain rounded border bg-white" onerror="this.style.display='none'"></td><td class="p-3"><div class="font-semibold text-sm">${escapeHtml(item.name)}</div><div class="tiny text-gray-500">${escapeHtml(item.sizeLabel||'Default')} · ${escapeHtml(item.variantKey)}</div></td><td class="p-3 tiny">${escapeHtml(item.category||'')}</td><td class="p-3 tiny font-bold">${escapeHtml(item.sizeLabel||'Default')}</td><td class="p-3"><label class="tiny text-gray-500">Base ₹<input id="base-price-${id}" type="number" min="1" step="1" value="${basePrice}" class="w-full p-1 border rounded text-black"></label><div class="tiny text-gray-500 mt-1">Shared factor: ${priceFactor}</div><div class="tiny font-bold text-green-700 mt-1">Selling price: ₹${sellingPrice.toLocaleString('en-IN')}</div></td><td class="p-3"><div class="flex items-center gap-2"><input id="stock-${id}" type="number" min="0" step="1" value="${stock}" class="w-20 p-1 border rounded tiny"><button onclick="saveInventoryStock('${id}')" class="px-2 py-1 border rounded tiny font-bold">Save</button></div><div class="tiny text-gray-500 mt-1">${item.reserved||0} reserved · ${available} available</div></td><td class="p-3 tiny">${state}</td></tr>`;
-}).join('') || `<tr><td colspan="8" class="p-4 text-gray-500">No matching product variants.</td></tr>`;
+function syncSharedFactorSizes(resetToDefault=false){const category=document.getElementById('inventory-factor-category');const size=document.getElementById('inventory-factor-size');if(!category||!size)return;const options=[...new Map([...(ADMIN_FACTOR_SIZE_OPTIONS[category.value]||[]),...inventoryRows.filter(row=>row.category===category.value&&row.variantKey!=='shared').map(row=>[row.variantKey,row.sizeLabel])]).entries()];const previous=size.value;size.innerHTML=options.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');size.value=!resetToDefault&&options.some(([value])=>value===previous)?previous:options[0][0];}
+function inventorySellingPrice(item) {
+  return Number(item.websitePrice)>0 ? Number(item.websitePrice) : Math.round(Number(item.basePrice||0)*Number(item.priceMultiplier||1));
+}
+function inventoryMrp(item) {
+  const price=inventorySellingPrice(item);
+  return Math.max(price,Number(item.mrp)>0?Number(item.mrp):Math.ceil(price*1.35/100)*100-1);
 }
 function inventoryAvailable(item){return Math.max(0,Number(item.stock??12)-Number(item.reserved||0));}
-function visibleInventoryRows(){const query=(document.getElementById('inventory-search')?.value||'').trim().toLowerCase(),status=document.getElementById('inventory-status-filter')?.value||'all',sort=document.getElementById('inventory-sort')?.value||'name';const rows=inventoryRows.filter(item=>{const available=inventoryAvailable(item),threshold=Number(item.lowStockThreshold||4),matchesQuery=!query||`${item.name} ${item.sizeLabel} ${item.category} ${item.variantKey}`.toLowerCase().includes(query),matchesStatus=status==='all'||(status==='out'&&available===0)||(status==='critical'&&available>0&&available<=2)||(status==='low'&&available>0&&available<=threshold)||(status==='in'&&available>threshold);return matchesQuery&&matchesStatus;});rows.sort((a,b)=>sort==='stock-asc'?inventoryAvailable(a)-inventoryAvailable(b)||a.name.localeCompare(b.name):sort==='stock-desc'?inventoryAvailable(b)-inventoryAvailable(a)||a.name.localeCompare(b.name):sort==='size'?String(a.sizeLabel).localeCompare(String(b.sizeLabel),undefined,{numeric:true})||a.name.localeCompare(b.name):a.name.localeCompare(b.name)||String(a.sizeLabel).localeCompare(String(b.sizeLabel),undefined,{numeric:true}));return rows;}
-function ensureInventoryBulkControls(){const table=document.getElementById('products-tbody')?.closest('.overflow-auto');if(!table||document.getElementById('inventory-bulk-controls'))return;table.insertAdjacentHTML('beforebegin',`<div id="inventory-bulk-controls" class="mb-4 p-4 border border-yellow-200 bg-yellow-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[auto_auto_minmax(220px,1fr)_180px_180px_auto] items-center gap-3"><label class="flex items-center gap-2 text-sm font-bold"><input id="inventory-select-all" type="checkbox" onchange="selectAllVisibleInventory(this.checked)"> Select all visible</label><button onclick="clearInventorySelection()" class="px-3 py-2 border bg-white rounded tiny font-bold">Clear selection</button><input id="inventory-search" oninput="renderInventoryProducts()" placeholder="Search product, category or size" class="p-2 border rounded min-w-0"><select id="inventory-status-filter" onchange="renderInventoryProducts()" class="p-2 border rounded bg-white"><option value="all">All stock statuses</option><option value="out">Out of stock</option><option value="critical">Only 1–2 left</option><option value="low">Low stock</option><option value="in">In stock</option></select><select id="inventory-sort" onchange="renderInventoryProducts()" class="p-2 border rounded bg-white"><option value="name">Sort: Product name</option><option value="stock-asc">Sort: Quantity low to high</option><option value="stock-desc">Sort: Quantity high to low</option><option value="size">Sort: Size</option></select><strong id="inventory-selection-count" class="text-sm whitespace-nowrap">0 variants selected</strong></div><div class="mt-3 pt-3 border-t border-yellow-200 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 items-end"><label class="tiny font-bold">Shared factor category<select id="inventory-factor-category" onchange="syncSharedFactorSizes(true)" class="w-full p-2 border rounded bg-white"><option>Perfume</option><option>Attar</option></select></label><label class="tiny font-bold">Shared factor size<select id="inventory-factor-size" class="w-full p-2 border rounded bg-white"></select></label><label class="tiny font-bold">Factor<input id="inventory-shared-factor" type="number" min="0.000001" step="0.000001" placeholder="e.g. 0.29" class="w-full p-2 border rounded"></label><button onclick="applySharedInventoryFactor()" class="px-4 py-2 bg-yellow-500 text-black rounded font-bold">Apply factor to all</button></div><div class="mt-3 pt-3 border-t border-yellow-200 flex flex-wrap items-center gap-2"><span class="tiny font-bold uppercase">Selected stock</span><input id="inventory-bulk-stock" type="number" min="0" step="1" value="12" placeholder="Stock quantity" class="p-2 border rounded w-36"><button onclick="applyBulkInventoryStock()" class="px-4 py-2 bg-black text-yellow-400 rounded font-bold">Apply stock</button><span class="tiny font-bold uppercase ml-2">Selected base price</span><input id="inventory-bulk-base-price" type="number" min="1" step="1" placeholder="e.g. 499" class="p-2 border rounded w-36"><button onclick="applyBulkInventoryBasePrice()" class="px-4 py-2 border border-black rounded font-bold">Apply price</button><span class="tiny text-gray-600">Factors are shared by category and size. Base price updates every size of each selected product.</span></div></div>`);syncSharedFactorSizes();const head=table.querySelector('thead tr');if(head){head.innerHTML='<th class="p-3 w-10">Select</th><th class="p-3">Image</th><th class="p-3">Product / Variant</th><th class="p-3">Category</th><th class="p-3">Size</th><th class="p-3">Pricing</th><th class="p-3">Stock</th><th class="p-3">Status</th>';}}
+function visibleInventoryRows() {
+  const value=id=>document.getElementById(id)?.value||'';
+  const query=value('inventory-search').trim().toLowerCase(),status=value('inventory-status-filter')||'all';
+  const category=value('inventory-category-filter'),size=value('inventory-size-filter'),visibility=value('inventory-visibility-filter');
+  const rows=inventoryRows.filter(item=>{
+    const available=inventoryAvailable(item),threshold=Number(item.lowStockThreshold||4);
+    return (!query||[item.name,item.sizeLabel,item.category].join(' ').toLowerCase().includes(query))
+      &&(!category||item.category===category)&&(!size||item.variantKey===size)
+      &&(!visibility||(visibility==='visible'?item.isStorefrontVisible!==false:item.isStorefrontVisible===false))
+      &&(status==='all'||(status==='out'&&available===0)||(status==='critical'&&available>0&&available<=2)||(status==='low'&&available>0&&available<=threshold)||(status==='in'&&available>threshold));
+  });
+  const sort=value('inventory-sort');
+  return rows.sort((a,b)=>(sort==='stock-asc'?inventoryAvailable(a)-inventoryAvailable(b):sort==='stock-desc'?inventoryAvailable(b)-inventoryAvailable(a):0)||String(a.name).localeCompare(String(b.name))||String(a.sizeLabel).localeCompare(String(b.sizeLabel),undefined,{numeric:true}));
+}
+function inventoryFiltersChanged(){selectedInventoryIds.clear();renderInventoryProducts();}
+function selectedVisibleInventoryIds(){
+  return visibleInventoryRows().filter(item=>selectedInventoryIds.has(String(item._id))).map(item=>String(item._id));
+}
+function ensureInventoryBulkControls() {
+  const table=document.getElementById('products-tbody')?.closest('.overflow-auto');
+  if(!table||document.getElementById('inventory-bulk-controls'))return;
+  table.classList.add('inventory-table-scroll');table.querySelector('table').classList.add('inventory-workspace-table');
+  const input=(id,label,placeholder='')=>'<label class="text-sm">'+label+'<input id="'+id+'" type="number" min="0.01" step="0.01" placeholder="'+placeholder+'" class="w-full p-2 border rounded bg-white"></label>';
+  table.insertAdjacentHTML('beforebegin',
+    '<div id="inventory-bulk-controls" class="mb-4 p-4 border rounded-lg bg-yellow-50">'+
+    '<h3 class="font-bold mb-2">Prices, sizes & stock</h3><p class="text-sm text-gray-600 mb-3">Filter the catalogue, select the matching sizes and apply changes. Changing filters clears your selection. Direct prices affect selected sizes only.</p>'+
+    '<div class="grid grid-cols-1 md:grid-cols-3 gap-2">'+
+    '<input id="inventory-search" aria-label="Search catalogue" oninput="inventoryFiltersChanged()" placeholder="Search products" class="p-2 border rounded">'+
+    '<select id="inventory-category-filter" aria-label="Category" onchange="inventoryFiltersChanged()" class="p-2 border rounded"></select>'+
+    '<select id="inventory-size-filter" aria-label="Size" onchange="inventoryFiltersChanged()" class="p-2 border rounded"></select>'+
+    '<select id="inventory-visibility-filter" aria-label="Product page visibility" onchange="inventoryFiltersChanged()" class="p-2 border rounded"><option value="">All visibility</option><option value="visible">Shown on product page</option><option value="hidden">Hidden from product page</option></select>'+
+    '<select id="inventory-status-filter" aria-label="Stock status" onchange="inventoryFiltersChanged()" class="p-2 border rounded"><option value="all">All stock statuses</option><option value="out">Out of stock</option><option value="critical">Only 1–2 left</option><option value="low">Low stock</option><option value="in">In stock</option></select>'+
+    '<select id="inventory-sort" aria-label="Sort variants" onchange="renderInventoryProducts()" class="p-2 border rounded"><option value="name">Product name</option><option value="stock-asc">Stock: low to high</option><option value="stock-desc">Stock: high to low</option></select></div>'+
+    '<div class="flex flex-wrap gap-3 items-center my-3"><label><input id="inventory-select-all" type="checkbox" onchange="selectAllVisibleInventory(this.checked)"> Select filtered sizes</label><button type="button" onclick="clearInventorySelection()" class="border rounded p-2 bg-white">Clear</button><strong id="inventory-selection-count" aria-live="polite"></strong></div>'+
+    '<div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">'+input('inventory-bulk-website-price','Website price ₹','Leave blank to keep')+input('inventory-bulk-mrp','MRP ₹','Leave blank to keep')+
+    '<button type="button" onclick="applyBulkInventoryPricing()" class="p-3 rounded bg-black text-yellow-400 font-bold">Apply price / MRP</button></div>'+
+    '<div class="flex flex-wrap gap-2 mt-3"><button onclick="applyBulkInventoryVisibility(false)" class="p-2 rounded border bg-white">Hide selected sizes</button><button onclick="applyBulkInventoryVisibility(true)" class="p-2 rounded border bg-white">Show selected sizes</button><button onclick="resetInventoryPrices()" class="p-2 rounded border bg-white">Use factor-based prices</button></div>'+
+    '<p class="text-sm text-gray-600 mt-2">Hidden 8 ml and 20 ml perfume sizes remain available in Custom Sets. They cannot be bought separately.</p>'+
+    '<div class="flex flex-wrap gap-2 items-center mt-3"><label>Stock <input id="inventory-bulk-stock" type="number" min="0" step="1" placeholder="Quantity" class="w-28 border p-2 rounded"></label><button onclick="applyBulkInventoryStock()" class="p-2 border rounded bg-white">Apply stock</button></div>'+
+    '<details class="mt-4"><summary class="cursor-pointer font-bold">Advanced: base prices & shared factors</summary><p class="text-sm my-2">Base prices affect every size of selected products. Factors affect every product in the selected category/size. Direct website-price overrides stay unchanged.</p>'+
+    '<div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">'+input('inventory-bulk-base-price','Product base price ₹')+'<button onclick="applyBulkInventoryBasePrice()" class="border p-2 rounded">Apply base price</button></div>'+
+    '<div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-3"><select id="inventory-factor-category" onchange="syncSharedFactorSizes(true)" aria-label="Factor category" class="border p-2 rounded"><option>Perfume</option><option>Attar</option></select><select id="inventory-factor-size" aria-label="Factor size" class="border p-2 rounded"></select><input id="inventory-shared-factor" aria-label="Factor" type="number" min="0.000001" step="0.000001" placeholder="Factor" class="border p-2 rounded"><button onclick="applySharedInventoryFactor()" class="border p-2 rounded">Apply shared factor</button></div></details></div>'+
+    '<details id="inventory-new-size-controls" class="mb-4 p-4 border rounded-lg bg-white"><summary class="font-bold cursor-pointer">Add a new product size</summary><div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">'+
+    '<label class="text-sm">Product<select id="inventory-new-size-product" class="w-full p-2 border rounded"></select></label><label class="text-sm">Size<input id="inventory-new-size-label" placeholder="e.g. 10 ml" class="w-full p-2 border rounded"></label>'+
+    input('inventory-new-size-price','Website price ₹')+input('inventory-new-size-mrp','MRP ₹')+
+    '<label class="text-sm">Initial stock<input id="inventory-new-size-stock" type="number" min="0" step="1" value="0" class="w-full p-2 border rounded"></label></div>'+
+    '<div class="flex flex-wrap gap-3 items-center mt-3"><label><input id="inventory-new-size-visible" type="checkbox" checked> Show on product pages</label><button onclick="addInventorySize()" class="p-3 bg-black text-yellow-400 rounded font-bold">Add size</button></div><p id="inventory-new-size-message" class="text-sm mt-2" role="status"></p></details>');
+  table.querySelector('thead tr').innerHTML='<th class="p-3">Select</th><th class="p-3">Product / size</th><th class="p-3">Website price & MRP</th><th class="p-3">Availability</th><th class="p-3">Save</th>';
+  syncSharedFactorSizes();
+}
+function refreshInventoryOptions() {
+  const options=(id,values,label)=>{
+    const el=document.getElementById(id);if(!el)return;
+    const previous=el.value;
+    el.innerHTML='<option value="">'+label+'</option>'+values.map(([value,text])=>'<option value="'+escapeHtml(value)+'">'+escapeHtml(text)+'</option>').join('');
+    if(values.some(([value])=>value===previous))el.value=previous;
+  };
+  options('inventory-category-filter',[...new Set(inventoryRows.map(i=>i.category))].filter(Boolean).sort().map(c=>[c,c]),'All categories');
+  options('inventory-size-filter',[...new Map(inventoryRows.map(i=>[i.variantKey,i.sizeLabel])).entries()].sort((a,b)=>a[1].localeCompare(b[1],undefined,{numeric:true})),'All sizes');
+  const products=[...new Map(inventoryRows.filter(i=>!i.sharedStock&&i.variantKey!=='shared').map(i=>[String(i.productId),i])).values()].sort((a,b)=>a.name.localeCompare(b.name));
+  options('inventory-new-size-product',products.map(i=>[String(i.productId),i.name+' · '+i.category]),'Choose product');
+}
+function renderInventoryProducts() {
+  ensureInventoryBulkControls();refreshInventoryOptions();
+  const rows=visibleInventoryRows(),ids=selectedVisibleInventoryIds();
+  document.getElementById('inventory-selection-count').textContent=ids.length+' selected / '+rows.length+' matching sizes';
+  const all=document.getElementById('inventory-select-all');all.checked=!!rows.length&&ids.length===rows.length;all.indeterminate=ids.length>0&&ids.length<rows.length;
+  document.getElementById('products-tbody').innerHTML=rows.map(item=>{
+    const id=String(item._id),available=inventoryAvailable(item),price=inventorySellingPrice(item),mrp=inventoryMrp(item);
+    return '<tr class="border-b '+(selectedInventoryIds.has(id)?'bg-yellow-50':'')+'"><td class="p-3"><input type="checkbox" aria-label="Select '+escapeHtml(item.name+' '+item.sizeLabel)+'" '+(selectedInventoryIds.has(id)?'checked':'')+' onchange="toggleInventorySelection(\''+id+'\',this.checked)"></td>'+
+    '<td class="p-3"><b>'+escapeHtml(item.name)+'</b><div class="text-sm">'+escapeHtml(item.sizeLabel)+' · '+escapeHtml(item.category)+'</div><small class="text-gray-500">'+(Number(item.websitePrice)>0?'Direct price':'Factor-based price')+'</small></td>'+
+    '<td class="p-3" style="min-width:170px"><label class="block text-sm">Website ₹<input id="website-price-'+id+'" type="number" min="0.01" step="0.01" value="'+price+'" class="w-full p-2 border rounded"></label><label class="block text-sm mt-2">MRP ₹<input id="mrp-'+id+'" type="number" min="0.01" step="0.01" value="'+mrp+'" class="w-full p-2 border rounded"></label></td>'+
+    '<td class="p-3" style="min-width:180px"><label class="block text-sm">Stock<input id="stock-'+id+'" type="number" min="0" step="1" value="'+Number(item.stock??12)+'" class="w-24 ml-2 p-2 border rounded"></label><div class="text-sm my-2">'+available+' available · '+Number(item.reserved||0)+' reserved</div><label class="text-sm"><input id="visible-'+id+'" type="checkbox" '+(item.isStorefrontVisible!==false?'checked':'')+'> Show on product page</label></td>'+
+    '<td class="p-3"><button onclick="saveInventoryStock(\''+id+'\')" class="p-3 bg-black text-yellow-400 rounded">Save size</button></td></tr>';
+  }).join('')||'<tr><td colspan="5" class="p-4">No matching sizes.</td></tr>';
+}
 function toggleInventorySelection(id,checked){if(checked)selectedInventoryIds.add(String(id));else selectedInventoryIds.delete(String(id));renderInventoryProducts();}
 function selectAllVisibleInventory(checked){visibleInventoryRows().forEach(item=>checked?selectedInventoryIds.add(String(item._id)):selectedInventoryIds.delete(String(item._id)));renderInventoryProducts();}
 function clearInventorySelection(){selectedInventoryIds.clear();renderInventoryProducts();}
-async function applyBulkInventoryStock(){const stock=Number(document.getElementById('inventory-bulk-stock')?.value);if(!selectedInventoryIds.size)return alert('Select at least one product size.');if(!Number.isInteger(stock)||stock<0)return alert('Enter a whole stock quantity of 0 or more.');if(!confirm(`Set stock to ${stock} for ${selectedInventoryIds.size} selected variant(s)?`))return;const{ok,body}=await adminFetch('/api/admin/inventory/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[...selectedInventoryIds],stock})});if(!ok)return alert(body.error||'Could not update selected stock');selectedInventoryIds.clear();await syncAndLoadInventory();renderInventoryProducts();}
-async function applyBulkInventoryBasePrice(){const basePrice=Number(document.getElementById('inventory-bulk-base-price')?.value);if(!selectedInventoryIds.size)return alert('Select at least one product size.');if(!Number.isFinite(basePrice)||basePrice<=0)return alert('Enter a valid base price.');if(!confirm(`Set base price to ₹${basePrice} for every size of ${selectedInventoryIds.size} selected product variant(s)?`))return;const{ok,body}=await adminFetch('/api/admin/inventory/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[...selectedInventoryIds],basePrice})});if(!ok)return alert(body.error||'Could not update selected prices');selectedInventoryIds.clear();await syncAndLoadInventory();renderInventoryProducts();}
-async function applySharedInventoryFactor(){const category=document.getElementById('inventory-factor-category')?.value;const variantKey=document.getElementById('inventory-factor-size')?.value;const priceMultiplier=Number(document.getElementById('inventory-shared-factor')?.value);if(!Number.isFinite(priceMultiplier)||priceMultiplier<=0)return alert('Enter a valid shared size factor.');if(!confirm(`Apply factor ${priceMultiplier} to every ${category} ${variantKey} product?`))return;const{ok,body}=await adminFetch('/api/admin/inventory/factor',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,variantKey,priceMultiplier})});if(!ok)return alert(body.error||'Could not update shared factor');await syncAndLoadInventory();renderInventoryProducts();alert(`Shared factor updated for ${body.updated||0} variants.`);}
+async function editSelectedInventory(changes,description) {
+  const ids=selectedVisibleInventoryIds();
+  if(!ids.length)return alert('Select at least one filtered size.');
+  if(!confirm(description+' for '+ids.length+' selected size(s)?'))return;
+  try {
+    const {ok,body}=await adminFetch('/api/admin/inventory/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids,...changes})});
+    if(!ok)throw new Error(body.error||'Could not save changes');
+    await syncAndLoadInventory();selectedInventoryIds.clear();renderInventoryProducts();
+  } catch(error){alert(error.message);}
+}
+function applyBulkInventoryPricing(){
+  const price=document.getElementById('inventory-bulk-website-price').value.trim(),mrp=document.getElementById('inventory-bulk-mrp').value.trim(),changes={};
+  if(price)changes.websitePrice=Number(price);if(mrp)changes.mrp=Number(mrp);
+  if(!Object.keys(changes).length)return alert('Enter a website price, MRP, or both.');
+  if(Object.values(changes).some(value=>!Number.isFinite(value)||value<=0))return alert('Prices must be greater than zero.');
+  return editSelectedInventory(changes,'Apply '+(price?'website price ₹'+price+' ':'')+(mrp?'MRP ₹'+mrp:''));
+}
+function applyBulkInventoryVisibility(visible){return editSelectedInventory({isStorefrontVisible:visible},visible?'Show on product pages':'Hide from product pages (keep Custom Set availability)');}
+function resetInventoryPrices(){return editSelectedInventory({websitePrice:null},'Restore factor-based website prices; keep MRP unchanged');}
+function applyBulkInventoryStock(){
+  const value=document.getElementById('inventory-bulk-stock').value;
+  if(value===''||!Number.isInteger(Number(value))||Number(value)<0)return alert('Enter a whole stock quantity of 0 or more.');
+  return editSelectedInventory({stock:Number(value)},'Set stock to '+value);
+}
+function applyBulkInventoryBasePrice(){
+  const value=Number(document.getElementById('inventory-bulk-base-price').value);
+  if(!Number.isFinite(value)||value<=0)return alert('Enter a valid base price.');
+  return editSelectedInventory({basePrice:value},'Set product-wide base price to ₹'+value+' (affects all sizes, except direct overrides)');
+}
+async function addInventorySize() {
+  const value=id=>document.getElementById(id).value;
+  const msg=document.getElementById('inventory-new-size-message');
+  const payload={productId:value('inventory-new-size-product'),sizeLabel:value('inventory-new-size-label').trim(),websitePrice:Number(value('inventory-new-size-price')),mrp:Number(value('inventory-new-size-mrp')),stock:Number(value('inventory-new-size-stock')),isStorefrontVisible:document.getElementById('inventory-new-size-visible').checked};
+  msg.textContent='Saving…';
+  try {
+    const {ok,body}=await adminFetch('/api/admin/inventory/size',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!ok)throw new Error(body.error||'Could not add size');
+    await syncAndLoadInventory();renderInventoryProducts();msg.textContent=payload.sizeLabel+' added. Initial stock: '+payload.stock+'.';
+    document.getElementById('inventory-new-size-label').value='';
+  }catch(error){msg.textContent=error.message;}
+}
+async function applySharedInventoryFactor(){
+  const category=document.getElementById('inventory-factor-category').value,variantKey=document.getElementById('inventory-factor-size').value,priceMultiplier=Number(document.getElementById('inventory-shared-factor').value);
+  if(!Number.isFinite(priceMultiplier)||priceMultiplier<=0)return alert('Enter a valid factor.');
+  if(!confirm('Apply factor '+priceMultiplier+' to all '+category+' '+variantKey+' variants? Direct prices remain unchanged.'))return;
+  try {
+    const {ok,body}=await adminFetch('/api/admin/inventory/factor',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,variantKey,priceMultiplier})});
+    if(!ok)throw new Error(body.error||'Could not update factor');
+    await syncAndLoadInventory();renderInventoryProducts();
+  }catch(error){alert(error.message);}
+}
 function productImage(product) {
 const img = product.images?.[0] || product.image || '';
 if (!img) return '';
@@ -2037,30 +2176,26 @@ hardcodedProducts = [];
 }
 }
 async function syncAndLoadInventory() {
-const seenIds=new Set(),seenNames=new Set();
-const products=[...hardcodedProducts,...adminProducts.map(product=>({...product,id:product._id,source:'backend'}))].filter(product=>{const id=String(product.id||product._id),nameKey=`${product.category||product.type||'Perfume'}:${product.name||''}`.trim().toLowerCase();if(!id||seenIds.has(id)||seenNames.has(nameKey))return false;seenIds.add(id);seenNames.add(nameKey);return true;}).map(product=>({productId:String(product.id||product._id),name:product.name,category:product.category||product.type||'Perfume',image:product.images?.[0]||product.image||'',basePrice:Number(product.price||0),sharedStock:!!product.sharedStock,variants:adminInventoryVariants(product)}));
-try {
-if (products.length) {const sync=await adminFetch('/api/admin/inventory/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products }) });if(!sync.ok)throw new Error(sync.body.error||'Could not initialize product stock');}
-const { ok, body } = await adminFetch('/api/admin/inventory');
-if (!ok) throw new Error(body.error || 'Could not load inventory');
-inventoryRows = body.inventory || [];
-inventoryByProductId = new Map(inventoryRows.map(item => [`${item.productId}:${item.variantKey}`, item]));
-} catch (err) {
-console.warn('Inventory unavailable', err);
-inventoryRows = [];
-throw err;
+  const sync=await adminFetch('/api/admin/inventory/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  if(!sync.ok)throw new Error(sync.body.error||'Could not initialize inventory');
+  const {ok,body}=await adminFetch('/api/admin/inventory');
+  if(!ok||!Array.isArray(body.inventory))throw new Error(body.error||'Invalid inventory response');
+  inventoryRows=body.inventory;
+  inventoryByProductId=new Map(inventoryRows.map(item=>[item.productId+':'+item.variantKey,item]));
 }
-}
-async function saveInventoryStock(productId) {
-const stock = Number(document.getElementById(`stock-${productId}`)?.value);
-const basePrice = Number(document.getElementById(`base-price-${productId}`)?.value);
-if(!Number.isInteger(stock)||stock<0)return alert('Stock must be a whole number of 0 or more.');
-if(!Number.isFinite(basePrice)||basePrice<=0)return alert('Base price must be greater than zero.');
-const { ok, body } = await adminFetch(`/api/admin/inventory/${encodeURIComponent(productId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stock,basePrice }) });
-if (!ok) return alert(body.error || 'Could not save stock or pricing');
-await syncAndLoadInventory();
-renderInventoryProducts();
-alert('Stock and pricing saved. Storefront and checkout now use these values.');
+async function saveInventoryStock(id) {
+  const stock=Number(document.getElementById('stock-'+id).value),websitePrice=Number(document.getElementById('website-price-'+id).value),mrp=Number(document.getElementById('mrp-'+id).value),isStorefrontVisible=document.getElementById('visible-'+id).checked;
+  const original=inventoryRows.find(item=>String(item._id)===String(id));
+  const payload={stock,isStorefrontVisible};
+  // Saving stock or visibility alone must not turn automatic prices into overrides.
+  if(websitePrice!==inventorySellingPrice(original))payload.websitePrice=websitePrice;
+  if(mrp!==inventoryMrp(original))payload.mrp=mrp;
+  if(!Number.isInteger(stock)||stock<0||!Number.isFinite(websitePrice)||websitePrice<=0||!Number.isFinite(mrp)||mrp<websitePrice)return alert('Check stock and prices. MRP must be at least the website price.');
+  try {
+    const {ok,body}=await adminFetch('/api/admin/inventory/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!ok)throw new Error(body.error||'Could not save size');
+    await syncAndLoadInventory();renderInventoryProducts();
+  }catch(error){alert(error.message);}
 }
 function adminInventoryVariants(product){const categoryName=String(product.category||product.type||'Perfume'),category=categoryName.toLowerCase(),images=product.images||[],supplied=new Map((product.sizes||[]).map(size=>[`${Number(size.value)}ml${/gift/i.test(size.unit||'')?'gift':''}`,Number(size.priceMultiplier)]));if(product.sharedStock)return[{sizeLabel:'Shared stock',variantKey:'shared',image:images[0]||product.image||'',priceMultiplier:1}];const labels=category.includes('attar')?['3 ml','6 ml','8 ml','12 ml']:category.includes('perfume')?['8 ml','20 ml','30 ml','50 ml','100 ml','30 ml Gift','50 ml Gift','100 ml Gift']:['Default'];const indexes=category.includes('attar')?[0,0,0,0]:[1,2,3,4,5,6,7,8];return labels.map((sizeLabel,index)=>{const variantKey=sizeLabel==='Default'?'default':`${sizeLabel.match(/[\d.]+/)?.[0]}ml${/gift/i.test(sizeLabel)?'gift':''}`;return{sizeLabel,variantKey,image:images[indexes[index]]||images[0]||product.image||'',priceMultiplier:supplied.get(variantKey)||ADMIN_PRICE_FACTORS[categoryName]?.[variantKey]||1};});}
 function getGiftProducts() {

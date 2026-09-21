@@ -318,7 +318,15 @@ selectedSize = 'Set';
 return;
 }
 sizeContainer.classList.remove('hidden');
-product.sizes.forEach((s, index) => {
+const storefrontSizes = product.sizes.filter(size => size?.isStorefrontVisible !== false);
+if (!storefrontSizes.length) {
+sizeContainer.classList.remove('hidden');
+sizeButtons.textContent = 'Available only in Custom Sets.';
+selectedSize = '';
+currentPrice = 0;
+return;
+}
+storefrontSizes.forEach((s, index) => {
 const btn = document.createElement('button');
 btn.className =
 'size-btn px-3 py-2 border border-gray-300 rounded text-sm hover:border-yellow-400 transition';
@@ -328,7 +336,7 @@ selectedSize = `${s.value}${s.unit}`;
 const pricing = getPricing(
 product.price,
 s.priceMultiplier,
-product.mrp
+Number(s.mrp || 0), s.websitePrice
 );
 currentPrice = pricing.sellingPrice;
 updatePriceDisplay(
@@ -1133,7 +1141,7 @@ No products found.
 return;
 }
 list.forEach(product => {
-const pricing = getPricing(product.price, 1, product.mrp);
+const pricing = getProductDisplayPricing(product);
 const imageUrl = getDefaultProductImage(product);
 const imageFallbacks = [
 imageUrl,
@@ -1326,11 +1334,11 @@ const sizes = Array.isArray(product.sizes) && product.sizes.length
 ? product.sizes
 : getSizesByCategory(product.type || product.category);
 const size = sizes.find(s => Number(s.value) === Number(sizeMl) && String(s.unit).toLowerCase() === 'ml');
-return Math.round(Number(product.price || 0) * (size?.priceMultiplier || 1));
+return size ? getPricing(product.price, size.priceMultiplier, size.mrp, size.websitePrice).sellingPrice : 0;
 }
 function getBundleEligibleProducts() {
 const perfumes = allProducts.filter(
-p => normalize(p.type || p.category) === 'perfume'
+p => normalize(p.type || p.category) === 'perfume' && getSizePrice(p, bundleState.sizeMl)>0
 );
 return perfumes.map(product => ({
 ...product,
@@ -1682,9 +1690,9 @@ function prevImage(){ currentImageIndex = (currentImageIndex-1+currentGallery.le
 function roundTo99(price){
 return Math.ceil(price/100)*100-1;
 }
-function getPricing(basePrice, multiplier = 1, explicitMrp = 0) {
-const sellingPrice = Math.ceil(basePrice * multiplier);
-const mrp = Number(explicitMrp) > 0 && Number(multiplier) === 1 ? Number(explicitMrp) : roundTo99(sellingPrice * 1.35);
+function getPricing(basePrice, multiplier = 1, explicitMrp = 0, websitePrice = 0) {
+const sellingPrice = Number(websitePrice)>0 ? Number(websitePrice) : Math.round(basePrice * multiplier);
+const mrp = Math.max(sellingPrice, Number(explicitMrp) > 0 ? Number(explicitMrp) : roundTo99(sellingPrice * 1.35));
 const discount = Math.round(
 ((mrp - sellingPrice) / mrp) * 100
 );
@@ -1693,6 +1701,12 @@ sellingPrice,
 mrp,
 discount
 };
+}
+function getProductDisplayPricing(product) {
+  const sizes=product.sizes?.length?product.sizes:getSizesByCategory(product.type||product.category);
+  const visible=sizes.filter(size=>size.isStorefrontVisible!==false);
+  const size=visible.find(size=>Number(size.priceMultiplier)===1)||visible[0];
+  return size?getPricing(product.price,size.priceMultiplier,size.mrp,size.websitePrice):getPricing(product.price,1,product.mrp);
 }
 function updatePriceDisplay(price, mrp, discount) {
 document.getElementById("modal-price").innerHTML = `
@@ -1715,8 +1729,13 @@ document.body.style.overflow = "auto";
 localStorage.removeItem("openProductId");
 }
 function addItemToCart() {
-const sizeLabel = currentProduct.type === 'Combo' ? 'Set' : selectedSize || 'Default';
-const final = currentPrice || currentProduct.price || 0;
+const sizeLabel = currentProduct.type === 'Combo' && !currentProduct.sizes?.length ? 'Set' : selectedSize || 'Default';
+const size=(currentProduct.sizes?.length?currentProduct.sizes:getSizesByCategory(currentProduct.type)).find(item=>normalizeWishlistSize(item.value+' '+item.unit)===normalizeWishlistSize(sizeLabel));
+if(size?.isStorefrontVisible===false || (currentProduct.sizes?.length&&!size)){
+showToast('This size is not sold separately. Please select an available size or use Custom Sets.');
+return;
+}
+const final = size ? getPricing(currentProduct.price,size.priceMultiplier,size.mrp,size.websitePrice).sellingPrice : currentPrice || currentProduct.price || 0;
 const quantity = Math.max(1, Math.floor(Number(pendingCartQty) || 1));
 const cartItem = {
 ...currentProduct,
@@ -3210,7 +3229,7 @@ grid.innerHTML = `<p class="col-span-full text-center text-gray-500">No products
 return;
 }
 list.forEach(product => {
-const pricing = getPricing(product.price, 1, product.mrp);
+const pricing = getProductDisplayPricing(product);
 const card = document.createElement('div');
 card.className = 'product-card bg-white cursor-pointer';
 card.onclick = () => openModal(product);
@@ -4334,9 +4353,11 @@ function getWishlistPricing(product, savedSize, storedPrice = 0, storedMrp = 0) 
 const sizes = Array.isArray(product?.sizes) && product.sizes.length ? product.sizes : getSizesByCategory(product?.type || product?.category);
 const normalizedSize = normalizeWishlistSize(savedSize);
 const size = sizes.find(item => normalizeWishlistSize(`${item.value} ${item.unit}`) === normalizedSize);
-const computed = getPricing(Number(product?.price || storedPrice || 0), Number(size?.priceMultiplier || 1), Number(product?.mrp || 0));
-const sellingPrice = Number(storedPrice || computed.sellingPrice || product?.price || 0);
-const mrp = Math.max(sellingPrice, Number(storedMrp || computed.mrp || product?.mrp || sellingPrice));
+const sizeMultiplier = Number(size?.priceMultiplier || 1);
+const sizeMrp = Number(size?.mrp || 0) || (sizeMultiplier === 1 ? Number(product?.mrp || 0) : 0);
+const computed = getPricing(Number(product?.price || storedPrice || 0), sizeMultiplier, sizeMrp, size?.websitePrice);
+const sellingPrice = Number(product ? computed.sellingPrice : storedPrice || 0);
+const mrp = Math.max(sellingPrice, Number(product ? computed.mrp : storedMrp || sellingPrice));
 const discount = mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
 return { sellingPrice, mrp, discount };
 }
@@ -4432,11 +4453,12 @@ return `${match[0]} ${unit}${/gift/i.test(normalized) ? ' Gift' : ''}`;
 return normalized;
 }
 function getDefaultWishlistSize(product) {
-const category = String(product?.type || product?.category || '').toLowerCase();
-if (category.includes('perfume')) return '30 ml Gift';
-if (category.includes('attar')) return '3 ml';
-const firstSize = Array.isArray(product?.sizes) ? product.sizes[0] : null;
-return firstSize ? normalizeWishlistSize(`${firstSize.value || ''} ${firstSize.unit || ''}`) : '';
+const sizes=Array.isArray(product?.sizes)?product.sizes.filter(size=>size.isStorefrontVisible!==false):[];
+if(product?.sizes?.length&&!sizes.length)return '';
+const preferred=sizes.find(size=>String(size.unit).toLowerCase()==='ml gift'&&Number(size.value)===30)||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
+if(preferred)return `${preferred.value} ${preferred.unit}`;
+const category=String(product?.type||product?.category||'').toLowerCase();
+return category.includes('perfume')?'30 ml Gift':category.includes('attar')?'3 ml':'';
 }
 function resolveWishlistSize(item, product) {
 return normalizeWishlistSize(item?.size) || getDefaultWishlistSize(product);
@@ -4671,7 +4693,7 @@ event?.stopPropagation();
 const product = findProductByAnyId(productId) || allProducts.find(item => savedName && normalize(item.name) === normalize(savedName));
 if (!product) return;
 const size = normalizeWishlistSize(savedSize) || getDefaultWishlistSize(product);
-const price = Number(savedPrice) || getWishlistPricing(product, size).sellingPrice;
+const price = getWishlistPricing(product, size).sellingPrice;
 window.EE?.addToCart?.(product, size, price, 1);
 setTimeout(() => window.dispatchEvent(new Event('ee:mini-cart-open')), 80);
 }
