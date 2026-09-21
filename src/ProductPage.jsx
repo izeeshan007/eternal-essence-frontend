@@ -1,4 +1,5 @@
 
+import { storefrontSizes, variantPricing as pricing } from './productVariants.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {ChevronLeft,ChevronRight,Heart,Share2,ShoppingBag,Minus,Plus,ArrowLeft,ShoppingCart,Sparkles,Eye} from 'lucide-react';
 
@@ -28,29 +29,19 @@ function imgUrl(name){
   if(String(name).startsWith('http'))return name;
   return `/products/${String(name).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
 }
-const SIZE_CACHE=new Map();
 const PERFUME_SIZE_SET=[
   {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
   {value:30,unit:'ml Gift',priceMultiplier:1.2},{value:50,unit:'ml Gift',priceMultiplier:1.601},{value:100,unit:'ml Gift',priceMultiplier:2.6032}
 ];
 const ATTAR_SIZE_SET=[{value:3,unit:'ml',priceMultiplier:1},{value:6,unit:'ml',priceMultiplier:1.85},{value:8,unit:'ml',priceMultiplier:2.3},{value:12,unit:'ml',priceMultiplier:3.2}];
-function getSizes(product){
-  const key=String(product?.id||product?._id||product?.name||'');
-  if(SIZE_CACHE.has(key))return SIZE_CACHE.get(key);
+function getSizes(product,liveRows={}){
   const category=categoryName(product).toLowerCase();
-  const canonical=category.includes('attar')?ATTAR_SIZE_SET:category.includes('perfume')?PERFUME_SIZE_SET:[];
-  const supplied=Array.isArray(product?.sizes)?product.sizes:[];
-  const sizeKey=size=>`${Number(size?.value||0)}-${String(size?.unit||'').toLowerCase().replace(/\s+/g,'')}`;
-  const suppliedByKey=new Map(supplied.map(size=>[sizeKey(size),size]));
-  const canonicalKeys=new Set(canonical.map(sizeKey));
-  const result=[...canonical.map(size=>({...size,...(suppliedByKey.get(sizeKey(size))||{})})),...supplied.filter(size=>!canonicalKeys.has(sizeKey(size)))];
-  if(!result.length)result.push({value:1,unit:'pc',priceMultiplier:1});
-  SIZE_CACHE.set(key,result); return result;
+  const fallback=category.includes('attar')?ATTAR_SIZE_SET:category.includes('perfume')?PERFUME_SIZE_SET:[{value:1,unit:'pc',priceMultiplier:1}];
+  return storefrontSizes(product,liveRows,fallback);
 }
-function pricing(base,mult,explicitMrp){
-  const selling=Math.round(Number(base||0)*Number(mult||1));
-  const mrp=Number(explicitMrp)>0&&Number(mult||1)===1?Number(explicitMrp):Math.round(selling/.80);
-  return {selling,mrp,discount:mrp?Math.round((mrp-selling)/mrp*100):0};
+function productCardPrice(product){
+  const sizes=getSizes(product),size=sizes.find(item=>Number(item.priceMultiplier)===1)||sizes[0];
+  return size?pricing(product.price,size.priceMultiplier,size.mrp,size.websitePrice).selling:Number(product.price||0);
 }
 function splitNotes(v){return String(v||'').split(/[,|•]/).map(s=>s.trim()).filter(Boolean);}
 function variantIndex(size){
@@ -130,7 +121,7 @@ function SimilarProducts({current}){
     <header><span>CURATED FOR THIS PROFILE</span><h2 id="ee-similar-title">You may also like</h2><p>Selected by shared accords, fragrance family, gender and wear occasion.</p></header>
     <div className="ee-similar-grid">{recommendations.map(({product,reasons})=><button type="button" className="ee-similar-card" key={product.id||product._id||product.name} onClick={()=>window.eeNavigateToProduct?.(product,{size:window.eeDefaultProductSize?.(product)})}>
       <div className="ee-similar-image"><ProductImage sources={galleryImageSources(product,0)} alt={product.name}/><span>{reasons[0]||'Similar profile'}</span></div>
-      <div className="ee-similar-copy"><small>{product.family||categoryName(product)}</small><strong>{product.name}</strong><p>{(Array.isArray(product.accords)?product.accords:[]).slice(0,3).join(' · ')||'Signature fragrance'}</p><div><b>₹{Number(product.price||0).toLocaleString('en-IN')}</b><em>VIEW FRAGRANCE →</em></div></div>
+      <div className="ee-similar-copy"><small>{product.family||categoryName(product)}</small><strong>{product.name}</strong><p>{(Array.isArray(product.accords)?product.accords:[]).slice(0,3).join(' · ')||'Signature fragrance'}</p><div><b>₹{productCardPrice(product).toLocaleString('en-IN')}</b><em>VIEW FRAGRANCE →</em></div></div>
     </button>)}</div>
   </section>;
 }
@@ -359,7 +350,7 @@ export default function ProductPage({product,route,onBack}){
     return()=>{window.removeEventListener('ee:cart-updated',sync);window.removeEventListener('scroll',onScroll)};
   },[]);
   useEffect(()=>{setP(normalize(product));},[product]);
-  useEffect(()=>{if(!p?.id)return;let active=true;const base=window.EE?.getBackendBase?.()||'http://localhost:5000';fetch(`${base}/api/products/inventory?productId=${encodeURIComponent(p.id)}`).then(response=>response.json()).then(data=>{if(active&&data.success){const rows=data.inventory||[];setVariantStock(Object.fromEntries(rows.map(item=>[item.variantKey,Number(item.available)])));setVariantPricing(Object.fromEntries(rows.map(item=>[item.variantKey,item])));}}).catch(()=>{});return()=>{active=false};},[p?.id]);
+  useEffect(()=>{if(!p?.id)return;let active=true;setVariantStock({});setVariantPricing({});const base=window.EE?.getBackendBase?.()||'http://localhost:5000';fetch(`${base}/api/products/inventory?productId=${encodeURIComponent(p.id)}`,{cache:'no-store'}).then(response=>response.json()).then(data=>{if(active&&data.success){const rows=data.inventory||[];setVariantStock(Object.fromEntries(rows.map(item=>[item.variantKey,Number(item.available)])));setVariantPricing(Object.fromEntries(rows.map(item=>[item.variantKey,item])));}}).catch(()=>{});return()=>{active=false};},[p?.id]);
   useEffect(()=>{
     if(!p?.id)return;
     let active=true;
@@ -394,13 +385,14 @@ export default function ProductPage({product,route,onBack}){
   useEffect(()=>{
     if(p&&size){
       const idx=variantIndex(size);setImg(idx);
-      const live=variantPricing.shared||variantPricing[normalizeSizeLabel(`${size.value} ${size.unit}`)]||{};
-      const pr=pricing(Number(live.basePrice)>0?live.basePrice:p.price,Number(live.priceMultiplier)>0?live.priceMultiplier:size.priceMultiplier,p.mrp);window.EE?.setSelection?.(p,displaySize(size),pr.selling,idx);
+      const activeSize=getSizes(p,variantPricing).find(s=>sizeKey(s)===sizeKey(size));
+      if(!activeSize)return;
+      const pr=pricing(p.price,activeSize.priceMultiplier,activeSize.mrp,activeSize.websitePrice);window.EE?.setSelection?.({...p,sizes:getSizes(p,variantPricing)},`${activeSize.value} ${activeSize.unit}`,pr.selling,idx);
     }
   },[p,size,variantPricing]);
   if(!p)return <div className="ee-notfound"><h1>Fragrance not found</h1><button onClick={onBack}>Back to collection</button></div>;
-  const sizes=getSizes(p),selectedSize=size||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),p.mrp),gallery=p.images?.length?p.images:[p.image];
-  const selectedStock=variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
+  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image];
+  const selectedStock=!selectedSize?0:variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
   const currentSources=img===selectedVariantIndex ? variantImages(p,selectedSize) : galleryImageSources(p,img);
   const moveImage=delta=>{
@@ -409,9 +401,10 @@ export default function ProductPage({product,route,onBack}){
     setImg((img+delta+gallery.length)%gallery.length);
   };
   const add=()=>{
+    if(!selectedSize){setVariantNotice('This product is currently available only through Custom Sets.');return;}
     if(selectedStock<=0){setVariantNotice(`${displaySize(selectedSize)} is currently out of stock. Please choose another size.`);return;}
     const editing=isEditingCartItem;
-    window.EE?.addToCart?.(p,displaySize(selectedSize),pr.selling,qty);
+    window.EE?.addToCart?.({...p,sizes},`${selectedSize.value} ${selectedSize.unit}`,pr.selling,qty);
     window.__eePendingProductSelection=null;
     setTimeout(()=>{
       window.dispatchEvent(new Event('ee:cart-updated'));
@@ -419,7 +412,7 @@ export default function ProductPage({product,route,onBack}){
       else window.dispatchEvent(new Event('ee:mini-cart-open'));
     },80);
   };
-  const toggle=async()=>{try{window.EE?.setSelection?.(p,`${selectedSize.value} ${selectedSize.unit}`,pr.selling,variantIndex(selectedSize));const changed=await window.EE?.toggleWishlist?.();if(changed)setWish(v=>!v);}catch{}};
+  const toggle=async()=>{if(!selectedSize)return;try{window.EE?.setSelection?.(p,`${selectedSize.value} ${selectedSize.unit}`,pr.selling,variantIndex(selectedSize));const changed=await window.EE?.toggleWishlist?.();if(changed)setWish(v=>!v);}catch{}};
   const selectSize=nextSize=>{setSize(nextSize);setImg(variantIndex(nextSize));setVariantNotice('');const url=new URL(location.href);url.searchParams.set('size',displaySize(nextSize));history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);};
   const share=()=>{const url=new URL(location.href);url.searchParams.set('size',displaySize(selectedSize));const sharedUrl=url.toString();navigator.share?navigator.share({title:p.name,text:`${p.name} – Eternal Essence`,url:sharedUrl}).catch(()=>{}):navigator.clipboard?.writeText(sharedUrl);};
   const goCart=()=>{if(window.eeNavigatePage)window.eeNavigatePage('cart');else{history.pushState({},'', '/cart');window.dispatchEvent(new CustomEvent('ee:route',{detail:{path:'/cart'}}));}};
@@ -428,8 +421,8 @@ export default function ProductPage({product,route,onBack}){
     {showFloatingCart&&<button type="button" className="ee-floating-cart ee-floating-cart-reveal" aria-label="Open floating cart preview" onClick={()=>window.dispatchEvent(new Event('ee:mini-cart-open'))}><ShoppingCart size={17}/><span>Cart</span><b>{cartCount}</b></button>}
     <div className="ee-breadcrumb"><button type="button" onClick={()=>window.eeNavigateCollection?.('all')}>Products</button><b>/</b><button type="button" onClick={()=>window.eeNavigateCollection?.(categoryName(p))}>{categoryName(p)}</button><b>/</b><strong>{productSlug(p)}</strong></div>
     <div className="ee-product-hero">
-      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={s===size?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
-      <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div><div className={`ee-live-viewers ${viewerCount>0?'':'loading'}`} role="status"><Eye size={15}/><span>{viewerCount>0?<><b>{viewerCount}</b> {viewerCount===1?'person':'people'} viewing now</>:'Live interest updating'}</span><i/></div><div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{variantNotice&&<div className="ee-variant-notice" role="status">{variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={s===size?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><div className="ee-qty ee-action-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
+      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
+      <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div><div className={`ee-live-viewers ${viewerCount>0?'':'loading'}`} role="status"><Eye size={15}/><span>{viewerCount>0?<><b>{viewerCount}</b> {viewerCount===1?'person':'people'} viewing now</>:'Live interest updating'}</span><i/></div><div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{(!sizes.length||variantNotice)&&<div className="ee-variant-notice" role="status">{!sizes.length?'No sizes are currently sold separately. Check Custom Sets for eligible sizes.':variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><div className="ee-qty ee-action-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
     </div>
     <ScentJourney product={p}/>
     <section className="ee-notes ee-accords-only"><div><span className="ee-kicker">MAIN ACCORDS</span><div className="ee-chips">{(p.accords||[]).map(a=><span key={a}>{a}</span>)}</div></div></section>

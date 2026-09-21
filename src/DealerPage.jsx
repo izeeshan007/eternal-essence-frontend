@@ -136,7 +136,7 @@ export async function exportDealerCatalogue(products,dealer,setStatus=()=>{},opt
       const productIndex=pageIndex*perPage+slot,product=products[productIndex];if(!product)continue;
       setStatus(`Designing catalogue card ${productIndex+1} of ${products.length}: ${product.name}`);
       const column=slot%columns,rowIndex=Math.floor(slot/columns),x=marginX+column*(cardWidth+gapX),cardTop=top+rowIndex*(cardHeight+gapY),innerX=x+2.2,innerWidth=cardWidth-4.4,sizes=getSizes(product);
-      const rows=sizes.map(size=>{const website=Math.round(Number(product.price||0)*Number(size.priceMultiplier||1));const factor=Number(dealer.priceFactors?.[factorKey(size)]??dealer.priceFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
+      const rows=sizes.map(size=>{const website=(Number(size.websitePrice)>0?Number(size.websitePrice):Math.round(Number(product.price||0)*Number(size.priceMultiplier||1)));const factor=Number(dealer.priceFactors?.[factorKey(size)]??dealer.priceFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
       const images=[];
       for(let index=0;index<rows.length;index+=1){const sources=variantSources(product,rows[index],index),cacheKey=sources.join('|');let data=imageCache.get(cacheKey);if(data===undefined){data=await loadCatalogueImage(sources);imageCache.set(cacheKey,data);}images.push(data);}
       doc.setDrawColor(215,205,178);doc.setFillColor(253,252,247);doc.roundedRect(x,cardTop,cardWidth,cardHeight,1.2,1.2,'FD');
@@ -166,7 +166,7 @@ function useProducts(ready){
 function RateCard({product,priceFactors,fallbackFactor,cardIndex}){
   const[activeIndex,setActiveIndex]=useState(()=>Math.max(0,getSizes(product).findIndex(size=>sizeKey(size)==='30mlgift')));
   const sizes=getSizes(product);
-  const prices=sizes.map(size=>{const website=Math.round(Number(product.price||0)*Number(size.priceMultiplier||1));const factor=Number(priceFactors?.[factorKey(size)]??fallbackFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
+  const prices=sizes.map(size=>{const website=(Number(size.websitePrice)>0?Number(size.websitePrice):Math.round(Number(product.price||0)*Number(size.priceMultiplier||1)));const factor=Number(priceFactors?.[factorKey(size)]??fallbackFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
   const lead=prices[activeIndex]||prices[0];
   return <article className="dealer-product-card">
     <VariantCarousel product={product} prices={prices} activeIndex={activeIndex} setActiveIndex={setActiveIndex} cardIndex={cardIndex}/>

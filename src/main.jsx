@@ -16,7 +16,7 @@ import './catalog.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 
-const LEGACY_ASSET_VERSION='20260907-2';
+const LEGACY_ASSET_VERSION='20260922-1';
 const LEGACY_SCRIPTS=[
   '/legacy/assets/js/storefront.js',
   '/legacy/assets/js/scent-quiz.js',
@@ -163,13 +163,13 @@ function productSlug(product){
 function productPath(product){
   return `/products/${categorySlug(product)}/${productSlug(product)}`;
 }
-function defaultProductSize(product){
-  const category=categoryName(product).toLowerCase();
-  if(category.includes('perfume'))return '30 ml Gift';
-  if(category.includes('attar'))return '3 ml';
-  const first=Array.isArray(product?.sizes)?product.sizes[0]:null;
-  if(!first)return '';
-  return `${first.value??''} ${first.unit??''}`.trim();
+function defaultProductSize(product) {
+const sizes=Array.isArray(product?.sizes)?product.sizes.filter(size=>size.isStorefrontVisible!==false):[];
+if(product?.sizes?.length&&!sizes.length)return '';
+const preferred=sizes.find(size=>String(size.unit).toLowerCase()==='ml gift'&&Number(size.value)===30)||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
+if(preferred)return `${preferred.value} ${preferred.unit}`;
+const category=String(product?.type||product?.category||'').toLowerCase();
+return category.includes('perfume')?'30 ml Gift':category.includes('attar')?'3 ml':'';
 }
 window.eeDefaultProductSize=defaultProductSize;
 function journalPath(slug){return `/journal/${slug}`;}
