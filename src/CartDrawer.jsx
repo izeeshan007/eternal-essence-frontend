@@ -10,6 +10,14 @@ const imageUrl=value=>{
   if(/^https?:\/\//i.test(raw))return raw;
   return `/products/${raw.split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
 };
+const itemImages=item=>[item?.image,item?.images?.[0],item?.collectionImage,item?.imageFallback,BRAND_IMAGE]
+  .filter(Boolean).map(imageUrl).filter((source,index,all)=>all.indexOf(source)===index);
+function CartItemImage({item}){
+  const sources=itemImages(item);
+  const[index,setIndex]=useState(0);
+  useEffect(()=>setIndex(0),[sources.join('|')]);
+  return <img src={sources[index]||BRAND_IMAGE} alt="" onError={()=>setIndex(current=>Math.min(current+1,sources.length))}/>;
+}
 
 export default function CartDrawer(){
   const[open,setOpen]=useState(false);
@@ -48,7 +56,7 @@ export default function CartDrawer(){
       <header><div><span>YOUR BAG</span><h2 id="ee-mini-cart-title">Cart preview</h2></div><button type="button" aria-label="Close cart preview" onClick={()=>setOpen(false)}><X/></button></header>
       {items.length?<>
         <div className="ee-mini-cart-items">{items.slice(0,4).map((item,index)=><button type="button" className="ee-mini-cart-item" onClick={()=>viewItem(item)} key={`${item.id||item.productId||item.name}-${item.selectedSize}-${index}`}>
-          <img src={imageUrl(item.image||item.images?.[0])} alt="" onError={event=>{event.currentTarget.onerror=null;event.currentTarget.src=BRAND_IMAGE}}/>
+          <CartItemImage item={item}/>
           <span><b>{item.name}</b><small>{item.selectedSize||item.size||'Standard'} · Qty {quantity(item)}</small></span>
           <strong>{money(Number(item.finalPrice||item.price||0)*quantity(item))}</strong>
         </button>)}</div>
