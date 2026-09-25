@@ -1,5 +1,6 @@
 
 import { storefrontSizes, variantPricing as pricing } from './productVariants.js';
+import { visibleGalleryIndices } from './productGallery.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {ChevronLeft,ChevronRight,Heart,Share2,ShoppingBag,Minus,Plus,ArrowLeft,ShoppingCart,Sparkles,Eye} from 'lucide-react';
 
@@ -371,7 +372,10 @@ export default function ProductPage({product,route,onBack}){
   useEffect(()=>{
     if(!p)return;
     const sizes=getSizes(p),selection=sizeFromUrl(p,sizes),nextSize=selection.size;setSize(nextSize);
-    setVariantNotice(selection.unavailable?`The shared size “${selection.requested}” is no longer available. Please choose one of the available sizes below.`:'');
+    // An old link can still request a size hidden by an admin. Select an
+    // available size and correct the URL instead of retaining a stale choice.
+    if(selection.unavailable&&nextSize){const url=new URL(location.href);url.searchParams.set('size',displaySize(nextSize));history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);}
+    setVariantNotice('');
     const pending=window.__eePendingProductSelection;
     if(pending?.cartIndex!=null&&String(pending.productId||'').replace(/^db_/,'')===String(p.id||'').replace(/^db_/,''))setQty(Math.max(1,Math.floor(Number(pending.quantity)||1)));
     else setQty(1);
@@ -383,6 +387,15 @@ export default function ProductPage({product,route,onBack}){
     try{setWish(!!window.EE?.isWishlistSaved?.(p.id,`${size.value} ${size.unit}`));}catch{}
   },[p?.id,size]);
   useEffect(()=>{
+    if(!p||!Object.keys(variantPricing).length)return;
+    const available=getSizes(p,variantPricing);
+    if(!size||available.some(item=>sizeKey(item)===sizeKey(size)))return;
+    const replacement=available[0]||null;
+    setSize(replacement);
+    setImg(variantIndex(replacement));
+    if(replacement){const url=new URL(location.href);url.searchParams.set('size',displaySize(replacement));history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);}
+  },[p,variantPricing,size]);
+  useEffect(()=>{
     if(p&&size){
       const idx=variantIndex(size);setImg(idx);
       const activeSize=getSizes(p,variantPricing).find(s=>sizeKey(s)===sizeKey(size));
@@ -391,14 +404,16 @@ export default function ProductPage({product,route,onBack}){
     }
   },[p,size,variantPricing]);
   if(!p)return <div className="ee-notfound"><h1>Fragrance not found</h1><button onClick={onBack}>Back to collection</button></div>;
-  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image];
+  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes);
   const selectedStock=!selectedSize?0:variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
-  const currentSources=img===selectedVariantIndex ? variantImages(p,selectedSize) : galleryImageSources(p,img);
+  const safeImg=galleryIndices.includes(img)?img:(galleryIndices[0]??0);
+  const currentSources=safeImg===selectedVariantIndex ? variantImages(p,selectedSize) : galleryImageSources(p,safeImg);
   const moveImage=delta=>{
-    if(!gallery.length)return;
-    if(selectedVariantIndex>=gallery.length&&img===selectedVariantIndex){setImg(delta>0?0:gallery.length-1);return;}
-    setImg((img+delta+gallery.length)%gallery.length);
+    if(!galleryIndices.length)return;
+    const position=galleryIndices.indexOf(safeImg);
+    if(position<0){setImg(delta>0?galleryIndices[0]:galleryIndices[galleryIndices.length-1]);return;}
+    setImg(galleryIndices[(position+delta+galleryIndices.length)%galleryIndices.length]);
   };
   const add=()=>{
     if(!selectedSize){setVariantNotice('This product is currently available only through Custom Sets.');return;}
@@ -421,7 +436,7 @@ export default function ProductPage({product,route,onBack}){
     {showFloatingCart&&<button type="button" className="ee-floating-cart ee-floating-cart-reveal" aria-label="Open floating cart preview" onClick={()=>window.dispatchEvent(new Event('ee:mini-cart-open'))}><ShoppingCart size={17}/><span>Cart</span><b>{cartCount}</b></button>}
     <div className="ee-breadcrumb"><button type="button" onClick={()=>window.eeNavigateCollection?.('all')}>Products</button><b>/</b><button type="button" onClick={()=>window.eeNavigateCollection?.(categoryName(p))}>{categoryName(p)}</button><b>/</b><strong>{productSlug(p)}</strong></div>
     <div className="ee-product-hero">
-      <div className="ee-product-gallery"><div className="ee-thumbs">{gallery.slice(0,9).map((g,i)=><button key={i} className={i===img?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(g)} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
+      <div className="ee-product-gallery"><div className="ee-thumbs">{galleryIndices.slice(0,9).map(i=><button key={i} className={i===safeImg?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(gallery[i])} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
       <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div><div className={`ee-live-viewers ${viewerCount>0?'':'loading'}`} role="status"><Eye size={15}/><span>{viewerCount>0?<><b>{viewerCount}</b> {viewerCount===1?'person':'people'} viewing now</>:'Live interest updating'}</span><i/></div><div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{(!sizes.length||variantNotice)&&<div className="ee-variant-notice" role="status">{!sizes.length?'No sizes are currently sold separately. Check Custom Sets for eligible sizes.':variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><div className="ee-qty ee-action-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
     </div>
     <ScentJourney product={p}/>

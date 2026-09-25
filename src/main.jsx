@@ -16,7 +16,7 @@ import './catalog.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 
-const LEGACY_ASSET_VERSION='20260922-1';
+const LEGACY_ASSET_VERSION='20260925-1';
 const LEGACY_SCRIPTS=[
   '/legacy/assets/js/storefront.js',
   '/legacy/assets/js/scent-quiz.js',
@@ -284,19 +284,20 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
         });
         // Keep source filenames readable; the release query still invalidates
         // CDN/browser caches when one of these compatibility scripts changes.
+        let storefrontScriptFailed=false;
         for(const path of LEGACY_SCRIPTS){
           const src=`${path}?v=${LEGACY_ASSET_VERSION}`;
-          try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${path}`,e);}
+          try{await add(src);}catch(e){console.error(`Legacy asset failed to load: ${path}`,e);if(path.includes('storefront.js'))storefrontScriptFailed=true;}
         }
         // Inline handlers in legacy-body.html call these functions by global
         // name. Explicitly expose the legacy menu function for strict/module
         // execution contexts.
         if(typeof window.openMobileMenu==='function') window.openMobileMenu=window.openMobileMenu;
-        if(!window.EE){
+        if(storefrontScriptFailed)window.__EE_CATALOG_STATUS__='unavailable';
+        if(!window.EE&&!storefrontScriptFailed){
           await new Promise(resolve=>{
             const done=()=>{window.removeEventListener('ee:ready',done);resolve()};
             window.addEventListener('ee:ready',done,{once:true});
-            setTimeout(done,8000);
           });
         }
         if(cancelled)return;
@@ -563,10 +564,13 @@ function App(){
   };
   return <div className="ee-route-view">
     <LegacyShell active={!isDealer} page={isProduct||isJournal?'home':(isCollection?'home':page)} collectionOnly={isCollection} productOnly={isProduct||isJournal||isDealer} onReady={handleLegacyReady}/>
-    {!isDealer&&!legacyReady&&<div className="ee-app-boot" role="status" aria-live="polite"><img src="/products/ee-brand-20260819.webp" alt=""/><p>ETERNAL ESSENCE</p><span>Preparing your collection</span></div>}
+    {!isDealer&&!legacyReady&&<div className="ee-app-boot" role="status" aria-live="polite"><img src="/products/ee-brand-20260819.webp" alt=""/><p>ETERNAL ESSENCE</p><span>Connecting to your collection…</span></div>}
     {!isProduct && !isJournal && !isCollection && !isDealer && legacyReady && document.getElementById('ee-home-react-mount') &&
       createPortal(<HomeEnhancements/>,document.getElementById('ee-home-react-mount'))}
-    {isProduct && (legacyReady ? <ProductPage product={product} route={route} onBack={navigateHome}/> : <div className="ee-loading"><div className="spinner"></div><p>Loading fragrance…</p></div>)}
+    {isProduct && (legacyReady ? window.__EE_CATALOG_STATUS__==='unavailable'
+      ? <div className="ee-loading" role="status"><p>The collection is temporarily unavailable.</p><button type="button" onClick={()=>location.reload()}>Retry</button></div>
+      : <ProductPage product={product} route={route} onBack={navigateHome}/>
+      : <div className="ee-loading"><div className="spinner"></div><p>Loading fragrance…</p></div>)}
     {isJournal && (legacyReady ? <JournalPage slug={journalSlug} onBack={navigateHome}/> : <div className="ee-loading"><div className="spinner"></div><p>Loading journal...</p></div>)}
     {isDealer&&<DealerPage backendBase={backendUrl()} legacyReady={legacyReady}/>}
     {!isDealer&&<CartDrawer/>}
