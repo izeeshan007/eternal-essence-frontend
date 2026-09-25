@@ -817,17 +817,17 @@ const DEFAULT_BUNDLE_RULES = [
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 async function loadBackendProducts() {
 try {
-const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products`);
+// Render's free instance can need around a minute to wake. Product visibility
+// must come from the live catalogue; the bundled list cannot know admin hides.
+const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products`, { cache: 'no-store' }, 75000);
+if (!res.ok) throw new Error(`Catalogue request failed (${res.status})`);
 const text = await res.text();
 if (text.startsWith('<')) {
-console.warn('Backend returned HTML instead of JSON');
-mergeProducts();
-return;
+throw new Error('Backend returned HTML instead of JSON');
 }
 const data = JSON.parse(text);
 if (!data.success || !Array.isArray(data.products)) {
-mergeProducts();
-return;
+throw new Error('Backend returned an invalid catalogue');
 }
 function normalizeCategory(cat) {
 if (!cat) return 'Perfume';
@@ -857,15 +857,19 @@ image: resolveMergeImage(p.images?.[6] || p.images?.[0]),
 images: (p.images || []).map(resolveMergeImage),
 source: 'backend'
 }));
+window.__EE_CATALOG_STATUS__ = 'ready';
 mergeProducts();
 } catch (err) {
-console.warn('Backend catalogue is unavailable; using the bundled local catalogue.', err?.message || err);
-mergeProducts();
+window.__EE_CATALOG_STATUS__ = 'unavailable';
+backendProducts = [];
+allProducts = [];
+console.error('Live catalogue is unavailable; storefront products are paused to protect admin visibility settings.', err?.message || err);
+const grid = document.getElementById('product-grid');
+if (grid) grid.innerHTML = '<p class="col-span-full text-center text-gray-600" role="status">The collection is temporarily unavailable. Please refresh to try again.</p>';
 }
 }
 function mergeProducts() {
 const frontendProducts = products.map(p => ({ ...p, source: 'frontend' }));
-const matchedFrontendIds = new Set();
 const correctedAsset = value => {
 const source = String(value || '');
 const filename = source.split('/').pop().toLowerCase();
@@ -894,7 +898,6 @@ const canonical = (orderCandidate && normalize(orderCandidate.name) === serverNa
 || nameCandidates[0]
 || orderCandidate;
 if (!canonical) return serverProduct;
-matchedFrontendIds.add(canonical.id);
 return {
 ...canonical,
 ...serverProduct,
@@ -910,11 +913,9 @@ images: (serverProduct.images?.length ? serverProduct.images : (canonical.images
 source: 'backend'
 };
 });
-// A deployed database may lag behind the array/current-catalog source. Keep
-// array-defined products visible immediately and avoid duplicating rows once
-// the database has been synchronized.
-const frontendOnly = frontendProducts.filter(product => !matchedFrontendIds.has(product.id));
-allProducts = backendProducts.length ? [...mergedBackendProducts, ...frontendOnly] : frontendProducts;
+// The live API is authoritative for admin product and size visibility. Never
+// re-add bundled products that the server intentionally omitted.
+allProducts = mergedBackendProducts;
 renderCategoryTabs();
 renderProducts(allProducts);
 renderBundleBuilder();
@@ -1132,6 +1133,10 @@ return `${window.__EE_IMAGE_BASE__ || '/products/'}placeholder.webp`;
 function renderProducts(list = allProducts) {
 const grid = document.getElementById('product-grid');
 grid.innerHTML = '';
+if (window.__EE_CATALOG_STATUS__ === 'unavailable') {
+grid.innerHTML = '<p class="col-span-full text-center text-gray-600" role="status">The collection is temporarily unavailable. Please refresh to try again.</p>';
+return;
+}
 list = list.filter(product => normalize(product.type || product.category) !== 'combo');
 if (!list.length) {
 grid.innerHTML = `
@@ -4706,8 +4711,8 @@ if(window.eeNavigateToProduct){ window.eeNavigateToProduct(product, { size: wind
 }
 async function initStore() {
 placeProductFilters();
-mergeProducts();
 await Promise.all([loadBundleRules(), loadBackendProducts()]);
+if (window.__EE_CATALOG_STATUS__ !== 'ready') return;
 renderProducts(allProducts);
 renderBundleBuilder();
 restoreCategoryIfAny();
