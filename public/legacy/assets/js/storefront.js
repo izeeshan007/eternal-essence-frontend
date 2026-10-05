@@ -281,9 +281,9 @@ return [
 { value: 30,  unit: 'ml', priceMultiplier: 1 }, // 0.47 / 0.12
 { value: 50,  unit: 'ml', priceMultiplier: 1.4008 }, // 0.62 / 0.12
 { value: 100, unit: 'ml', priceMultiplier: 2.4028 },  // 1 / 0.12
-{ value: 30, unit: 'ml Gift', priceMultiplier: 1.2 },
-{ value: 50, unit: 'ml Gift', priceMultiplier: 1.601 },
-{ value: 100, unit: 'ml Gift', priceMultiplier: 2.6032 }  // 1 / 0.12
+{ value: 30, unit: 'ml ', priceMultiplier: 1.2 },
+{ value: 50, unit: 'ml ', priceMultiplier: 1.601 },
+{ value: 100, unit: 'ml ', priceMultiplier: 2.6032 }  // 1 / 0.12
 ];
 }
 if (category === 'Attar') {
