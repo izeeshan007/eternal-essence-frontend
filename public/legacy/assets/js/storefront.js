@@ -278,12 +278,9 @@ if (category === 'Perfume') {
 return [
 { value: 8,   unit: 'ml', priceMultiplier: 0.2985971943887776 }, // 0.12 / 0.12
 { value: 20,  unit: 'ml', priceMultiplier: 0.6993987 }, // 0.32 / 0.12
-{ value: 30,  unit: 'ml', priceMultiplier: 1 }, // 0.47 / 0.12
-{ value: 50,  unit: 'ml', priceMultiplier: 1.4008 }, // 0.62 / 0.12
-{ value: 100, unit: 'ml', priceMultiplier: 2.4028 },  // 1 / 0.12
-{ value: 30, unit: 'ml ', priceMultiplier: 1.2 },
-{ value: 50, unit: 'ml ', priceMultiplier: 1.601 },
-{ value: 100, unit: 'ml ', priceMultiplier: 2.6032 }  // 1 / 0.12
+{ value: 30, unit: 'ml', priceMultiplier: 1.2 },
+{ value: 50, unit: 'ml', priceMultiplier: 1.601 },
+{ value: 100, unit: 'ml', priceMultiplier: 2.6032 }
 ];
 }
 if (category === 'Attar') {
@@ -377,9 +374,9 @@ return `${window.__EE_IMAGE_BASE__ || '/products/'}${String(img).split('/').pop(
 const PERFUME_VARIANT_INDEX = {
 '8ml': 1,
 '20ml': 2,
-'30ml': 3,
-'50ml': 4,
-'100ml': 5,
+'30ml': 6,
+'50ml': 7,
+'100ml': 8,
 '30mlgift': 6,
 '50mlgift': 7,
 '100mlgift': 8
@@ -859,6 +856,7 @@ source: 'backend'
 }));
 window.__EE_CATALOG_STATUS__ = 'ready';
 mergeProducts();
+loadCuratedCollections();
 } catch (err) {
 window.__EE_CATALOG_STATUS__ = 'unavailable';
 backendProducts = [];
@@ -921,6 +919,63 @@ renderProducts(allProducts);
 renderBundleBuilder();
 buildCollectionMenus();
 }
+async function loadCuratedCollections() {
+try {
+const response = await fetch(`${BACKEND_BASE_URL}/api/products/curated`);
+if (!response.ok) throw new Error('Curated collections unavailable');
+const data = await response.json();
+if (!data.success) throw new Error(data.error || 'Curated collections unavailable');
+window.__EE_CURATED__ = data;
+renderCuratedHero(data);
+applyFilters();
+window.dispatchEvent(new Event('ee:curated-loaded'));
+} catch (error) { console.warn(error.message); }
+}
+function renderCuratedHero(data) {
+const slider = document.getElementById('hero-slider');
+if (!slider) return;
+const season = data.season === 'winter' ? 'winter' : 'summer';
+const label = season === 'winter' ? 'Winter' : 'Summer';
+// Preserve the original collection, attar and custom-set slides.
+slider.querySelector('[data-seasonal-slide]')?.remove();
+const template = slider.querySelector('.hero-slide');
+if (!template) return;
+const slide = template.cloneNode(true);
+slide.dataset.seasonalSlide = 'true';
+slide.querySelector('h2').textContent = `${label} fragrances`;
+slide.querySelector('h1').textContent = season === 'winter' ? 'Warmth for Winter' : 'Freshness for Summer';
+slide.querySelector('p').textContent = season === 'winter'
+  ? 'Discover rich woods, warm amber and comforting scents for cooler days.'
+  : 'Discover fresh, bright and airy scents for warm and humid days.';
+const button = slide.querySelector('button');
+button.removeAttribute('onclick');
+button.textContent = `Shop all ${season} scents`;
+button.onclick = () => window.eeOpenCuratedCollection(season);
+const ids = data.collections?.[season] || [];
+const product = allProducts.find(item => ids.map(String).includes(String(item.id || item._id).replace(/^db_/, '')));
+if (product) slide.style.backgroundImage = `linear-gradient(rgba(0,0,0,.64),rgba(0,0,0,.64)), url("${getDefaultProductImage(product)}")`;
+slider.appendChild(slide);
+const dotHost = slider.parentElement.querySelector('.hero-dot')?.parentElement;
+if (dotHost) {
+  dotHost.replaceChildren();
+  slider.querySelectorAll('.hero-slide').forEach((item,index) => {
+    const dot = document.createElement('button');
+    dot.className = 'hero-dot w-3 h-3 rounded-full bg-white/50 hover:bg-yellow-500 transition';
+    dot.setAttribute('aria-label', `Show ${item.querySelector('h1')?.textContent || 'slide'}`);
+    dot.onclick = () => setHeroSlide(index);
+    dotHost.appendChild(dot);
+  });
+}
+setHeroSlide(0);
+}
+window.eeOpenCuratedCollection = key => {
+if (!['summer','winter','oud'].includes(key)) return;
+window.eeNavigateCollection?.('all');
+history.replaceState({}, '', `/collections?edit=${key}`);
+applyFilters();
+window.dispatchEvent(new CustomEvent('ee:route', { detail: { path: location.pathname + location.search } }));
+window.scrollTo(0,0);
+};
 function categoryLabel(category){
 return String(category || 'Product').trim() || 'Product';
 }
@@ -1027,7 +1082,7 @@ localStorage.setItem(CART_COUPON_KEY, appliedCoupon || '');
 function loadCartFromStorage() {
 try {
 const raw = localStorage.getItem(CART_STORAGE_KEY);
-if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) { cart.length = 0; parsed.forEach(i=>cart.push(i)); } }
+if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) { cart.length = 0; parsed.forEach(i=>{ if (/^(30|50|100)\s*ml\s*gift$/i.test(String(i.selectedSize||''))) i.selectedSize=String(i.selectedSize).replace(/\s*gift$/i,''); cart.push(i); }); } }
 const d = localStorage.getItem(CART_DISCOUNT_KEY); if (d) discountAmount = Number(JSON.parse(d))||0;
 const c = localStorage.getItem(CART_COUPON_KEY); if (c) appliedCoupon = c || null;
 } catch (e) { console.warn('loadCart err', e); }
@@ -1747,6 +1802,7 @@ const cartItem = {
 selectedSize: sizeLabel,
 finalPrice: final,
 quantity,
+gift: editingCartIndex !== null && cart[editingCartIndex]?.gift === true,
 image: getVariantImage(currentProduct, sizeLabel),
 imageFallback: getVariantFallbackImage(currentProduct, sizeLabel)
 };
@@ -1775,7 +1831,14 @@ function cartItemQty(item) {
 return isQuantityCartItem(item) ? Math.max(1, Math.floor(Number(item.quantity) || 1)) : 1;
 }
 function cartItemLineTotal(item) {
-return Number(item.finalPrice || 0) * cartItemQty(item);
+return (Number(item.finalPrice || 0) + (item.gift === true && isQuantityCartItem(item) ? 25 : 0)) * cartItemQty(item);
+}
+function setCartItemGift(index, checked) {
+const item = cart[index];
+if (!item || !isQuantityCartItem(item)) return;
+item.gift = checked === true;
+renderCart(); saveCartToStorage();
+window.dispatchEvent(new Event('ee:cart-updated'));
 }
 function changeCartQuantity(index, delta) {
 const item = cart[index];
@@ -1940,7 +2003,7 @@ qty: p.qty
 : `<img ${imageWithFallback(itemImage, itemFallback, getDefaultProductImage(item))} class="w-16 h-16 object-cover rounded border">`;
 const qty = cartItemQty(item);
 const canChangeQty = isQuantityCartItem(item);
-const unitPrice = Number(item.finalPrice || 0);
+const unitPrice = Number(item.finalPrice || 0) + (item.gift === true && canChangeQty ? 25 : 0);
 const linePrice = cartItemLineTotal(item);
 const isEditingRow = editingCartRowIndex === idx;
 const quantityControls = canChangeQty
@@ -1954,7 +2017,7 @@ const quantityControls = canChangeQty
 tr.innerHTML = `
 <td class="ee-cart-product p-4 flex items-center gap-4 pr-14 md:pr-4 cursor-pointer" onclick="viewCartItem(${idx})" title="View product details">
 ${itemVisual}
-<div class="ee-cart-product-copy"><p class="font-bold text-sm">${item.name}</p>${bundleDetails}</div>
+<div class="ee-cart-product-copy"><p class="font-bold text-sm">${item.name}</p>${bundleDetails}${canChangeQty ? `<label class="text-xs flex items-center gap-2 mt-2" onclick="event.stopPropagation()"><input type="checkbox" ${item.gift === true ? 'checked' : ''} onchange="setCartItemGift(${idx},this.checked)"> Gift wrap +₹25 per item</label>` : ''}</div>
 </td>
 <td class="ee-cart-size block md:table-cell px-4 pb-2 md:p-4 text-sm text-gray-600"><span class="md:hidden font-bold text-gray-500 mr-2">Size:</span>${item.selectedSize}</td>
 <td class="ee-cart-quantity block md:table-cell px-4 pb-4 md:p-4 text-sm"><span class="ee-cart-mobile-label md:hidden">Quantity</span>${quantityControls}</td>
@@ -2261,7 +2324,8 @@ qty: cartItemQty(item),
 image: item.image,
 itemType: item.itemType || 'product',
 bundleMeta: item.bundleMeta || null,
-cardMeta: item.cardMeta || null
+cardMeta: item.cardMeta || null,
+gift: item.gift === true
 }));
 }
 let couponSuggestionTimer = null;
@@ -2514,7 +2578,7 @@ function confirmCodOrder(quote) {
 return new Promise(resolve => {
 const existing = document.getElementById('cod-confirm-modal');
 if (existing) existing.remove();
-const items = (quote?.items || []).map(item => `<li class="flex justify-between gap-3 py-2 border-b"><span>${escapeHtml(item.name || 'Product')} <small class="text-gray-500">${escapeHtml(item.size || '')} × ${Number(item.qty || 1)}</small></span><b>₹${(Number(item.price || 0) * Number(item.qty || 1)).toLocaleString('en-IN')}</b></li>`).join('');
+const items = (quote?.items || []).map(item => `<li class="flex justify-between gap-3 py-2 border-b"><span>${escapeHtml(item.name || 'Product')} <small class="text-gray-500">${escapeHtml(item.size || '')} × ${Number(item.qty || 1)}${item.gift ? ' · Gift wrap' : ''}</small></span><b>₹${(Number(item.price || 0) * Number(item.qty || 1)).toLocaleString('en-IN')}</b></li>`).join('');
 const modal = document.createElement('div');
 modal.id = 'cod-confirm-modal';
 modal.className = 'fixed inset-0 z-[10001] bg-black/70 flex items-center justify-center p-4';
@@ -3192,6 +3256,12 @@ return (val || '').toLowerCase().replace(/\s+/g,'');
 }
 function applyFilters() {
 let filtered = [...allProducts];
+const curatedKey = new URLSearchParams(location.search).get('edit');
+if (['summer','winter','oud'].includes(curatedKey)) {
+const selected = new Set((window.__EE_CURATED__?.collections?.[curatedKey] || []).map(String));
+filtered = filtered.filter(product => selected.has(String(product.id || product._id).replace(/^db_/, ''))
+  || (curatedKey !== 'oud' && String(product.season || '').toLowerCase().includes(curatedKey)));
+}
 if (activeCategory !== 'all') {
 const cat = normalize(activeCategory);
 filtered = filtered.filter(p =>
@@ -3224,6 +3294,28 @@ const sort = document.getElementById('sort-filter')?.value || '';
 if (sort === 'price-asc') filtered.sort((a,b)=>a.price-b.price);
 if (sort === 'price-desc') filtered.sort((a,b)=>b.price-a.price);
 if (sort === 'name-asc') filtered.sort((a,b)=>a.name.localeCompare(b.name));
+if (!sort) {
+  const seasonKey = window.__EE_CURATED__?.season || (Number(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', month: 'numeric' }).format(new Date())) >= 3 && Number(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', month: 'numeric' }).format(new Date())) <= 10 ? 'summer' : 'winter');
+  const selectedIds = window.__EE_CURATED__?.collections?.[curatedKey] || [];
+  const currentIds = window.__EE_CURATED__?.collections?.[seasonKey] || [];
+  const identity = product => String(product.id || product._id).replace(/^db_/, '');
+  const seasonRank = product => {
+    const label = normalize(product.season);
+    const current = seasonKey === 'winter' ? /winter|autumn/.test(label) : /summer|spring/.test(label);
+    const other = seasonKey === 'winter' ? /summer|spring/.test(label) : /winter|autumn/.test(label);
+    return current ? 2 : other ? 0 : 1;
+  };
+  filtered.sort((a,b) => {
+    if (['summer','winter','oud'].includes(curatedKey)) {
+      const ai = selectedIds.indexOf(identity(a)), bi = selectedIds.indexOf(identity(b));
+      return (ai < 0 ? Infinity : ai) - (bi < 0 ? Infinity : bi) || 0;
+    }
+    const ai = currentIds.indexOf(identity(a)), bi = currentIds.indexOf(identity(b));
+    if ((ai >= 0) !== (bi >= 0)) return ai >= 0 ? -1 : 1;
+    if (ai >= 0 && bi >= 0) return ai - bi;
+    return seasonRank(b) - seasonRank(a);
+  });
+}
 renderProducts(filtered);
 }
 function renderFilteredProducts(list) {
@@ -3620,6 +3712,7 @@ ${item.itemType === 'perfume_card' && item.cardMeta
 <div class="flex-1">
 <p class="storefront-order-item-name font-semibold">${escapeHtml(item.name || 'Ordered item')}</p>
 <p class="text-xs text-gray-500">${escapeHtml(item.size || '')}</p>
+${item.gift ? '<p class="text-xs text-yellow-700 font-semibold">Gift wrap included</p>' : ''}
 <p class="mt-1 text-xs text-gray-600">Qty: <strong>${quantity}</strong>${Number.isFinite(lineTotal) && lineTotal > 0 ? ` · ₹${lineTotal.toFixed(2)}` : ''}</p>
 ${
 isDelivered && isCatalogProduct
@@ -4453,17 +4546,17 @@ const unit = /\bkg\b/i.test(normalized) ? 'kg'
 : /\b(?:gm|g|gram|grams)\b/i.test(normalized) ? 'gm'
 : /\b(?:pc|piece|pieces)\b/i.test(normalized) ? 'pc'
 : 'ml';
-return `${match[0]} ${unit}${/gift/i.test(normalized) ? ' Gift' : ''}`;
+return `${match[0]} ${unit}${/gift/i.test(normalized) && ![30,50,100].includes(Number(match[0])) ? ' Gift' : ''}`;
 }
 return normalized;
 }
 function getDefaultWishlistSize(product) {
 const sizes=Array.isArray(product?.sizes)?product.sizes.filter(size=>size.isStorefrontVisible!==false):[];
 if(product?.sizes?.length&&!sizes.length)return '';
-const preferred=sizes.find(size=>String(size.unit).toLowerCase()==='ml gift'&&Number(size.value)===30)||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
+const preferred=sizes.find(size=>String(size.unit).toLowerCase()==='ml'&&Number(size.value)===30)||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
 if(preferred)return `${preferred.value} ${preferred.unit}`;
 const category=String(product?.type||product?.category||'').toLowerCase();
-return category.includes('perfume')?'30 ml Gift':category.includes('attar')?'3 ml':'';
+return category.includes('perfume')?'30 ml':category.includes('attar')?'3 ml':'';
 }
 function resolveWishlistSize(item, product) {
 return normalizeWishlistSize(item?.size) || getDefaultWishlistSize(product);

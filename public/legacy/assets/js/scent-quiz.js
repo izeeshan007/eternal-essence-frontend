@@ -1,37 +1,239 @@
-const SCENT_QUIZ_QUESTIONS=[
-{id:'gender',title:'Who are you choosing this fragrance for?',sub:'This is a preference, not a strict limitation.',options:[['Male','For Him','fa-mars'],['Female','For Her','fa-venus'],['Unisex','Unisex / No Preference','fa-people-arrows']]},
-{id:'age',title:'What is the age range?',sub:'Age helps us tune the style from playful and modern to deep and sophisticated.',options:[['under18','Under 18','fa-seedling'],['18-25','18–25','fa-bolt'],['26-35','26–35','fa-star'],['36-50','36–50','fa-gem'],['50plus','50+','fa-crown']]},
-{id:'mood',title:'How do you want your fragrance to make you feel?',sub:'Choose the emotion you want your scent to express.',options:[['fresh','Fresh & Refreshed','fa-water'],['confident','Confident & Commanding','fa-crown'],['romantic','Romantic & Attractive','fa-heart'],['calm','Calm & Peaceful','fa-leaf'],['mysterious','Mysterious & Dark','fa-moon'],['luxurious','Luxurious & Royal','fa-gem'],['energetic','Energetic & Sporty','fa-bolt'],['cozy','Cozy & Comforting','fa-mug-hot']]},
-{id:'occasion',title:'Where will you wear it most?',sub:'The right scent should fit the moments that matter to you.',options:[['everyday','Everyday / Casual','fa-sun'],['office','Office / Professional','fa-briefcase'],['date','Date / Romantic Evening','fa-heart'],['party','Party / Night Out','fa-champagne-glasses'],['special','Special Occasion','fa-star'],['traditional','Traditional / Religious','fa-mosque']]},
-{id:'scent',title:'Which scent world attracts you most?',sub:'No need to know perfume terminology—pick what sounds most enjoyable.',options:[['fresh','Fresh / Aquatic','fa-water'],['citrus','Citrus / Zesty','fa-lemon'],['sweet','Sweet / Vanilla','fa-cookie-bite'],['floral','Floral / Elegant','fa-fan'],['woody','Woody / Earthy','fa-tree'],['spicy','Spicy / Warm','fa-fire'],['oud','Oud / Oriental','fa-moon'],['musk','Musk / Clean','fa-cloud']]},
-{id:'intensity',title:'How strong should your fragrance feel?',sub:'From an intimate skin scent to a powerful statement.',options:[['subtle','Subtle & Close','fa-feather'],['balanced','Balanced','fa-scale-balanced'],['strong','Strong & Noticeable','fa-fire-flame-curved'],['beast','Very Powerful','fa-dragon']]},
-{id:'time',title:'When will you mostly wear it?',sub:'Some fragrances shine in daylight; others come alive after dark.',options:[['Day','Day','fa-sun'],['Night','Night','fa-moon'],['Day/Night','Both Day & Night','fa-circle-half-stroke']]},
-{id:'season',title:'What weather will you wear it in most?',sub:'Climate changes how a fragrance projects and develops.',options:[['hot','Hot / Summer','fa-temperature-high'],['cool','Cool / Winter','fa-snowflake'],['rainy','Rainy / Monsoon','fa-cloud-rain'],['all','All Year','fa-earth-asia']]},
-{id:'type',title:'What kind of fragrance would you prefer?',sub:'Choose perfume, concentrated attar, or let us consider both.',options:[['Perfume','Perfume Spray','fa-spray-can-sparkles'],['Attar','Attar / Perfume Oil','fa-droplet'],['Either','Either — Show My Best Matches','fa-wand-magic-sparkles']]}
+// Beginner-friendly scent finder. Only live, visible products can be shown.
+const SCENT_QUIZ_QUESTIONS = [
+  { id:'intent', title:'How do you want to feel wearing it?', hint:'Think about the impression you want to make.', options:[
+    ['fresh','Fresh and approachable','Easy to be around','fa-sun'],
+    ['calm','Calm and comfortable','A moment for yourself','fa-leaf'],
+    ['confident','Confident and polished','Ready for anything','fa-star'],
+    ['romantic','Warm and inviting','Close, personal moments','fa-heart'],
+    ['bold','Bold and memorable','Make an entrance','fa-fire']
+  ]},
+  { id:'setting', title:'Where will you wear it most?', hint:'Pick the moment you can picture most clearly.', options:[
+    ['everyday','Everyday errands','An easy daily companion','fa-house'],
+    ['work','Work or college','Comfortable around others','fa-briefcase'],
+    ['date','A date or dinner','Personal and inviting','fa-moon'],
+    ['social','Celebrations or nights out','Something people remember','fa-champagne-glasses'],
+    ['ritual','Quiet or traditional moments','For reflection and ritual','fa-hands-praying']
+  ]},
+  { id:'aroma', title:'Which familiar smells sound good?', hint:'There is no perfume knowledge needed here.', options:[
+    ['fresh','Fresh shower and citrus','Bright, clean and airy','fa-water'],
+    ['sweet','Vanilla and desserts','Soft, warm sweetness','fa-cookie-bite'],
+    ['floral','Fresh flowers','Petals and gentle elegance','fa-fan'],
+    ['woody','Trees and warm woods','Grounded and natural','fa-tree'],
+    ['oud','Incense and rich oud','Deep and distinctive','fa-fire-flame-curved'],
+    ['unsure','Surprise me','Use my other answers','fa-wand-magic-sparkles']
+  ]},
+  { id:'presence', title:'How noticeable should it feel?', hint:'Choose your comfort level, not a technical strength rating.', options:[
+    ['soft','Close and gentle','Mostly for me and people nearby','fa-feather'],
+    ['balanced','Somewhere in the middle','Present without taking over','fa-scale-balanced'],
+    ['statement','A clear statement','I enjoy a richer scent','fa-bolt']
+  ]},
+  { id:'climate', title:'What weather will you wear it in?', hint:'Weather changes which scent styles feel most comfortable.', options:[
+    ['current','The current Indian season','Use today’s seasonal edit','fa-calendar-day'],
+    ['hot','Warm or humid days','Light and refreshing','fa-temperature-high'],
+    ['cool','Cooler days or evenings','Warm and enveloping','fa-snowflake'],
+    ['all','A mix of weather','Versatile is best','fa-earth-asia']
+  ]},
+  { id:'format', title:'How would you like to apply it?', hint:'We will show products you can open and shop now.', options:[
+    ['Perfume','Perfume spray','A familiar spray bottle','fa-spray-can-sparkles'],
+    ['Attar','Attar oil','A concentrated oil','fa-droplet'],
+    ['Either','Either is fine','Show my strongest matches','fa-wand-magic-sparkles']
+  ]}
 ];
-let scentQuizState={step:0,answers:{}};
-function openScentQuiz(){scentQuizState={step:0,answers:{}};document.getElementById('scent-quiz-modal').classList.remove('hidden');document.body.style.overflow='hidden';renderScentQuiz();}
-function closeScentQuiz(){document.getElementById('scent-quiz-modal').classList.add('hidden');document.body.style.overflow='';}
-function renderScentQuiz(){const q=SCENT_QUIZ_QUESTIONS[scentQuizState.step],body=document.getElementById('scent-quiz-body');body.innerHTML=`<div class="mb-8 pr-12"><div class="flex justify-between text-xs uppercase tracking-[.2em] text-gray-400 mb-3"><span>Find Your Signature Scent</span><span>${scentQuizState.step+1} of ${SCENT_QUIZ_QUESTIONS.length}</span></div><div class="ee-quiz-progress"><div style="width:${((scentQuizState.step+1)/SCENT_QUIZ_QUESTIONS.length)*100}%"></div></div></div><div class="text-center max-w-3xl mx-auto mb-8"><p class="text-yellow-500 text-xs uppercase tracking-[.3em] font-bold mb-3">Question ${scentQuizState.step+1}</p><h2 class="brand-font text-2xl md:text-4xl font-bold mb-3">${q.title}</h2><p class="text-gray-400">${q.sub}</p></div><div class="grid grid-cols-2 md:grid-cols-${q.options.length>6?4:q.options.length>3?3:3} gap-3 md:gap-4 max-w-4xl mx-auto">${q.options.map(o=>`<button onclick="answerScentQuiz('${q.id}','${o[0].replace(/'/g,"\\'")}')" class="ee-quiz-option rounded-xl p-4 text-center ${scentQuizState.answers[q.id]===o[0]?'selected':''}"><i class="fas ${o[2]} text-yellow-500 text-xl mb-3 block"></i><span class="text-sm md:text-base font-bold">${o[1]}</span></button>`).join('')}</div>${scentQuizState.step>0?`<div class="text-center mt-7"><button onclick="previousScentQuestion()" class="text-gray-400 hover:text-yellow-500 text-sm uppercase tracking-widest"><i class="fas fa-arrow-left mr-2"></i>Back</button></div>`:''}`;}
-function answerScentQuiz(id,value){scentQuizState.answers[id]=value;if(scentQuizState.step<SCENT_QUIZ_QUESTIONS.length-1){scentQuizState.step++;renderScentQuiz();}else renderScentAnalysis();}
-function previousScentQuestion(){if(scentQuizState.step>0){scentQuizState.step--;renderScentQuiz();}}
-function scentText(p){return [p.name,p.type,p.gender,p.season,p.time,p.family,Array.isArray(p.accords)?p.accords.join(' '):p.accords,p.top,p.mid,p.base,p.description].filter(Boolean).join(' ').toLowerCase();}
-const SQ_MAP={fresh:['fresh','aquatic','marine','ozonic','green','aromatic','mint','water'],citrus:['citrus','lemon','bergamot','orange','grapefruit','mandarin','lime'],sweet:['sweet','vanilla','gourmand','chocolate','caramel','honey','tonka','coffee','praline'],floral:['floral','rose','jasmine','peony','gardenia','tuberose','lavender','violet','iris'],woody:['woody','wood','cedar','sandalwood','vetiver','oakmoss','patchouli'],spicy:['spicy','spice','pepper','cinnamon','cardamom','clove','ginger'],oud:['oud','agarwood','oriental','amber','saffron','incense','resin'],musk:['musk','musky','powdery','clean','white musk','soapy']};
-const MOOD_MAP={fresh:['fresh','aquatic','marine','citrus','green','mint'],confident:['woody','leather','amber','spicy','tobacco','smoky'],romantic:['floral','vanilla','sweet','amber','fruity','rose','jasmine'],calm:['musk','powdery','floral','herbal','sandalwood','lavender'],mysterious:['oud','smoky','leather','tobacco','patchouli','incense'],luxurious:['oud','saffron','amber','woody','oriental','leather'],energetic:['citrus','aquatic','marine','fresh spicy','aromatic','ginger'],cozy:['vanilla','gourmand','chocolate','coffee','honey','tonka','caramel']};
-function hasAny(text,words){return words.some(w=>text.includes(w));}
-function calculateScentMatch(p,a){let score=0,max=0,reasons=[];const t=scentText(p),gender=String(p.gender||'').toLowerCase(),type=String(p.type||p.category||'').toLowerCase(),season=String(p.season||'').toLowerCase(),time=String(p.time||'').toLowerCase();
-max+=15;if(a.gender==='Unisex'||gender.includes(a.gender.toLowerCase())||gender.includes('unisex')){score+=15;reasons.push('fits your gender preference');}else score+=3;
-max+=5;let mature=hasAny(t,['oud','leather','tobacco','incense','smoky','earthy','animalic']);if(['under18','18-25'].includes(a.age)){score+=mature?2:5;}else if(['36-50','50plus'].includes(a.age)){score+=mature?5:3;}else score+=5;
-max+=20;let moodHits=(MOOD_MAP[a.mood]||[]).filter(w=>t.includes(w)).length;score+=Math.min(20,moodHits*5);if(moodHits){reasons.push(`matches your ${a.mood} mood`);}
-max+=15;const occ={everyday:['fresh','citrus','aquatic','clean','aromatic'],office:['fresh','woody','clean','musk','citrus'],date:['sweet','vanilla','floral','amber','musk'],party:['strong','oud','amber','spicy','leather','sweet'],special:['luxury','oud','saffron','amber','floral','oriental'],traditional:['attar','oud','musk','sandalwood','rose','incense']}[a.occasion]||[];let oh=occ.filter(w=>t.includes(w)).length;score+=Math.min(15,oh*4);if(oh)reasons.push('suited to your chosen occasion');
-max+=25;let sh=(SQ_MAP[a.scent]||[]).filter(w=>t.includes(w)).length;score+=Math.min(25,sh*6);if(sh)reasons.push(`features ${a.scent} character`);
-max+=5;const heavy=hasAny(t,['oud','leather','tobacco','amber','smoky','intense','strong','incense']);if(a.intensity==='subtle')score+=heavy?1:5;else if(a.intensity==='balanced')score+=4;else if(a.intensity==='strong')score+=heavy?5:3;else score+=heavy?5:2;
-max+=5;if(a.time==='Day/Night'||time.includes('day/night')||time.includes(a.time.toLowerCase()))score+=5;else score+=1;
-max+=5;if(a.season==='all'||season.includes('all'))score+=5;else if(a.season==='hot'&&hasAny(season+' '+t,['summer','spring','fresh','aquatic','citrus']))score+=5;else if(a.season==='cool'&&hasAny(season+' '+t,['winter','autumn','oud','amber','vanilla','spicy']))score+=5;else if(a.season==='rainy'&&hasAny(t,['woody','green','earthy','fresh','vetiver','musk']))score+=5;else score+=1;
-max+=5;if(a.type==='Either'||type.includes(a.type.toLowerCase()))score+=5;
-let pct=Math.round((score/max)*100);return {product:p,score,pct:Math.min(99,Math.max(35,pct)),reasons:[...new Set(reasons)].slice(0,3)};}
-function getScentPersonality(a){const names={fresh:'Fresh Explorer',confident:'Confident Commander',romantic:'Romantic Charmer',calm:'Serene Minimalist',mysterious:'Mysterious Enigma',luxurious:'Royal Connoisseur',energetic:'Energetic Adventurer',cozy:'Cozy Dreamer'};return `The ${names[a.mood]||'Signature Seeker'}`;}
-function getQuizEligibleProducts(){return (typeof products!=='undefined'?products:[]).filter(p=>{const typ=String(p.type||p.category||'').toLowerCase();return typ.includes('perfume')||typ.includes('attar');});}
-function renderScentAnalysis(){const body=document.getElementById('scent-quiz-body');body.innerHTML=`<div class="py-20 text-center"><div class="w-20 h-20 mx-auto rounded-full border-2 border-yellow-500 flex items-center justify-center mb-6"><i class="fas fa-wand-magic-sparkles text-yellow-500 text-3xl animate-pulse"></i></div><h2 class="brand-font text-3xl md:text-5xl font-bold mb-3">Discovering Your Signature...</h2><p class="text-gray-400">Analysing your preferences across our fragrance collection.</p></div>`;setTimeout(renderScentResults,700);}
-function renderScentResults(){const a=scentQuizState.answers;let ranked=getQuizEligibleProducts().map(p=>calculateScentMatch(p,a)).sort((x,y)=>y.score-x.score);if(a.type!=='Either'){const exact=ranked.filter(r=>String(r.product.type||r.product.category||'').toLowerCase().includes(a.type.toLowerCase()));if(exact.length>=5)ranked=exact;}const top=ranked.slice(0,5),body=document.getElementById('scent-quiz-body');body.innerHTML=`<div class="text-center mb-9 pr-10"><p class="text-yellow-500 text-xs uppercase tracking-[.35em] font-bold mb-3">Your fragrance personality</p><h2 class="brand-font text-3xl md:text-5xl font-bold mb-3">${getScentPersonality(a)}</h2><p class="text-gray-400 max-w-2xl mx-auto">Based on your mood, lifestyle and scent preferences, these are your strongest Eternal Essence matches.</p></div><div class="space-y-4">${top.map((r,i)=>`<div class="ee-result-card text-black rounded-xl p-3 md:p-5 flex gap-4 items-center"><div class="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shrink-0"><img src="${r.product.image||''}" alt="${r.product.name}" class="w-full h-full object-cover" onerror="this.style.display='none'"></div><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-black uppercase tracking-widest text-yellow-700">#${i+1} ${i===0?'Best Match':'Recommendation'}</span></div><h3 class="brand-font text-lg md:text-2xl font-bold truncate">${r.product.name}</h3><p class="text-xs md:text-sm text-gray-500 mt-1 line-clamp-2">${r.reasons.length?r.reasons.join(' • '):'Selected from your fragrance preferences'}</p><div class="flex flex-wrap gap-1 mt-2">${(Array.isArray(r.product.accords)?r.product.accords.slice(0,3):[]).map(x=>`<span class="text-[10px] bg-black text-yellow-500 px-2 py-1 rounded-full">${x}</span>`).join('')}</div><button onclick="closeScentQuiz();openProduct(${JSON.stringify(r.product.id||r.product._id)})" class="mt-3 text-xs font-bold uppercase tracking-widest border-b-2 border-yellow-500 hover:text-yellow-700">View Fragrance</button></div><div class="ee-match-ring relative shrink-0" style="--match:${r.pct}%"><span>${r.pct}%</span></div></div>`).join('')}</div><div class="flex flex-col sm:flex-row justify-center gap-3 mt-8"><button onclick="openScentQuiz()" class="border border-yellow-500 text-yellow-500 px-6 py-3 font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition">Retake Quiz</button><button onclick="closeScentQuiz();document.getElementById('collection-section')?.scrollIntoView({behavior:'smooth'})" class="bg-yellow-500 text-black px-6 py-3 font-bold uppercase tracking-widest hover:bg-white transition">Explore Collection</button></div>`;}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('scent-quiz-modal')?.classList.contains('hidden'))closeScentQuiz();});
+const QUIZ_AROMAS = {
+  fresh:['fresh','aquatic','marine','citrus','bergamot','lemon','lime','mint','clean','green'],
+  sweet:['vanilla','sweet','gourmand','caramel','chocolate','honey','tonka','coffee'],
+  floral:['floral','rose','jasmine','peony','gardenia','tuberose','lavender','violet'],
+  woody:['woody','wood','cedar','sandalwood','vetiver','oakmoss','patchouli'],
+  oud:['oud','agarwood','incense','saffron','amber','resin','oriental']
+};
+const QUIZ_INTENTS = {
+  fresh:['fresh','aquatic','citrus','clean','green','aromatic'],
+  calm:['musk','sandalwood','lavender','soft','powdery','herbal'],
+  confident:['woody','amber','leather','spicy','aromatic','vetiver'],
+  romantic:['rose','floral','vanilla','musk','sweet','amber'],
+  bold:['oud','leather','tobacco','saffron','smoky','incense']
+};
+const QUIZ_SETTINGS = {
+  everyday:['fresh','clean','citrus','musk','aromatic'],
+  work:['clean','fresh','musk','woody','citrus','sandalwood'],
+  date:['vanilla','rose','amber','musk','floral','sweet'],
+  social:['amber','oud','spicy','leather','sweet','saffron'],
+  ritual:['attar','oud','rose','sandalwood','incense','musk']
+};
+let scentQuizState = { step:0, answers:{}, results:[], timer:null };
+function quizElement(tag, className, content) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (content !== undefined) node.textContent = content;
+  return node;
+}
+function quizMatches(text, terms) { return terms.filter(term => text.includes(term)); }
+function quizCategory(product) { return String(product.type || product.category || '').toLowerCase(); }
+function quizImage(product) {
+  const source = String(product.image || product.images?.[0] || 'ee-brand-20260819.webp');
+  return /^https?:\/\//i.test(source) ? source : '/products/' + source.split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp');
+}
+function currentQuizClimate() {
+  if (window.__EE_CURATED__?.season) return window.__EE_CURATED__.season === 'winter' ? 'cool' : 'hot';
+  const month = Number(new Intl.DateTimeFormat('en-IN', { timeZone:'Asia/Kolkata', month:'numeric' }).format(new Date()));
+  return month >= 3 && month <= 10 ? 'hot' : 'cool';
+}
+function getQuizEligibleProducts() {
+  if (window.__EE_CATALOG_STATUS__ !== 'ready') return [];
+  return (window.EE?.getProducts?.() || []).filter(product => {
+    const category = quizCategory(product);
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+    return (category === 'perfume' || category === 'attar') && product.isActive !== false
+      && (!sizes.length || sizes.some(size => size.isStorefrontVisible !== false));
+  });
+}
+function scoreScentProduct(product, answers) {
+  const accords = [product.family, ...(Array.isArray(product.accords) ? product.accords : [])].filter(Boolean).join(' ').toLowerCase();
+  const notes = [product.top, product.mid, product.base, product.notes?.top, product.notes?.mid, product.notes?.base].filter(Boolean).join(' ').toLowerCase();
+  const details = (accords + ' ' + notes + ' ' + (product.name || '') + ' ' + (product.description || '')).toLowerCase();
+  const climate = answers.climate === 'current' ? currentQuizClimate() : answers.climate;
+  let score = 0;
+  const reasons = [];
+  if (answers.aroma !== 'unsure') {
+    const terms = QUIZ_AROMAS[answers.aroma] || [];
+    const main = quizMatches(accords, terms), supporting = quizMatches(notes, terms);
+    score += Math.min(42, main.length * 12 + supporting.length * 6 + (main.length || supporting.length ? 4 : 0));
+    if (main.length || supporting.length) reasons.push((main[0] || supporting[0]) + ' notes match the smells you picked');
+  }
+  const mood = quizMatches(details, QUIZ_INTENTS[answers.intent] || []);
+  score += Math.min(30, mood.length * (answers.aroma === 'unsure' ? 12 : 8));
+  if (mood.length) reasons.push(mood[0] + ' character supports your ' + answers.intent + ' mood');
+  const moment = quizMatches(details, QUIZ_SETTINGS[answers.setting] || []);
+  score += Math.min(20, moment.length * 6);
+  if (moment.length) reasons.push('a good direction for ' + ({work:'work or college',social:'celebrations'}[answers.setting] || answers.setting) + ' wear');
+  const rich = quizMatches(details, ['oud','amber','leather','incense','tobacco','smoky','spicy','intense']).length;
+  score += answers.presence === 'statement' ? (rich ? 10 : 1) : answers.presence === 'soft' ? (rich ? 1 : 10) : 7;
+  const season = String(product.season || '').toLowerCase();
+  const allSeason = /all\s*season/.test(season);
+  const warmFit = /summer|spring/.test(season) || quizMatches(details, QUIZ_AROMAS.fresh).length > 1;
+  const coolFit = /winter|autumn/.test(season) || rich > 1;
+  if (climate === 'all' || allSeason) score += 8;
+  else if ((climate === 'hot' && warmFit) || (climate === 'cool' && coolFit)) {
+    score += 10;
+    reasons.push('fits ' + (climate === 'hot' ? 'warmer' : 'cooler') + ' weather');
+  }
+  return { product, score, reasons:[...new Set(reasons)].slice(0,3) };
+}
+function rankScentProducts(products, answers) {
+  const eligible = products.filter(product => answers.format === 'Either' || quizCategory(product) === String(answers.format || '').toLowerCase());
+  const ranked = eligible.map(product => scoreScentProduct(product, answers))
+    .sort((a,b) => b.score - a.score || String(a.product.name).localeCompare(String(b.product.name)));
+  const seen = new Set();
+  return ranked.filter(result => {
+    const name = String(result.product.name || '').toLowerCase();
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+}
+function openScentQuiz() {
+  clearTimeout(scentQuizState.timer);
+  scentQuizState = { step:0, answers:{}, results:[], timer:null };
+  const modal = document.getElementById('scent-quiz-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  renderScentQuiz();
+}
+function closeScentQuiz() {
+  clearTimeout(scentQuizState.timer);
+  document.getElementById('scent-quiz-modal')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function quizHeader(step) {
+  const top = quizElement('div','ee-quiz-top');
+  const label = quizElement('div','ee-quiz-count','Find your signature scent · ' + (step + 1) + ' of ' + SCENT_QUIZ_QUESTIONS.length);
+  const progress = quizElement('div','ee-quiz-progress');
+  const fill = quizElement('div');
+  fill.style.width = Math.round((step + 1) / SCENT_QUIZ_QUESTIONS.length * 100) + '%';
+  progress.appendChild(fill);
+  top.append(label,progress);
+  return top;
+}
+function renderScentQuiz() {
+  const question = SCENT_QUIZ_QUESTIONS[scentQuizState.step];
+  const body = document.getElementById('scent-quiz-body');
+  if (!body || !question) return;
+  const intro = quizElement('div','ee-quiz-intro');
+  intro.append(quizElement('p','ee-quiz-kicker','A few easy choices'),quizElement('h2','brand-font',question.title),quizElement('p','ee-quiz-hint',question.hint));
+  const options = quizElement('div','ee-quiz-options');
+  question.options.forEach(option => {
+    const button = quizElement('button','ee-quiz-option');
+    button.type = 'button';
+    const icon = quizElement('i','fas ' + option[3]);
+    button.append(icon,quizElement('strong','',option[1]),quizElement('small','',option[2]));
+    button.addEventListener('click',() => answerScentQuiz(question.id, option[0]));
+    options.appendChild(button);
+  });
+  body.replaceChildren(quizHeader(scentQuizState.step),intro,options);
+  if (scentQuizState.step > 0) {
+    const back = quizElement('button','ee-quiz-back','← Back');
+    back.type = 'button';
+    back.addEventListener('click',previousScentQuestion);
+    body.appendChild(back);
+  }
+}
+function answerScentQuiz(id,value) {
+  scentQuizState.answers[id] = value;
+  if (scentQuizState.step < SCENT_QUIZ_QUESTIONS.length - 1) {
+    scentQuizState.step++;
+    renderScentQuiz();
+  } else renderScentAnalysis();
+}
+function previousScentQuestion() {
+  if (scentQuizState.step > 0) { scentQuizState.step--; renderScentQuiz(); }
+}
+function renderScentAnalysis() {
+  const body = document.getElementById('scent-quiz-body');
+  body.replaceChildren(quizElement('h2','ee-quiz-loading brand-font','Finding your fragrances…'),quizElement('p','ee-quiz-hint','Matching your choices with products available now.'));
+  scentQuizState.timer = setTimeout(renderScentResults,350);
+}
+function renderScentResults() {
+  const body = document.getElementById('scent-quiz-body');
+  const answers = scentQuizState.answers;
+  scentQuizState.results = rankScentProducts(getQuizEligibleProducts(),answers).slice(0,3);
+  if (!scentQuizState.results.length) {
+    body.replaceChildren(quizElement('h2','brand-font','The collection is unavailable right now'),quizElement('p','ee-quiz-hint','Please try again when the live catalogue has loaded.'));
+    const retry = quizElement('button','ee-quiz-retry','Try again');
+    retry.addEventListener('click',openScentQuiz);
+    body.appendChild(retry);
+    return;
+  }
+  const direction = {fresh:'Fresh and easy',calm:'Comforting and understated',confident:'Polished confidence',romantic:'Warm and inviting',bold:'Bold and distinctive'}[answers.intent] || 'Your scent direction';
+  const intro = quizElement('div','ee-quiz-intro');
+  intro.append(quizElement('p','ee-quiz-kicker','Your scent direction'),quizElement('h2','brand-font',direction),quizElement('p','ee-quiz-hint','These live products fit the feeling, moment and smells you chose. Open one to see its notes, sizes and price.'));
+  const list = quizElement('div','ee-quiz-results');
+  scentQuizState.results.forEach((result,index) => {
+    const card = quizElement('article','ee-result-card ee-quiz-result');
+    const image = quizElement('img');
+    image.src = quizImage(result.product);
+    image.alt = result.product.name;
+    image.onerror = () => { image.onerror = null; image.src = '/products/ee-brand-20260819.webp'; };
+    const content = quizElement('div');
+    const label = quizElement('span','ee-quiz-result-label',(index === 0 ? 'Start here' : 'Option ' + (index + 1)) + ' · ' + (result.product.type || result.product.category || 'Fragrance'));
+    const name = quizElement('h3','brand-font',result.product.name);
+    const explanation = quizElement('p','',result.reasons.length ? result.reasons.join(' · ') : 'A balanced starting point based on your choices');
+    const open = quizElement('button','','Open this fragrance →');
+    open.type = 'button';
+    open.addEventListener('click',() => {
+      closeScentQuiz();
+      window.eeNavigateToProduct?.(result.product,{size:window.eeDefaultProductSize?.(result.product) || ''});
+    });
+    content.append(label,name,explanation,open);
+    card.append(image,content);
+    list.appendChild(card);
+  });
+  const retake = quizElement('button','ee-quiz-retry','Try different answers');
+  retake.type = 'button';
+  retake.addEventListener('click',openScentQuiz);
+  body.replaceChildren(intro,list,retake);
+}
+window.__EE_SCENT_QUIZ__ = { rankScentProducts,scoreScentProduct,getQuizEligibleProducts };
+document.addEventListener('keydown',event => {
+  if (event.key === 'Escape' && !document.getElementById('scent-quiz-modal')?.classList.contains('hidden')) closeScentQuiz();
+});

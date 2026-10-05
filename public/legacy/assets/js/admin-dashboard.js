@@ -53,12 +53,12 @@ const DEALER_FACTOR_FIELDS = [
 { key: 'ml8', label: '8 ml', defaultValue: 0.80, group: 'Shared' },
 { key: 'ml12', label: '12 ml', defaultValue: 0.80, group: 'Attar' },
 { key: 'ml20', label: '20 ml', defaultValue: 0.75, group: 'Perfume' },
-{ key: 'ml30', label: '30 ml', defaultValue: 0.70, group: 'Perfume' },
-{ key: 'gift30', label: '30 ml Gift', defaultValue: 0.70, group: 'Gift' },
-{ key: 'ml50', label: '50 ml', defaultValue: 0.65, group: 'Perfume' },
-{ key: 'gift50', label: '50 ml Gift', defaultValue: 0.65, group: 'Gift' },
-{ key: 'ml100', label: '100 ml', defaultValue: 0.60, group: 'Perfume' },
-{ key: 'gift100', label: '100 ml Gift', defaultValue: 0.60, group: 'Gift' }
+{ key: 'ml30', label: 'Retired 30 ml', defaultValue: 0.70, group: 'Legacy' },
+{ key: 'gift30', label: '30 ml', defaultValue: 0.70, group: 'Perfume' },
+{ key: 'ml50', label: 'Retired 50 ml', defaultValue: 0.65, group: 'Legacy' },
+{ key: 'gift50', label: '50 ml', defaultValue: 0.65, group: 'Perfume' },
+{ key: 'ml100', label: 'Retired 100 ml', defaultValue: 0.60, group: 'Legacy' },
+{ key: 'gift100', label: '100 ml', defaultValue: 0.60, group: 'Perfume' }
 ];
 function notifyNewOrders(nextOrders) {
 const nextIds = new Set(nextOrders.map(order => String(order._id || order.orderId)));
@@ -1213,7 +1213,7 @@ const itemsHtml = (selectedOrder.items || [])
 .map((item, index) => {
 const sourceIndex = item.__adminNew ? '' : String(item.__orderSourceIndex ?? index);
 if (!canEditItems) return `<div class="border rounded-lg p-3 bg-gray-50"><div class="font-semibold">${escapeHtml(item.name || 'Product')}</div><div class="text-gray-500 mt-1">${escapeHtml(item.size || '')}${item.qty ? ` × ${escapeHtml(item.qty)}` : ''}</div>${item.price !== undefined ? `<div class="font-bold mt-1">${formatINR(item.price)}</div>` : ''}</div>`;
-return `<div class="border rounded-lg p-3 bg-gray-50 admin-order-item-edit" data-item-index="${index}" data-source-index="${sourceIndex}"><div class="flex items-start justify-between gap-2 mb-2"><div class="tiny font-semibold uppercase tracking-wide ${item.__adminNew ? 'text-green-700' : 'text-gray-500'}">${item.__adminNew ? 'New catalogue item' : 'Existing item · catalogue details locked'}</div><button type="button" onclick="removeOrderItem(${index})" class="admin-order-item-remove px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 tiny font-bold"><i class="fas fa-trash mr-1"></i>Remove</button></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="tiny font-semibold">Product name<input data-item-field="name" readonly value="${escapeHtml(item.name || 'Product')}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Size<input data-item-field="size" readonly value="${escapeHtml(item.size || '')}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Quantity<input data-item-field="qty" type="number" min="1" max="999" value="${Number(item.qty || 1)}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Unit price<input data-item-field="price" readonly value="${Number(item.price || 0)}" class="w-full p-2 border rounded mt-1"></label></div></div>`;
+return `<div class="border rounded-lg p-3 bg-gray-50 admin-order-item-edit" data-item-index="${index}" data-source-index="${sourceIndex}"><div class="flex items-start justify-between gap-2 mb-2"><div class="tiny font-semibold uppercase tracking-wide ${item.__adminNew ? 'text-green-700' : 'text-gray-500'}">${item.__adminNew ? 'New catalogue item' : 'Existing item · catalogue details locked'}${item.gift ? ' · Gift wrap' : ''}</div><button type="button" onclick="removeOrderItem(${index})" class="admin-order-item-remove px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 tiny font-bold"><i class="fas fa-trash mr-1"></i>Remove</button></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="tiny font-semibold">Product name<input data-item-field="name" readonly value="${escapeHtml(item.name || 'Product')}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Size<input data-item-field="size" readonly value="${escapeHtml(item.size || '')}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Quantity<input data-item-field="qty" type="number" min="1" max="999" value="${Number(item.qty || 1)}" class="w-full p-2 border rounded mt-1"></label><label class="tiny font-semibold">Unit price<input data-item-field="price" readonly value="${Number(item.price || 0)}" class="w-full p-2 border rounded mt-1"></label></div></div>`;
 })
 .join('');
 const supportHtml = (selectedOrder.supportRequests || [])
@@ -2011,7 +2011,7 @@ renderInventoryProducts();
 document.getElementById('products-tbody').innerHTML = `<tr><td colspan="7" class="p-4 text-red-600">${escapeHtml(err.message)}</td></tr>`;
 }
 }
-const ADMIN_FACTOR_SIZE_OPTIONS={Perfume:[['8ml','8 ml'],['20ml','20 ml'],['30ml','30 ml'],['50ml','50 ml'],['100ml','100 ml'],['30mlgift','30 ml Gift'],['50mlgift','50 ml Gift'],['100mlgift','100 ml Gift']],Attar:[['3ml','3 ml'],['6ml','6 ml'],['8ml','8 ml'],['12ml','12 ml']]};
+const ADMIN_FACTOR_SIZE_OPTIONS={Perfume:[['8ml','8 ml'],['20ml','20 ml'],['30mlgift','30 ml'],['50mlgift','50 ml'],['100mlgift','100 ml']],Attar:[['3ml','3 ml'],['6ml','6 ml'],['8ml','8 ml'],['12ml','12 ml']]};
 function syncSharedFactorSizes(resetToDefault=false){const category=document.getElementById('inventory-factor-category');const size=document.getElementById('inventory-factor-size');if(!category||!size)return;const options=[...new Map([...(ADMIN_FACTOR_SIZE_OPTIONS[category.value]||[]),...inventoryRows.filter(row=>row.category===category.value&&row.variantKey!=='shared').map(row=>[row.variantKey,row.sizeLabel])]).entries()];const previous=size.value;size.innerHTML=options.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');size.value=!resetToDefault&&options.some(([value])=>value===previous)?previous:options[0][0];}
 function inventorySellingPrice(item) {
   return Number(item.websitePrice)>0 ? Number(item.websitePrice) : Math.round(Number(item.basePrice||0)*Number(item.priceMultiplier||1));
@@ -2180,7 +2180,10 @@ async function syncAndLoadInventory() {
   if(!sync.ok)throw new Error(sync.body.error||'Could not initialize inventory');
   const {ok,body}=await adminFetch('/api/admin/inventory');
   if(!ok||!Array.isArray(body.inventory))throw new Error(body.error||'Invalid inventory response');
-  inventoryRows=body.inventory;
+  const allRows=body.inventory;
+  const giftRows=new Set(allRows.filter(row=>/perfume/i.test(row.category||'')&&/^(30|50|100)mlgift$/.test(row.variantKey)).map(row=>`${row.productId}:${row.variantKey.replace('gift','')}`));
+  inventoryRows=allRows.filter(row=>!/perfume/i.test(row.category||'')||!giftRows.has(`${row.productId}:${row.variantKey}`))
+    .map(row=>/perfume/i.test(row.category||'')&&/^(30|50|100)mlgift$/.test(row.variantKey)?{...row,sizeLabel:row.sizeLabel.replace(/\s*Gift$/i,'')}:row);
   inventoryByProductId=new Map(inventoryRows.map(item=>[item.productId+':'+item.variantKey,item]));
 }
 async function saveInventoryStock(id) {
@@ -2197,7 +2200,7 @@ async function saveInventoryStock(id) {
     await syncAndLoadInventory();renderInventoryProducts();
   }catch(error){alert(error.message);}
 }
-function adminInventoryVariants(product){const categoryName=String(product.category||product.type||'Perfume'),category=categoryName.toLowerCase(),images=product.images||[],supplied=new Map((product.sizes||[]).map(size=>[`${Number(size.value)}ml${/gift/i.test(size.unit||'')?'gift':''}`,Number(size.priceMultiplier)]));if(product.sharedStock)return[{sizeLabel:'Shared stock',variantKey:'shared',image:images[0]||product.image||'',priceMultiplier:1}];const labels=category.includes('attar')?['3 ml','6 ml','8 ml','12 ml']:category.includes('perfume')?['8 ml','20 ml','30 ml','50 ml','100 ml','30 ml Gift','50 ml Gift','100 ml Gift']:['Default'];const indexes=category.includes('attar')?[0,0,0,0]:[1,2,3,4,5,6,7,8];return labels.map((sizeLabel,index)=>{const variantKey=sizeLabel==='Default'?'default':`${sizeLabel.match(/[\d.]+/)?.[0]}ml${/gift/i.test(sizeLabel)?'gift':''}`;return{sizeLabel,variantKey,image:images[indexes[index]]||images[0]||product.image||'',priceMultiplier:supplied.get(variantKey)||ADMIN_PRICE_FACTORS[categoryName]?.[variantKey]||1};});}
+function adminInventoryVariants(product){const categoryName=String(product.category||product.type||'Perfume'),category=categoryName.toLowerCase(),images=product.images||[],supplied=new Map((product.sizes||[]).map(size=>[`${Number(size.value)}ml${/gift/i.test(size.unit||'')?'gift':''}`,Number(size.priceMultiplier)]));if(product.sharedStock)return[{sizeLabel:'Shared stock',variantKey:'shared',image:images[0]||product.image||'',priceMultiplier:1}];const labels=category.includes('attar')?['3 ml','6 ml','8 ml','12 ml']:category.includes('perfume')?['8 ml','20 ml','30 ml','50 ml','100 ml']:['Default'];const indexes=category.includes('attar')?[0,0,0,0]:[1,2,6,7,8];return labels.map((sizeLabel,index)=>{const variantKey=sizeLabel==='Default'?'default':`${sizeLabel.match(/[\d.]+/)?.[0]}ml${category.includes('perfume')&&index>=2?'gift':''}`;return{sizeLabel,variantKey,image:images[indexes[index]]||images[0]||product.image||'',priceMultiplier:supplied.get(variantKey)||ADMIN_PRICE_FACTORS[categoryName]?.[variantKey]||1};});}
 function getGiftProducts() {
 const dbProducts = (adminProducts || []).map(p => ({ ...p, source: 'backend' }));
 const seen = new Set();
@@ -2209,7 +2212,7 @@ return true;
 });
 }
 function giftImageBySize(product, sizeLabel) {
-const idxMap = { '8 ml': 1, '20 ml': 2, '30 ml': 3, '50 ml': 4, '100 ml': 5, '30 ml Gift': 6, '50 ml Gift': 7, '100 ml Gift': 8 };
+const idxMap = { '8 ml': 1, '20 ml': 2, '30 ml': 6, '50 ml': 7, '100 ml': 8, '30 ml Gift': 6, '50 ml Gift': 7, '100 ml Gift': 8 };
 const idx = product.category === 'Perfume' ? (idxMap[sizeLabel] || 0) : 0;
 const img = product.images?.[idx] || product.images?.[0] || product.image || '';
 if (!img) return '';
@@ -2504,3 +2507,44 @@ setAuthUI(); if (adminToken) initData(); })();
   observer.observe(document.body, { childList: true, subtree: true });
   setTimeout(renderWhatsAppFailureDetails, 500);
 })();
+// Homepage seasonal and Oud edits. The picker uses live active products, so
+// administrators cannot save a hidden or deleted product into a collection.
+let homeCollectionProducts = [];
+function mountHomeCollectionsAdmin() {
+  const dashboard = document.getElementById('dashboard');
+  if (!dashboard || dashboard.classList.contains('hidden') || document.getElementById('home-collections-admin')) return;
+  const panel = document.createElement('section');
+  panel.id = 'home-collections-admin';
+  panel.className = 'card p-6 mt-8';
+  panel.innerHTML = `<h2 class="text-xl font-bold">Homepage seasonal edits &amp; OUD Lovers</h2><p class="text-sm text-gray-500 mt-2">Summer appears March–October; winter appears November–February (India time). Select the products shown in the hero collection and OUD Lovers section.</p><div id="home-collections-fields" class="grid md:grid-cols-3 gap-4 mt-5"></div><button type="button" id="save-home-collections" class="mt-5 bg-black text-white px-5 py-2 rounded font-bold">Save homepage selections</button><p id="home-collections-status" class="text-sm mt-2"></p>`;
+  dashboard.appendChild(panel);
+  document.getElementById('save-home-collections').addEventListener('click', saveHomeCollectionsAdmin);
+  loadHomeCollectionsAdmin();
+}
+async function loadHomeCollectionsAdmin() {
+  const status = document.getElementById('home-collections-status');
+  try {
+    const { ok, body } = await adminFetch('/api/admin/home-collections');
+    if (!ok) throw new Error(body.error || 'Could not load selections');
+    homeCollectionProducts = body.products || [];
+    const fields = document.getElementById('home-collections-fields');
+    fields.innerHTML = ['summer','winter','oud'].map(key => `<div class="border rounded p-3"><h3 class="font-bold capitalize">${key === 'oud' ? 'OUD Lovers' : key}</h3><input class="w-full p-2 border rounded text-sm mt-2 mb-2" placeholder="Find a product" oninput="filterHomeCollectionProducts('${key}',this.value)"><div id="home-collection-${key}" class="h-56 overflow-auto border rounded p-2 text-sm space-y-1">${homeCollectionProducts.map(product => `<label class="home-product-option flex gap-2 items-start"><input type="checkbox" value="${escapeHtml(product.id)}" ${body.collections?.[key]?.includes(product.id) ? 'checked' : ''}><span>${escapeHtml(product.name)} <small class="text-gray-500">${escapeHtml(product.category)}</small></span></label>`).join('')}</div></div>`).join('');
+    status.textContent = 'Selections loaded.';
+  } catch (error) { status.textContent = error.message; status.className = 'text-sm mt-2 text-red-600'; }
+}
+function filterHomeCollectionProducts(key, query) {
+  const needle = String(query || '').toLowerCase();
+  document.querySelectorAll(`#home-collection-${key} .home-product-option`).forEach(row => { row.style.display = row.textContent.toLowerCase().includes(needle) ? '' : 'none'; });
+}
+async function saveHomeCollectionsAdmin() {
+  const status = document.getElementById('home-collections-status');
+  const collections = Object.fromEntries(['summer','winter','oud'].map(key => [key, [...document.querySelectorAll(`#home-collection-${key} input:checked`)].map(input => input.value)]));
+  status.textContent = 'Saving...';
+  try {
+    const { ok, body } = await adminFetch('/api/admin/home-collections', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(collections) });
+    if (!ok) throw new Error(body.error || 'Could not save selections');
+    status.textContent = 'Homepage selections saved.';
+    status.className = 'text-sm mt-2 text-green-700';
+  } catch (error) { status.textContent = error.message; status.className = 'text-sm mt-2 text-red-600'; }
+}
+setInterval(mountHomeCollectionsAdmin, 1000);
