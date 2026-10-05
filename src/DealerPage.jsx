@@ -6,19 +6,19 @@ const BRAND_IMAGE='/products/ee-brand-20260819.webp';
 const money=value=>`₹${Math.round(Number(value||0)).toLocaleString('en-IN')}`;
 const pdfMoney=value=>`Rs. ${Math.round(Number(value||0)).toLocaleString('en-IN')}`;
 const PERFUME_SIZES=[
-  {value:8,unit:'ml',priceMultiplier:.278557114228},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
-  {value:30,unit:'ml Gift',priceMultiplier:1.2},{value:50,unit:'ml Gift',priceMultiplier:1.601},{value:100,unit:'ml Gift',priceMultiplier:2.6032}
+  {value:8,unit:'ml',priceMultiplier:.278557114228},{value:20,unit:'ml',priceMultiplier:.6993987},
+  {value:30,unit:'ml',priceMultiplier:1.2},{value:50,unit:'ml',priceMultiplier:1.601},{value:100,unit:'ml',priceMultiplier:2.6032}
 ];
 const ATTAR_SIZES=[{value:3,unit:'ml',priceMultiplier:1},{value:6,unit:'ml',priceMultiplier:1.85},{value:8,unit:'ml',priceMultiplier:2.3},{value:12,unit:'ml',priceMultiplier:3.2}];
 const categoryLabel=product=>String(product?.type||product?.category||'Perfume').trim()||'Perfume';
 const productType=product=>{const category=categoryLabel(product),normalized=category.toLowerCase();return normalized.includes('attar')?'Attar':normalized.includes('perfume')?'Perfume':category;};
 const normalizedUnit=size=>String(size?.unit||'').toLowerCase().replace(/\s+/g,'');
 const sizeKey=size=>`${Number(size?.value||0)}${normalizedUnit(size)}`;
-const factorKey=size=>normalizedUnit(size).includes('gift')?`gift${Number(size.value)}`:`${normalizedUnit(size)}${Number(size.value)}`;
+const factorKey=size=>normalizedUnit(size).includes('gift')||[30,50,100].includes(Number(size.value))?`gift${Number(size.value)}`:`${normalizedUnit(size)}${Number(size.value)}`;
 const sizeLabel=size=>String(size?.unit||'').toLowerCase()==='pc'?'Standard':`${size?.value||''} ${size?.unit||''}`.trim();
 function getSizes(product){
   const kind=productType(product),canonical=kind==='Attar'?ATTAR_SIZES:kind==='Perfume'?PERFUME_SIZES:[];
-  const supplied=Array.isArray(product?.sizes)?product.sizes:[];
+  const supplied=Array.isArray(product?.sizes)?product.sizes.filter(size=>kind!=='Perfume'||![30,50,100].includes(Number(size.value))||/gift/i.test(size.unit||'')||!product.sizes.some(other=>Number(other.value)===Number(size.value)&&/gift/i.test(other.unit||''))).map(size=>kind==='Perfume'&&/gift/i.test(size.unit||'')?{...size,unit:'ml'}:size):[];
   const suppliedByKey=new Map(supplied.map(size=>[sizeKey(size),size]));
   const merged=canonical.map(size=>({...size,...(suppliedByKey.get(sizeKey(size))||{})}));
   const canonicalKeys=new Set(canonical.map(sizeKey));
@@ -31,7 +31,7 @@ function imageUrl(name){
   return`/products/${String(name).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
 }
 function perfumeVariantIndex(size){
-  const map={'8ml':1,'20ml':2,'30ml':3,'50ml':4,'100ml':5,'30mlgift':6,'50mlgift':7,'100mlgift':8};
+  const map={'8ml':1,'20ml':2,'30ml':6,'50ml':7,'100ml':8,'30mlgift':6,'50mlgift':7,'100mlgift':8};
   return map[sizeKey(size)]??0;
 }
 function variantSources(product,size,sizeIndex){
@@ -164,7 +164,7 @@ function useProducts(ready){
 }
 
 function RateCard({product,priceFactors,fallbackFactor,cardIndex}){
-  const[activeIndex,setActiveIndex]=useState(()=>Math.max(0,getSizes(product).findIndex(size=>sizeKey(size)==='30mlgift')));
+  const[activeIndex,setActiveIndex]=useState(()=>Math.max(0,getSizes(product).findIndex(size=>sizeKey(size)==='30ml')));
   const sizes=getSizes(product);
   const prices=sizes.map(size=>{const website=(Number(size.websitePrice)>0?Number(size.websitePrice):Math.round(Number(product.price||0)*Number(size.priceMultiplier||1)));const factor=Number(priceFactors?.[factorKey(size)]??fallbackFactor??1);return{...size,website,dealer:Math.round(website*factor)};});
   const lead=prices[activeIndex]||prices[0];
@@ -174,7 +174,7 @@ function RateCard({product,priceFactors,fallbackFactor,cardIndex}){
       <div className="dealer-product-meta"><span>{product.gender||'Unisex'}</span><span>{product.season||'All Season'}</span><span>{product.time||'Day/Night'}</span></div>
       <p>{product.description||product.inspiredBy||'Eternal Essence fragrance profile.'}</p>
       <div className="dealer-lead-rate"><div><span>Website price</span><del>{money(lead.website)}</del></div><div><span>Your dealer rate</span><strong>{money(lead.dealer)}</strong></div><em>{sizeLabel(lead)}</em></div>
-      <details><summary>View all regular &amp; gift size rates</summary><div className="dealer-size-table"><div className="head"><b>SIZE</b><b>WEBSITE</b><b>DEALER</b></div>{prices.map((row,index)=><div key={`${sizeKey(row)}-${index}`}><span>{sizeLabel(row)}</span><del>{money(row.website)}</del><strong>{money(row.dealer)}</strong></div>)}</div></details>
+      <details><summary>View all size rates</summary><div className="dealer-size-table"><div className="head"><b>SIZE</b><b>WEBSITE</b><b>DEALER</b></div>{prices.map((row,index)=><div key={`${sizeKey(row)}-${index}`}><span>{sizeLabel(row)}</span><del>{money(row.website)}</del><strong>{money(row.dealer)}</strong></div>)}</div></details>
     </div>
   </article>;
 }

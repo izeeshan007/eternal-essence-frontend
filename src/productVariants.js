@@ -5,8 +5,18 @@ export function variantKey(size) {
 
 export function storefrontSizes(product, liveRows = {}, fallback = []) {
   const supplied = Array.isArray(product?.sizes) && product.sizes.length ? product.sizes : fallback;
-  return supplied.map(size => {
-    const row = liveRows.shared || liveRows[variantKey(size)];
+  const perfume = /perfume/i.test(product?.category || product?.type || '');
+  const giftFactors = { 30: 1.2, 50: 1.601, 100: 2.6032 };
+  const retiredFactors = { 30: 1, 50: 1.4008, 100: 2.4028 };
+  const normalized = perfume ? supplied.filter(size => ![30,50,100].includes(Number(size.value)) || /gift/i.test(size.unit || '') || !supplied.some(other => Number(other.value) === Number(size.value) && /gift/i.test(other.unit || '')))
+    .map(size => {
+      if (![30,50,100].includes(Number(size.value))) return size;
+      const retired = Number(size.priceMultiplier) === retiredFactors[Number(size.value)];
+      return { ...size, unit: 'ml', priceMultiplier: retired ? giftFactors[Number(size.value)] : size.priceMultiplier,
+        websitePrice: retired ? undefined : size.websitePrice };
+    }) : supplied;
+  return normalized.map(size => {
+    const row = liveRows.shared || (perfume && [30,50,100].includes(Number(size.value)) ? liveRows[`${size.value}mlgift`] : null) || liveRows[variantKey(size)];
     if (!row) return size;
     const factor = Number(row.priceMultiplier) > 0 ? Number(row.priceMultiplier) : Number(size.priceMultiplier || 1);
     const base = Number(row.basePrice) > 0 ? Number(row.basePrice) : Number(product.price || 0);

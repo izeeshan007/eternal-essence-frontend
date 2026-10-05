@@ -31,8 +31,8 @@ function imgUrl(name){
   return `/products/${String(name).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
 }
 const PERFUME_SIZE_SET=[
-  {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
-  {value:30,unit:'ml Gift',priceMultiplier:1.2},{value:50,unit:'ml Gift',priceMultiplier:1.601},{value:100,unit:'ml Gift',priceMultiplier:2.6032}
+  {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},
+  {value:30,unit:'ml',priceMultiplier:1.2},{value:50,unit:'ml',priceMultiplier:1.601},{value:100,unit:'ml',priceMultiplier:2.6032}
 ];
 const ATTAR_SIZE_SET=[{value:3,unit:'ml',priceMultiplier:1},{value:6,unit:'ml',priceMultiplier:1.85},{value:8,unit:'ml',priceMultiplier:2.3},{value:12,unit:'ml',priceMultiplier:3.2}];
 function getSizes(product,liveRows={}){
@@ -49,7 +49,7 @@ function variantIndex(size){
   const k=size&&typeof size==='object'
     ? `${size.value}${String(size.unit||'').toLowerCase().replace(/\s+/g,'')}`
     : String(size??'').toLowerCase().replace(/\s+/g,'');
-  const map={'8ml':1,'20ml':2,'30ml':3,'50ml':4,'100ml':5,'30mlgift':6,'50mlgift':7,'100mlgift':8};
+  const map={'8ml':1,'20ml':2,'30ml':6,'50ml':7,'100ml':8,'30mlgift':6,'50mlgift':7,'100mlgift':8};
   return map[k]??0;
 }
 function sizeKey(size){
@@ -66,7 +66,7 @@ function normalizeSizeLabel(value){
     :/\b(?:gm|g|gram|grams)\b/i.test(raw)?'gm'
     :/\b(?:pc|piece|pieces)\b/i.test(raw)?'pc'
     :'ml';
-  return `${match[0]}${unit}${/gift/i.test(raw)?'gift':''}`;
+  return `${match[0]}${unit}${/gift/i.test(raw)&&![30,50,100].includes(Number(match[0]))?'gift':''}`;
 }
 function sizeFromUrl(product,sizes){
   const requested=new URLSearchParams(location.search).get('size')||window.__eePendingProductSelection?.size||'';
@@ -404,8 +404,8 @@ export default function ProductPage({product,route,onBack}){
     }
   },[p,size,variantPricing]);
   if(!p)return <div className="ee-notfound"><h1>Fragrance not found</h1><button onClick={onBack}>Back to collection</button></div>;
-  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes);
-  const selectedStock=!selectedSize?0:variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
+  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),legacyGiftKey=categoryName(p).toLowerCase().includes('perfume')&&[30,50,100].includes(Number(selectedSize?.value))?`${selectedSize?.value}mlgift`:null,livePrice=variantPricing.shared||variantPricing[legacyGiftKey]||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes);
+  const selectedStock=!selectedSize?0:variantStock.shared??variantStock[legacyGiftKey]??variantStock[selectedVariantKey]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
   const safeImg=galleryIndices.includes(img)?img:(galleryIndices[0]??0);
   const currentSources=safeImg===selectedVariantIndex ? variantImages(p,selectedSize) : galleryImageSources(p,safeImg);

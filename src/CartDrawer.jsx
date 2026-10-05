@@ -4,6 +4,7 @@ import {ArrowRight,ShoppingBag,X} from 'lucide-react';
 const BRAND_IMAGE='/products/ee-brand-20260819.webp';
 const money=value=>`₹${Math.round(Number(value||0)).toLocaleString('en-IN')}`;
 const quantity=item=>Math.max(1,Math.floor(Number(item?.quantity||item?.qty)||1));
+const itemTotal=item=>(Number(item?.finalPrice||item?.price||0)+(item?.gift===true&&(!item.itemType||item.itemType==='product')?25:0))*quantity(item);
 const imageUrl=value=>{
   if(!value)return BRAND_IMAGE;
   const raw=String(value);
@@ -38,7 +39,7 @@ export default function CartDrawer(){
     document.addEventListener('keydown',onKey);
     return()=>document.removeEventListener('keydown',onKey);
   },[open]);
-  const total=useMemo(()=>items.reduce((sum,item)=>sum+Number(item.finalPrice||item.price||0)*quantity(item),0),[items]);
+  const total=useMemo(()=>items.reduce((sum,item)=>sum+itemTotal(item),0),[items]);
   const count=useMemo(()=>items.reduce((sum,item)=>sum+quantity(item),0),[items]);
   const goCart=()=>{setOpen(false);window.eeNavigatePage?.('cart')};
   const continueShopping=()=>{
@@ -57,8 +58,8 @@ export default function CartDrawer(){
       {items.length?<>
         <div className="ee-mini-cart-items">{items.slice(0,4).map((item,index)=><button type="button" className="ee-mini-cart-item" onClick={()=>viewItem(item)} key={`${item.id||item.productId||item.name}-${item.selectedSize}-${index}`}>
           <CartItemImage item={item}/>
-          <span><b>{item.name}</b><small>{item.selectedSize||item.size||'Standard'} · Qty {quantity(item)}</small></span>
-          <strong>{money(Number(item.finalPrice||item.price||0)*quantity(item))}</strong>
+          <span><b>{item.name}</b><small>{item.selectedSize||item.size||'Standard'} · Qty {quantity(item)}{item.gift?' · Gift wrap':''}</small></span>
+          <strong>{money(itemTotal(item))}</strong>
         </button>)}</div>
         {items.length>4&&<p className="ee-mini-cart-more">+ {items.length-4} more item{items.length-4===1?'':'s'} in your cart</p>}
         <div className="ee-mini-cart-total"><span>{count} item{count===1?'':'s'}</span><b>{money(total)}</b></div>

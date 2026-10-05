@@ -1,4 +1,4 @@
-const PERFUME_IMAGE_SIZES = ['8ml', '20ml', '30ml', '50ml', '100ml', '30mlgift', '50mlgift', '100mlgift'];
+const PERFUME_IMAGE_SIZES = ['8ml', '20ml', 'retired30ml', 'retired50ml', 'retired100ml', '30ml', '50ml', '100ml'];
 
 export function visibleGalleryIndices(product, sizes = []) {
   const images = Array.isArray(product?.images) && product.images.length

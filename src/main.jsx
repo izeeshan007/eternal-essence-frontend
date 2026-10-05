@@ -169,7 +169,7 @@ if(product?.sizes?.length&&!sizes.length)return '';
 const preferred=sizes.find(size=>String(size.unit).toLowerCase()==='ml gift'&&Number(size.value)===30)||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
 if(preferred)return `${preferred.value} ${preferred.unit}`;
 const category=String(product?.type||product?.category||'').toLowerCase();
-return category.includes('perfume')?'30 ml Gift':category.includes('attar')?'3 ml':'';
+return category.includes('perfume')?'30 ml':category.includes('attar')?'3 ml':'';
 }
 window.eeDefaultProductSize=defaultProductSize;
 function journalPath(slug){return `/journal/${slug}`;}
