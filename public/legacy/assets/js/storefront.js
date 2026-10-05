@@ -873,7 +873,7 @@ const source = String(value || '');
 const filename = source.split('/').pop().toLowerCase();
 const corrected = {
 'dark rebel.webp': 'dark_rebel.webp',
-'blue_oud.webp': 'blueoud.webp',
+
 'fire_oud.webp': 'fire oud.webp',
 'eternal_white.webp': 'eternal white.webp',
 'placeholder.webp': 'ee-brand-20260819.webp'
