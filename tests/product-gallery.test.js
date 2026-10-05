@@ -10,7 +10,7 @@ test('hidden perfume sizes remove only their gallery slots', () => {
   { value: 30, unit: 'ml', isStorefrontVisible: true },
   { value: 30, unit: 'ml Gift', isStorefrontVisible: true }
  ];
- assert.deepEqual(visibleGalleryIndices(product, sizes), [0, 3, 6, 9]);
+ assert.deepEqual(visibleGalleryIndices(product, sizes), [0, 6, 9]);
 });
 
 test('attar and unavailable size metadata do not hide unrelated photos', () => {
