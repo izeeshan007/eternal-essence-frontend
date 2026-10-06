@@ -873,7 +873,7 @@ const source = String(value || '');
 const filename = source.split('/').pop().toLowerCase();
 const corrected = {
 'dark rebel.webp': 'dark_rebel.webp',
-
+'blue_oud.webp': 'blueoud.webp',
 'fire_oud.webp': 'fire oud.webp',
 'eternal_white.webp': 'eternal white.webp',
 'placeholder.webp': 'ee-brand-20260819.webp'
@@ -3563,7 +3563,7 @@ box.innerHTML = reviews.map(r => `
 <div class="border-b py-3">
 <div class="flex items-center gap-2">
 ${'â˜…'.repeat(r.rating)}${'â˜†'.repeat(5 - r.rating)}
-<span class="text-xs text-gray-500">${r.userEmail}</span>
+<span class="text-xs text-gray-500">${escapeHtml(r.name && !r.name.includes('@') ? r.name : 'Customer')}</span>
 </div>
 <p class="text-sm mt-1">${r.comment || ''}</p>
 </div>
@@ -3594,7 +3594,7 @@ let reviewsHtml = `
 reviewsHtml += data.reviews.map(r => `
 <div class="border-b border-gray-100 pb-4 mb-4">
 <div class="flex justify-between items-center mb-1">
-<span class="font-bold text-gray-800 text-sm">${r.userEmail.split('@')[0]}</span>
+<span class="font-bold text-gray-800 text-sm">${escapeHtml(r.name && !r.name.includes('@') ? r.name : 'Customer')}</span>
 <span class="text-[10px] text-gray-400">${new Date(r.createdAt).toLocaleDateString()}</span>
 </div>
 <div class="text-yellow-500 text-[10px] mb-2">${'★'.repeat(r.rating)}</div>
