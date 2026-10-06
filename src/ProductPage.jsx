@@ -127,7 +127,7 @@ function SimilarProducts({current}){
   </section>;
 }
 function reviewImages(review){return (Array.isArray(review?.images)?review.images:[]).map(image=>typeof image==='string'?image:image?.data).filter(source=>/^data:image\/(?:jpeg|png|webp);base64,/i.test(String(source||''))).slice(0,3);}
-function reviewerName(review){return String(review?.name||review?.user?.name||review?.userEmail?.split('@')[0]||'Customer').trim()||'Customer';}
+function reviewerName(review){const name=String(review?.name||'').trim();return name&&!name.includes('@')?name:'Customer';}
 function CustomerReviews({reviews}){
   const [activeImage,setActiveImage]=useState('');
   const average=reviews.length?reviews.reduce((sum,review)=>sum+Number(review.rating||0),0)/reviews.length:0;
