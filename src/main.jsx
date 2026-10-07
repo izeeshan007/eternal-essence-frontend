@@ -6,6 +6,7 @@ import ProductPage from './ProductPage';
 import JournalPage from './JournalPage';
 import OfferPopup from './OfferPopup';
 import HomeEnhancements from './HomeEnhancements';
+import StorefrontChrome,{HotSelling,InfoPage} from './StorefrontChrome';
 import DealerPage from './DealerPage';
 import CartDrawer from './CartDrawer';
 import WhatsAppOptIn from './WhatsAppOptIn';
@@ -16,7 +17,7 @@ import './catalog.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 
-const LEGACY_ASSET_VERSION='20260925-1';
+const LEGACY_ASSET_VERSION='20261007-4';
 const LEGACY_SCRIPTS=[
   '/legacy/assets/js/storefront.js',
   '/legacy/assets/js/scent-quiz.js',
@@ -211,6 +212,10 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
           );
         if(cancelled)return;
         ref.current.innerHTML=markup;
+        // The React homepage hides the legacy shell, but the scent finder is
+        // still driven by its legacy script. Keep its modal outside that shell.
+        const quizModal=ref.current.querySelector('#scent-quiz-modal');
+        if(quizModal)document.body.appendChild(quizModal);
         // The legacy shell is fetched asynchronously. Hide catalog-only
         // sections before the browser gets a chance to paint them on `/`.
         // This prevents the collection grid from flashing before the home
@@ -341,8 +346,12 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
             const state=collectionStateFromLocation();
             window.setCategory?.(state.kind,true);
             const gender=document.getElementById('gender-filter');
+            const season=document.getElementById('season-filter');
+            const time=document.getElementById('time-filter');
             const search=document.getElementById('search-input');
             if(gender)gender.value=state.gender||'';
+            if(season)season.value=state.season||'';
+            if(time)time.value=state.time||'';
             if(search)search.value=state.search||'';
             safeLegacyApplyFilters();
           }
@@ -423,7 +432,7 @@ function LegacyShell({active,page,onReady,productOnly=false,collectionOnly=false
       }catch(e){console.error('Legacy shell boot failed',e); onReady?.()}
     }
     mount();
-    return()=>{cancelled=true};
+    return()=>{cancelled=true;document.getElementById('scent-quiz-modal')?.remove();document.body.style.overflow=''};
   },[]);
 
   useEffect(()=>{
@@ -464,7 +473,8 @@ function collectionStateFromLocation(){
   const segment=parts[1]||'';
   const kind=categoryFromCollectionSegment(segment);
   const facet=parts[2]||'';
-  const state={gender:'',search:''};
+  const params=new URLSearchParams(location.search);
+  const state={gender:'',season:params.get('season')||'',time:params.get('time')||'',search:params.get('search')||''};
   if(facet==='for-him')state.gender='Male';
   else if(facet==='for-her')state.gender='Female';
   else if(facet==='unisex')state.gender='Unisex';
@@ -487,6 +497,7 @@ function categoryFromCollectionSegment(segment=''){
   if(!value)return 'all';
   if(value==='attar'||value==='attars')return 'Attar';
   if(value==='perfume'||value==='perfumes')return 'Perfume';
+  if(value==='bakhoor'||value==='bakhoors'||value==='bukhoor')return 'Bakhoor';
   const products=window.EE?.getProducts?.()||[];
   const match=products.find(product=>categoryCollectionSegment(categoryName(product))===value);
   if(match)return categoryName(match);
@@ -505,7 +516,7 @@ function safeLegacyApplyFilters(){
 }
 
 function findProductByRoute(route){
-  const list=window.EE?.getProducts?.()||[];
+  const list=window.EE?.getProducts?.()||currentCatalog.map(p=>({...p,id:p.legacyId,type:p.category,image:p.images?.[0]}));
   if(route?.legacyId){
     return list.find(p=>String(p.id||p._id).replace(/^db_/,'')===String(route.legacyId).replace(/^db_/,''));
   }
@@ -524,8 +535,8 @@ function App(){
   const sync=()=>setPath(location.pathname+location.search);
   useEffect(()=>{
     const onPop=sync; const onRoute=sync; const onHash=sync;
-    window.addEventListener('popstate',onPop); window.addEventListener('hashchange',onHash); window.addEventListener('ee:route',onRoute);
-    return()=>{window.removeEventListener('popstate',onPop);window.removeEventListener('hashchange',onHash);window.removeEventListener('ee:route',onRoute)};
+    window.addEventListener('popstate',onPop); window.addEventListener('hashchange',onHash); window.addEventListener('ee:route',onRoute); window.addEventListener('ee:catalog-updated',onRoute);
+    return()=>{window.removeEventListener('popstate',onPop);window.removeEventListener('hashchange',onHash);window.removeEventListener('ee:route',onRoute);window.removeEventListener('ee:catalog-updated',onRoute)};
   },[]);
   useEffect(()=>{trackAnalytics('page_view');},[path]);
   useEffect(()=>{
@@ -546,12 +557,24 @@ function App(){
   const isDealer=cleanPath==='/dealer';
   const page=pageFromLocation();
   const isCollection=page==='collection' && !isProduct;
+  const isHot=cleanPath==='/collections/hot-selling';
+  const isInfo=/^\/pages\/(?:about-us|shipping-policy|return-refund-policy|privacy-policy|terms-conditions|happy-customers|track-your-order)$/.test(cleanPath);
 
   useEffect(()=>{
     if(!legacyReady)return;
     const visible=isCollection;
     ['filter-bar','collection-section','catalog-floating-filter'].forEach(id=>document.getElementById(id)?.classList.toggle('ee-catalog-hidden',!visible));
-  },[legacyReady,isCollection,path]);
+    if(visible&&!isHot){
+      const state=collectionStateFromLocation();
+      window.setCategory?.(state.kind,true);
+      const gender=document.getElementById('gender-filter'),season=document.getElementById('season-filter'),time=document.getElementById('time-filter'),search=document.getElementById('search-input');
+      if(gender)gender.value=state.gender||'';
+      if(season)season.value=state.season||'';
+      if(time)time.value=state.time||'';
+      if(search)search.value=state.search||'';
+      safeLegacyApplyFilters();
+    }
+  },[legacyReady,isCollection,isHot,path]);
 
   // Once legacy data is ready, refresh product resolution so direct links work.
   useEffect(()=>{ if(legacyReady) setPath(location.pathname+location.search); },[legacyReady]);
@@ -563,15 +586,13 @@ function App(){
     window.dispatchEvent(new CustomEvent('ee:route',{detail:{path:'/'}}));
   };
   return <div className="ee-route-view">
-    <LegacyShell active={!isDealer} page={isProduct||isJournal?'home':(isCollection?'home':page)} collectionOnly={isCollection} productOnly={isProduct||isJournal||isDealer} onReady={handleLegacyReady}/>
-    {!isDealer&&!legacyReady&&<div className="ee-app-boot" role="status" aria-live="polite"><img src="/products/ee-brand-20260819.webp" alt=""/><p>ETERNAL ESSENCE</p><span>Connecting to your collection…</span></div>}
-    {!isProduct && !isJournal && !isCollection && !isDealer && legacyReady && document.getElementById('ee-home-react-mount') &&
-      createPortal(<HomeEnhancements/>,document.getElementById('ee-home-react-mount'))}
-    {isProduct && (legacyReady ? window.__EE_CATALOG_STATUS__==='unavailable'
-      ? <div className="ee-loading" role="status"><p>The collection is temporarily unavailable.</p><button type="button" onClick={()=>location.reload()}>Retry</button></div>
-      : <ProductPage product={product} route={route} onBack={navigateHome}/>
-      : <div className="ee-loading"><div className="spinner"></div><p>Loading fragrance…</p></div>)}
-    {isJournal && (legacyReady ? <JournalPage slug={journalSlug} onBack={navigateHome}/> : <div className="ee-loading"><div className="spinner"></div><p>Loading journal...</p></div>)}
+    {!isDealer&&<StorefrontChrome/>}
+    <LegacyShell active={!isDealer} page={isProduct||isJournal||isInfo?'home':(isCollection?'home':page)} collectionOnly={isCollection&&!isHot} productOnly={isProduct||isJournal||isDealer||isInfo||isHot} onReady={handleLegacyReady}/>
+    {!isProduct&&!isJournal&&!isCollection&&!isDealer&&!isInfo&&page==='home'&&<main className="ee-new-home"><HomeEnhancements/></main>}
+    {isHot&&<HotSelling/>}
+    {isInfo&&<InfoPage slug={cleanPath.split('/').pop()}/>}
+    {isProduct&&<ProductPage product={product} route={route} onBack={navigateHome}/>}
+    {isJournal&&<JournalPage slug={journalSlug} onBack={navigateHome}/>}
     {isDealer&&<DealerPage backendBase={backendUrl()} legacyReady={legacyReady}/>}
     {!isDealer&&<CartDrawer/>}
     {!isDealer&&<OfferPopup/>}

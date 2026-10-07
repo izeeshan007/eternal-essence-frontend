@@ -1,6 +1,9 @@
 
 import { storefrontSizes, variantPricing as pricing } from './productVariants.js';
-import { visibleGalleryIndices } from './productGallery.js';
+import { visibleGalleryIndices, withNotesImage, isNotesImage } from './productGallery.js';
+import notesFiles from 'virtual:product-notes';
+import { NotesArtwork } from './FragranceNotes.jsx';
+import { summarizeReviews, withProvidedReviews } from './productReviews.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {ChevronLeft,ChevronRight,Heart,Share2,ShoppingBag,Minus,Plus,ArrowLeft,ShoppingCart,Sparkles,Eye} from 'lucide-react';
 
@@ -13,7 +16,7 @@ function normalize(p){
     mid:p.mid??p.notes?.mid??'',
     base:p.base??p.notes?.base??'',
     accords:Array.isArray(p.accords)?p.accords:String(p.accords||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean),
-    images:Array.isArray(p.images)&&p.images.length?p.images:[p.image].filter(Boolean),
+    images:withNotesImage(p,notesFiles),
   };
 }
 function slugify(v){return String(v||'').trim().toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
@@ -31,8 +34,8 @@ function imgUrl(name){
   return `/products/${String(name).split('/').pop().replace(/\.(png|jpe?g)$/i,'.webp')}`;
 }
 const PERFUME_SIZE_SET=[
-  {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},
-  {value:30,unit:'ml',priceMultiplier:1.2},{value:50,unit:'ml',priceMultiplier:1.601},{value:100,unit:'ml',priceMultiplier:2.6032}
+  {value:8,unit:'ml',priceMultiplier:.2985971943887776},{value:20,unit:'ml',priceMultiplier:.6993987},{value:30,unit:'ml',priceMultiplier:1},{value:50,unit:'ml',priceMultiplier:1.4008},{value:100,unit:'ml',priceMultiplier:2.4028},
+  {value:30,unit:'ml Gift',priceMultiplier:1.2},{value:50,unit:'ml Gift',priceMultiplier:1.601},{value:100,unit:'ml Gift',priceMultiplier:2.6032}
 ];
 const ATTAR_SIZE_SET=[{value:3,unit:'ml',priceMultiplier:1},{value:6,unit:'ml',priceMultiplier:1.85},{value:8,unit:'ml',priceMultiplier:2.3},{value:12,unit:'ml',priceMultiplier:3.2}];
 function getSizes(product,liveRows={}){
@@ -49,6 +52,7 @@ function variantIndex(size){
   const k=size&&typeof size==='object'
     ? `${size.value}${String(size.unit||'').toLowerCase().replace(/\s+/g,'')}`
     : String(size??'').toLowerCase().replace(/\s+/g,'');
+  // Former gift photography is the standard 30/50/100 ml presentation.
   const map={'8ml':1,'20ml':2,'30ml':6,'50ml':7,'100ml':8,'30mlgift':6,'50mlgift':7,'100mlgift':8};
   return map[k]??0;
 }
@@ -66,19 +70,20 @@ function normalizeSizeLabel(value){
     :/\b(?:gm|g|gram|grams)\b/i.test(raw)?'gm'
     :/\b(?:pc|piece|pieces)\b/i.test(raw)?'pc'
     :'ml';
-  return `${match[0]}${unit}${/gift/i.test(raw)&&![30,50,100].includes(Number(match[0]))?'gift':''}`;
+  return `${match[0]}${unit}${/gift/i.test(raw)?'gift':''}`;
 }
 function sizeFromUrl(product,sizes){
   const requested=new URLSearchParams(location.search).get('size')||window.__eePendingProductSelection?.size||'';
   const key=normalizeSizeLabel(requested);
   const match=sizes.find(s=>normalizeSizeLabel(`${s.value} ${s.unit}`)===key);
-  return {size:match||sizes[0],unavailable:!!requested&&!match,requested};
+  const preferred=/perfume/i.test(categoryName(product))?sizes.find(s=>Number(s.value)===30&&String(s.unit).toLowerCase()==='ml'):null;
+  return {size:match||preferred||sizes[0],unavailable:!!requested&&!match,requested};
 }
 function variantImages(product,size){
   if(!product)return ['/products/placeholder.webp'];
   const idx=variantIndex(size), first=product.images?.[0]||product.image;
   if(categorySlug(product)==='attars')return [imgUrl(first)];
-  const exact=product.images?.[idx], ml=Number(size?.value||0);
+  const exact=isNotesImage(product.images?.[idx])?null:product.images?.[idx], ml=Number(size?.value||0);
   if(!first)return [`/products/common${idx}.webp`,'/products/placeholder.webp'];
   const s=String(first),dot=s.lastIndexOf('.'),base=dot<0?s:s.slice(0,dot).replace(/\(\d+\)$/,'');
   const ext=dot<0?'.webp':s.slice(dot);
@@ -128,12 +133,29 @@ function SimilarProducts({current}){
 }
 function reviewImages(review){return (Array.isArray(review?.images)?review.images:[]).map(image=>typeof image==='string'?image:image?.data).filter(source=>/^data:image\/(?:jpeg|png|webp);base64,/i.test(String(source||''))).slice(0,3);}
 function reviewerName(review){const name=String(review?.name||'').trim();return name&&!name.includes('@')?name:'Customer';}
-function CustomerReviews({reviews}){
+function jumpToReviews(event) {
+  const section=document.getElementById('ee-customer-reviews');
+  if(!section)return;
+  event.preventDefault();
+  section.focus({preventScroll:true});
+  section.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  history.replaceState(history.state,'',location.pathname+location.search+'#ee-customer-reviews');
+}
+function RatingSummary({reviews,status,compact=false}){
+  const {average,ratingCount,reviewCount,excerpt}=summarizeReviews(reviews);
+  const label=status==='loading'?'Loading reviews':status==='error'?'Reviews unavailable':ratingCount
+    ? `${average.toFixed(1)} out of 5, ${ratingCount} ratings and ${reviewCount} reviews. Read customer reviews`
+    :'No reviews yet. View customer reviews';
+  return <a className={`ee-rating-summary ${compact?'ee-rating-mobile':'ee-rating-desktop'}`} href="#ee-customer-reviews" onClick={jumpToReviews} aria-label={label}>
+    {status==='ready'&&ratingCount>0?<><span className="ee-rating-badge">{average.toFixed(1)} <span aria-hidden="true">★</span></span><span className="ee-rating-count">{compact?`${ratingCount} · ${reviewCount} reviews`:`${ratingCount} rating${ratingCount===1?'':'s'} & ${reviewCount} review${reviewCount===1?'':'s'}`}</span>{!compact&&excerpt&&<q className="ee-rating-excerpt">{excerpt}</q>}</>:<span className="ee-rating-empty">{status==='loading'?'Loading reviews…':status==='error'?'Reviews unavailable':'No reviews yet'}</span>}
+  </a>;
+}
+function CustomerReviews({reviews,status}){
   const [activeImage,setActiveImage]=useState('');
   const average=reviews.length?reviews.reduce((sum,review)=>sum+Number(review.rating||0),0)/reviews.length:0;
-  return <section className="ee-reviews" aria-labelledby="ee-review-title">
-    <div className="ee-review-heading"><div><span>VERIFIED EXPERIENCES</span><h2 id="ee-review-title">Customer reviews</h2></div>{reviews.length>0&&<aside><strong>{average.toFixed(1)}</strong><div><b>{'★'.repeat(Math.round(average))}{'☆'.repeat(5-Math.round(average))}</b><small>Based on {reviews.length} review{reviews.length===1?'':'s'}</small></div></aside>}</div>
-    {reviews.length?<div className="review-grid">{reviews.slice(0,8).map((review,index)=>{const name=reviewerName(review),images=reviewImages(review);return <article className="review-card" key={review._id||index}><header><span className="review-avatar">{name.slice(0,1).toUpperCase()}</span><div><b>{name}</b><small>✓ Verified purchase</small></div><time>{review.createdAt?new Date(review.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):''}</time></header><div className="stars" aria-label={`${Number(review.rating)||5} out of 5 stars`}>{'★'.repeat(Number(review.rating)||5)}{'☆'.repeat(5-(Number(review.rating)||5))}</div><p>{review.comment||review.review||review.text||''}</p>{images.length>0&&<div className={`review-images count-${images.length}`}>{images.map((source,imageIndex)=><button type="button" key={imageIndex} onClick={()=>setActiveImage(source)} aria-label={`Open review photo ${imageIndex+1}`}><img src={source} alt={`${name}'s review photo ${imageIndex+1}`}/></button>)}</div>}</article>})}</div>:<div className="empty-reviews"><b>No reviews yet</b><span>Delivered-order customers can be the first to share their experience and photos.</span></div>}
+  return <section id="ee-customer-reviews" tabIndex={-1} className="ee-reviews" aria-labelledby="ee-review-title" aria-busy={status==='loading'}>
+    <div className="ee-review-heading"><div><span>CUSTOMER FEEDBACK</span><h2 id="ee-review-title">Customer reviews</h2></div>{reviews.length>0&&<aside><strong>{average.toFixed(1)}</strong><div><b>{'★'.repeat(Math.round(average))}{'☆'.repeat(5-Math.round(average))}</b><small>Based on {reviews.length} review{reviews.length===1?'':'s'}</small></div></aside>}</div>
+    {reviews.length?<div className="review-grid">{reviews.map((review,index)=>{const name=reviewerName(review),images=reviewImages(review);return <article className="review-card" key={review._id||index}><header><span className="review-avatar">{name.slice(0,1).toUpperCase()}</span><div><b>{name}</b><small>{review.verifiedPurchase===false||review.source==='store-provided'?'Shared by store':'✓ Verified purchase'}</small></div><time>{review.createdAt?new Date(review.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):''}</time></header><div className="stars" aria-label={`${Number(review.rating)||5} out of 5 stars`}>{'★'.repeat(Number(review.rating)||5)}{'☆'.repeat(5-(Number(review.rating)||5))}</div><p>{review.comment||review.review||review.text||''}</p>{images.length>0&&<div className={`review-images count-${images.length}`}>{images.map((source,imageIndex)=><button type="button" key={imageIndex} onClick={()=>setActiveImage(source)} aria-label={`Open review photo ${imageIndex+1}`}><img src={source} alt={`${name}'s review photo ${imageIndex+1}`}/></button>)}</div>}</article>})}</div>:<div className="empty-reviews"><b>{status==='loading'?'Loading reviews…':status==='error'?'Reviews could not be loaded':'No reviews yet'}</b><span>{status==='error'?'Please refresh the page to try again.':status==='loading'?'Fetching customer ratings and experiences.':'Delivered-order customers can be the first to share their experience and photos.'}</span></div>}
     {activeImage&&<div className="review-lightbox" role="dialog" aria-modal="true" aria-label="Customer review photo" onClick={()=>setActiveImage('')}><button type="button" aria-label="Close review photo" onClick={()=>setActiveImage('')}>×</button><img src={activeImage} alt="Customer review" onClick={event=>event.stopPropagation()}/></div>}
   </section>;
 }
@@ -332,7 +354,9 @@ function getAnalyticsVisitorId(){
   }catch{return `ee-${Date.now()}-${Math.random().toString(36).slice(2)}`;}
 }
 export default function ProductPage({product,route,onBack}){
-  const [p,setP]=useState(()=>normalize(product)),[size,setSize]=useState(null),[qty,setQty]=useState(1),[img,setImg]=useState(0),[wish,setWish]=useState(false),[reviews,setReviews]=useState([]);
+  const [p,setP]=useState(()=>normalize(product)),[size,setSize]=useState(null),[qty,setQty]=useState(1),[img,setImg]=useState(0),[wish,setWish]=useState(false),[reviewRequest,setReviewRequest]=useState({productId:'',status:'loading',reviews:[]});
+  const reviews=reviewRequest.productId===p?.id?reviewRequest.reviews:[];
+  const reviewsStatus=reviewRequest.productId===p?.id?reviewRequest.status:'loading';
   const [variantNotice,setVariantNotice]=useState('');
   const [variantStock,setVariantStock]=useState({});
   const [variantPricing,setVariantPricing]=useState({});
@@ -380,8 +404,24 @@ export default function ProductPage({product,route,onBack}){
     if(pending?.cartIndex!=null&&String(pending.productId||'').replace(/^db_/,'')===String(p.id||'').replace(/^db_/,''))setQty(Math.max(1,Math.floor(Number(pending.quantity)||1)));
     else setQty(1);
     try{setWish(!!window.EE?.isWishlistSaved?.(p.id,`${nextSize?.value} ${nextSize?.unit}`));}catch{}
-    try{window.EE?.getReviews?.(p.id).then(d=>setReviews(d?.reviews||[])).catch(()=>{});}catch{}
   },[p?.id,requestedSize,route?.slug,route?.legacyId]);
+  useEffect(()=>{
+    if(!p?.id)return;
+    let active=true;
+    const productId=p.id;
+    const provided=withProvidedReviews([],p);
+    setReviewRequest({productId,status:provided.length?'ready':'loading',reviews:provided});
+    Promise.resolve().then(()=>{
+      if(!window.EE?.getReviews)throw new Error('Reviews unavailable');
+      return window.EE.getReviews(productId);
+    }).then(data=>{
+      if(data?.success===false||!Array.isArray(data?.reviews))throw new Error('Invalid review response');
+      if(active)setReviewRequest({productId,status:'ready',reviews:withProvidedReviews(data.reviews,p)});
+    }).catch(()=>{
+      if(active)setReviewRequest({productId,status:provided.length?'ready':'error',reviews:provided});
+    });
+    return()=>{active=false};
+  },[p?.id]);
   useEffect(()=>{
     if(!p||!size)return;
     try{setWish(!!window.EE?.isWishlistSaved?.(p.id,`${size.value} ${size.unit}`));}catch{}
@@ -404,11 +444,11 @@ export default function ProductPage({product,route,onBack}){
     }
   },[p,size,variantPricing]);
   if(!p)return <div className="ee-notfound"><h1>Fragrance not found</h1><button onClick={onBack}>Back to collection</button></div>;
-  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),legacyGiftKey=categoryName(p).toLowerCase().includes('perfume')&&[30,50,100].includes(Number(selectedSize?.value))?`${selectedSize?.value}mlgift`:null,livePrice=variantPricing.shared||variantPricing[legacyGiftKey]||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes);
-  const selectedStock=!selectedSize?0:variantStock.shared??variantStock[legacyGiftKey]??variantStock[selectedVariantKey]??12;
+  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes);
+  const selectedStock=!selectedSize?0:variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
   const safeImg=galleryIndices.includes(img)?img:(galleryIndices[0]??0);
-  const currentSources=safeImg===selectedVariantIndex ? variantImages(p,selectedSize) : galleryImageSources(p,safeImg);
+  const currentSources=safeImg===selectedVariantIndex&&!isNotesImage(gallery[safeImg]) ? variantImages(p,selectedSize) : galleryImageSources(p,safeImg);
   const moveImage=delta=>{
     if(!galleryIndices.length)return;
     const position=galleryIndices.indexOf(safeImg);
@@ -436,13 +476,13 @@ export default function ProductPage({product,route,onBack}){
     {showFloatingCart&&<button type="button" className="ee-floating-cart ee-floating-cart-reveal" aria-label="Open floating cart preview" onClick={()=>window.dispatchEvent(new Event('ee:mini-cart-open'))}><ShoppingCart size={17}/><span>Cart</span><b>{cartCount}</b></button>}
     <div className="ee-breadcrumb"><button type="button" onClick={()=>window.eeNavigateCollection?.('all')}>Products</button><b>/</b><button type="button" onClick={()=>window.eeNavigateCollection?.(categoryName(p))}>{categoryName(p)}</button><b>/</b><strong>{productSlug(p)}</strong></div>
     <div className="ee-product-hero">
-      <div className="ee-product-gallery"><div className="ee-thumbs">{galleryIndices.slice(0,9).map(i=><button key={i} className={i===safeImg?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}><img src={imgUrl(gallery[i])} alt="" onError={event=>{event.currentTarget.closest('button').style.display='none'}}/></button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button><ProductImage sources={currentSources} alt={p.name}/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
-      <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div><div className={`ee-live-viewers ${viewerCount>0?'':'loading'}`} role="status"><Eye size={15}/><span>{viewerCount>0?<><b>{viewerCount}</b> {viewerCount===1?'person':'people'} viewing now</>:'Live interest updating'}</span><i/></div><div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{(!sizes.length||variantNotice)&&<div className="ee-variant-notice" role="status">{!sizes.length?'No sizes are currently sold separately. Check Custom Sets for eligible sizes.':variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><div className="ee-qty ee-action-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
+      <div className="ee-product-gallery"><div className="ee-thumbs">{galleryIndices.map(i=><button type="button" aria-label={isNotesImage(gallery[i])?'View fragrance notes':`View product image ${i+1}`} aria-pressed={i===safeImg} key={i} className={i===safeImg?'active':''} onClick={()=>{setImg(i);window.EE?.setSelection?.(p,`${size?.value} ${size?.unit}`,pr.selling,i)}}>{isNotesImage(gallery[i])?<span className="ee-notes-thumb"><Sparkles size={19}/><small>NOTES</small></span>:<img src={imgUrl(gallery[i])} alt="" onError={event=>{const fallback=imgUrl(gallery[0]);if(event.currentTarget.src!==new URL(fallback,location.origin).href)event.currentTarget.src=fallback;else event.currentTarget.closest('button').style.display='none'}}/>}</button>)}</div><div className="ee-main-image"><button onClick={()=>moveImage(-1)}><ChevronLeft/></button>{isNotesImage(gallery[safeImg])?<NotesArtwork product={p}/>:<ProductImage sources={currentSources} alt={p.name}/>}<RatingSummary reviews={reviews} status={reviewsStatus} compact/><div className="ee-image-actions"><button type="button" className={'ee-image-action '+(wish?'saved':'')} aria-label="Add to wishlist" onClick={event=>{event.stopPropagation();toggle()}}><Heart fill={wish?'currentColor':'none'}/></button><button type="button" className="ee-image-action" aria-label="Share product" onClick={event=>{event.stopPropagation();share()}}><Share2/></button></div><button onClick={()=>moveImage(1)}><ChevronRight/></button></div><div className="ee-mobile-size-picker"><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span><div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div></div></div>
+      <div className="ee-product-info">{isEditingCartItem&&<div className="ee-editing-cart">EDITING CART ITEM</div>}<div className="ee-gender">{p.gender||'UNISEX'}</div><h1>{p.name}</h1><RatingSummary reviews={reviews} status={reviewsStatus}/><div className="ee-meta">{(p.family||categoryName(p)||'SIGNATURE FRAGRANCE').toUpperCase()}</div><div className={`ee-live-viewers ${viewerCount>0?'':'loading'}`} role="status"><Eye size={15}/><span>{viewerCount>0?<><b>{viewerCount}</b> {viewerCount===1?'person':'people'} viewing now</>:'Live interest updating'}</span><i/></div><div className="ee-divider"/><p className="ee-quote">“A fragrance journey designed around character, balance and a memorable dry-down.”</p><div className="ee-best"><div><span>BEST FOR</span><b>{p.time||'Day & Night'} · {p.season||'All seasons'}</b></div><div><span>MOOD</span><b>{p.accords?.slice(0,3).join(' · ')||'Signature'}</b></div></div><div className="ee-price"><div><strong>₹{pr.selling.toLocaleString('en-IN')}</strong> <del>₹{pr.mrp.toLocaleString('en-IN')}</del><em>{pr.discount}% OFF</em></div></div><span className="ee-label">SELECT SIZE · {selectedStock>2?'IN STOCK':selectedStock>0?`HURRY — ONLY ${selectedStock} LEFT`:'OUT OF STOCK'}</span>{(!sizes.length||variantNotice)&&<div className="ee-variant-notice" role="status">{!sizes.length?'No sizes are currently sold separately. Check Custom Sets for eligible sizes.':variantNotice}</div>}<div className="ee-sizes">{sizes.map((s,i)=><button key={i} className={sizeKey(s)===sizeKey(selectedSize)?'selected':''} onClick={()=>selectSize(s)}>{displaySize(s)}</button>)}</div><div className="ee-actions"><div className="ee-qty ee-action-qty" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" onClick={()=>setQty(Math.max(1,qty-1))}><Minus size={15}/></button><b>{qty}</b><button type="button" aria-label="Increase quantity" disabled={qty>=selectedStock} onClick={()=>setQty(Math.min(selectedStock,qty+1))}><Plus size={15}/></button></div><button className="ee-add" disabled={selectedStock<=0} onClick={add}><ShoppingBag size={18}/> {selectedStock<=0?'OUT OF STOCK':isEditingCartItem?'UPDATE CART':'ADD TO CART'}</button></div><div className="ee-micro"><span>✓ All India shipping</span><span>✓ Secure checkout</span><span>✓ Quality assured</span></div></div>
     </div>
     <ScentJourney product={p}/>
     <section className="ee-notes ee-accords-only"><div><span className="ee-kicker">MAIN ACCORDS</span><div className="ee-chips">{(p.accords||[]).map(a=><span key={a}>{a}</span>)}</div></div></section>
     <SimilarProducts current={p}/>
     <WhySection/>
-    <CustomerReviews reviews={reviews}/><ProductFooter/>
+    <CustomerReviews reviews={reviews} status={reviewsStatus}/><ProductFooter/>
   </div>;
 }

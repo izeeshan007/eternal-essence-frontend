@@ -60,10 +60,38 @@ function restoreAdminDashboard(backendBase,backendFallback){
   };
 }
 
+// List real public assets without duplicating them into hashed bundles.
+function productNotesAssets() {
+  const id = 'virtual:product-notes';
+  const resolvedId = '\0' + id;
+  const directory = path.join(frontendDir, 'public/products');
+  return {
+    name: 'product-notes-assets',
+    resolveId(source) { if (source === id) return resolvedId; },
+    load(source) {
+      if (source !== resolvedId) return;
+      const files = fs.readdirSync(directory).filter(file => /_notes\.(webp|png)$/i.test(file)).sort();
+      return 'export default ' + JSON.stringify(files) + ';';
+    },
+    configureServer(server) {
+      const refresh = file => {
+        if (path.dirname(path.resolve(file)) !== directory || !/_notes\.(webp|png)$/i.test(file)) return;
+        const module = server.moduleGraph.getModuleById(resolvedId);
+        if (module) server.moduleGraph.invalidateModule(module);
+        server.ws.send({ type: 'full-reload' });
+      };
+      server.watcher.on('add', refresh).on('unlink', refresh);
+      server.httpServer?.once('close', () => {
+        server.watcher.off('add', refresh).off('unlink', refresh);
+      });
+    }
+  };
+}
+
 export default defineConfig(({mode})=>{
   const env=loadEnv(mode,frontendDir,'');
   return {
-    plugins:[react(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'',env.VITE_BACKEND_FALLBACK_URL||'')],
+    plugins:[react(),productNotesAssets(),restoreAdminDashboard(env.VITE_BACKEND_BASE_URL||'',env.VITE_BACKEND_FALLBACK_URL||'')],
     resolve:{dedupe:['react','react-dom']},
     optimizeDeps:{include:['react','react-dom','react-dom/client','react/jsx-runtime']},
     // Vite's default production minifier is available in the bundled toolchain;
