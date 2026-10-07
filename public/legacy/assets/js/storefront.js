@@ -855,15 +855,13 @@ images: (p.images || []).map(resolveMergeImage),
 source: 'backend'
 }));
 window.__EE_CATALOG_STATUS__ = 'ready';
+try { localStorage.setItem('ee_catalog_cache_v1', JSON.stringify(backendProducts)); } catch (_) {}
 mergeProducts();
+window.dispatchEvent(new CustomEvent('ee:catalog-updated'));
 loadCuratedCollections();
 } catch (err) {
-window.__EE_CATALOG_STATUS__ = 'unavailable';
-backendProducts = [];
-allProducts = [];
-console.error('Live catalogue is unavailable; storefront products are paused to protect admin visibility settings.', err?.message || err);
-const grid = document.getElementById('product-grid');
-if (grid) grid.innerHTML = '<p class="col-span-full text-center text-gray-600" role="status">The collection is temporarily unavailable. Please refresh to try again.</p>';
+window.__EE_CATALOG_STATUS__ = 'stale';
+console.warn('Live catalogue refresh failed; keeping the immediately available collection.', err?.message || err);
 }
 }
 function mergeProducts() {
@@ -1062,7 +1060,11 @@ if (authToken && !init.headers.Authorization && !init.headers.authorization) {
 init.headers['Authorization'] = `Bearer ${authToken}`;
 }
 const res = await _orig(input, init);
-if (res && res.status === 401) {
+const requestUrl = input instanceof Request ? input.url : String(input || '');
+let requestPath = '';
+try { requestPath = new URL(requestUrl, location.href).pathname; } catch {}
+const requiresAccountSession = /^\/api\/(?:auth\/me|auth\/phone\/|auth\/wishlist|orders\/my|orders\/retry\/|orders\/cancel\/|orders\/[^/]+\/support|wishlist)/.test(requestPath);
+if (res && res.status === 401 && requiresAccountSession && authToken) {
 clearAuth();
 try { if (!document.hidden) alert('Session expired or unauthorized. You have been logged out.'); } catch(e){}
 }
@@ -1187,6 +1189,12 @@ return `${window.__EE_IMAGE_BASE__ || '/products/'}placeholder.webp`;
 }
 function renderProducts(list = allProducts) {
 const grid = document.getElementById('product-grid');
+grid.querySelectorAll('.ee-card-wish').forEach(button => {
+  if (button.__eeWishSync) {
+    window.removeEventListener('ee:wishlist-updated', button.__eeWishSync);
+    window.removeEventListener('ee:ready', button.__eeWishSync);
+  }
+});
 grid.innerHTML = '';
 if (window.__EE_CATALOG_STATUS__ === 'unavailable') {
 grid.innerHTML = '<p class="col-span-full text-center text-gray-600" role="status">The collection is temporarily unavailable. Please refresh to try again.</p>';
@@ -1220,6 +1228,8 @@ const typeClass   = (product.type || product.category || '')
 const card = document.createElement('div');
 card.className = 'product-card bg-white relative group cursor-pointer';
 card.onclick = () => openModal(product);
+const reviewKey = String(product.id||product._id||'').replace(/^db_/,'');
+card.dataset.productKey = reviewKey;
 card.innerHTML = `
 <div class="product-image-wrap relative aspect-[4/5] overflow-hidden">
 <img
@@ -1228,11 +1238,13 @@ alt="${product.name}"
 class="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
 loading="lazy"
 />
+<div class="ee-card-actions"><button type="button" class="ee-card-wish" aria-label="Add to wishlist">♡</button><div class="ee-card-quick-actions"><button type="button" class="ee-card-view" aria-label="Quick view ${escapeHtml(product.name)}" title="Quick view"><i class="fas fa-eye" aria-hidden="true"></i></button><button type="button" class="ee-card-add" aria-label="Quick add ${escapeHtml(product.name)} to cart" title="Quick add to cart"><i class="fas fa-shopping-bag" aria-hidden="true"></i></button></div></div>
 </div>
 <div class="product-details">
 <div class="product-card-copy">
 ${product.family ? `<p class="product-family">${product.family}</p>` : ''}
 <h3 class="brand-font">${product.name}</h3>
+<button type="button" class="ee-card-review" data-review-key="${escapeHtml(reviewKey)}" aria-label="View customer reviews for ${escapeHtml(product.name)}"></button>
 <p class="product-description">${product.description || ''}</p>
 </div>
 <div class="product-card-meta" aria-label="Fragrance details">
@@ -1248,8 +1260,41 @@ ${product.season ? `<span class="badge season ${seasonClass}">${product.season}<
 </div>
 </div>
 `;
+card.querySelector('.ee-card-view').onclick = event => {event.stopPropagation(); openQuickView(product);};
+card.querySelector('.ee-card-add').onclick = event => {event.stopPropagation(); quickAddProduct(product.id);};
+card.querySelector('.ee-card-review').onclick = event => {
+  event.stopPropagation(); window.eeNavigateToProduct?.(product);
+  history.replaceState(history.state,'',location.pathname+location.search+'#ee-customer-reviews');
+  setTimeout(()=>document.getElementById('ee-customer-reviews')?.scrollIntoView({behavior:'smooth'}),250);
+};
+const wishButton = card.querySelector('.ee-card-wish');
+const wishSize = window.eeDefaultProductSize?.(product) || (product.type==='Attar'?'3 ml':'30 ml');
+const syncCardWish = () => {
+  const saved = window.EE?.isWishlistSaved?.(product.id || product._id, wishSize) || false;
+  wishButton.classList.toggle('saved', saved);
+  wishButton.textContent = saved ? '♥' : '♡';
+  wishButton.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Add to wishlist');
+  wishButton.setAttribute('aria-pressed', String(saved));
+};
+syncCardWish();
+window.addEventListener('ee:wishlist-updated', syncCardWish);
+window.addEventListener('ee:ready', syncCardWish);
+wishButton.__eeWishSync = syncCardWish;
+wishButton.onclick = async event => {
+  event.stopPropagation();
+  if (!window.EE?.getAuth?.()?.token) { window.eeNavigatePage?.('account'); return; }
+  const size = wishSize;
+  const price = getWishlistPricing(product,size).sellingPrice;
+  window.EE.setSelection(product,size,price);
+  const saved = await window.EE.toggleWishlist();
+  if (saved) {
+    syncCardWish();
+    window.dispatchEvent(new Event('ee:wishlist-updated'));
+  }
+};
 grid.appendChild(card);
 });
+window.dispatchEvent(new Event('ee:catalog-cards-rendered'));
 }
 function resolveImage(img) {
 if (!img) return '';
@@ -1952,7 +1997,7 @@ function cartHasPerfumeCard() {
 return cart.some(item => item.itemType === 'perfume_card');
 }
 function isMumbaiCheckoutCity() {
-return normalize(document.getElementById('ship-city')?.value || '') === 'mumbai';
+return normalize(document.getElementById('ship-city')?.value || '').includes('mumbai');
 }
 function updatePaymentMethodAvailability() {
 const codRow = document.getElementById('cod-payment-row');
@@ -2017,7 +2062,7 @@ const quantityControls = canChangeQty
 tr.innerHTML = `
 <td class="ee-cart-product p-4 flex items-center gap-4 pr-14 md:pr-4 cursor-pointer" onclick="viewCartItem(${idx})" title="View product details">
 ${itemVisual}
-<div class="ee-cart-product-copy"><p class="font-bold text-sm">${item.name}</p>${bundleDetails}${canChangeQty ? `<label class="text-xs flex items-center gap-2 mt-2" onclick="event.stopPropagation()"><input type="checkbox" ${item.gift === true ? 'checked' : ''} onchange="setCartItemGift(${idx},this.checked)"> Gift wrap +₹25 per item</label>` : ''}</div>
+<div class="ee-cart-product-copy"><p class="font-bold text-sm">${item.name}</p>${bundleDetails}${canChangeQty ? `<label class="text-xs flex items-center gap-2 mt-2" onclick="event.stopPropagation()"><input type="checkbox" ${item.gift === true ? 'checked' : ''} onchange="setCartItemGift(${idx},this.checked)"> Make this a gift +₹25 per item</label>` : ''}</div>
 </td>
 <td class="ee-cart-size block md:table-cell px-4 pb-2 md:p-4 text-sm text-gray-600"><span class="md:hidden font-bold text-gray-500 mr-2">Size:</span>${item.selectedSize}</td>
 <td class="ee-cart-quantity block md:table-cell px-4 pb-4 md:p-4 text-sm"><span class="ee-cart-mobile-label md:hidden">Quantity</span>${quantityControls}</td>
@@ -2321,7 +2366,9 @@ name: item.name,
 size: item.selectedSize || item.size,
 price: item.finalPrice || item.price,
 qty: cartItemQty(item),
-image: item.image,
+image: item.itemType === 'product' || !item.itemType
+? item.imageFallback || getDefaultProductImage(item) || item.image
+: item.image,
 itemType: item.itemType || 'product',
 bundleMeta: item.bundleMeta || null,
 cardMeta: item.cardMeta || null,
@@ -2387,7 +2434,9 @@ function closePhoneVerification(){const modal=document.getElementById('phone-ver
 async function sendPhoneCode(){const msg=document.getElementById('phone-verification-message');try{const phone=document.getElementById('verify-phone-number').value;const res=await fetch(`${BACKEND_BASE_URL}/api/auth/phone/send-otp`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${authToken}`},body:JSON.stringify({phone})});const data=await res.json();if(!res.ok)throw new Error(data.error);msg.textContent=data.message;msg.className='success';document.getElementById('verify-phone-code-row').classList.remove('hidden');document.getElementById('send-phone-code').classList.add('hidden');}catch(err){msg.textContent=err.message||'Could not send code';msg.className='error';}}
 async function verifyPhoneCode(){const msg=document.getElementById('phone-verification-message');try{const res=await fetch(`${BACKEND_BASE_URL}/api/auth/phone/verify-otp`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${authToken}`},body:JSON.stringify({phone:document.getElementById('verify-phone-number').value,code:document.getElementById('verify-phone-code').value})});const data=await res.json();if(!res.ok)throw new Error(data.error);currentUser=data.user;saveAuthToStorage();msg.textContent='Mobile verified. FIRST25 is now available.';msg.className='success';setTimeout(()=>{closePhoneVerification();loadCouponSuggestions();},700);}catch(err){msg.textContent=err.message||'Verification failed';msg.className='error';}}
 function showOrdersLoginRequired(){
-document.getElementById('orders-login-required').classList.remove('hidden');
+const panel=document.getElementById('orders-login-required');
+if(!panel.querySelector('[data-track-guest]')){const button=document.createElement('button');button.type='button';button.dataset.trackGuest='true';button.className='block mx-auto mt-4 underline font-semibold';button.textContent='Track an order using your email';button.onclick=()=>{const saved=localStorage.getItem('ee_guest_order_email')||'';const field=document.getElementById('guest-email');if(field)field.value=saved;openGuestOtpModal('orders');};panel.appendChild(button);}
+panel.classList.remove('hidden');
 document.getElementById('orders-empty-msg').classList.add('hidden');
 document.getElementById('orders-error-msg').classList.add('hidden');
 document.getElementById('orders-list-container').classList.add('hidden');
@@ -2410,10 +2459,11 @@ const attempts=readPendingPaymentAttempts().filter(item=>item.localId!==attempt.
 }
 function removePendingPayment(localId){writePendingPaymentAttempts(readPendingPaymentAttempts().filter(item=>item.localId!==localId));}
 async function notifyPaymentInterrupted(razorpayOrderId, reason, localId){
-try{await fetch(`${BACKEND_BASE_URL}/api/orders/payment-failed`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpayOrderId,reason})});}catch{}
+const attempt=readPendingPaymentAttempts().find(item=>item.localId===localId);
+try{await fetch(`${BACKEND_BASE_URL}/api/orders/payment-failed`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpayOrderId,clientReference:attempt?.payload?.clientReference,reason})});}catch{}
 if(localId){const attempts=readPendingPaymentAttempts();const index=attempts.findIndex(item=>item.localId===localId);if(index>=0){attempts[index].reason=reason;attempts[index].status=reason==='User closed Razorpay popup'?'PAYMENT_CANCELLED':'PAYMENT_FAILED';attempts[index].updatedAt=new Date().toISOString();writePendingPaymentAttempts(attempts);}}
 renderOrders();
-if(typeof switchPage==='function') switchPage('orders');
+if(typeof switchPage==='function') switchPage(authToken?'orders':'cart');
 }
 async function renderOrders() {
 const renderId = ++ordersRenderSeq;
@@ -2517,7 +2567,9 @@ errorMsg.textContent = err.message || 'Could not load orders.';
 errorMsg.classList.remove('hidden');
 }
 }
-function openGuestOtpModal() {
+let guestOtpDestination='cart';
+function openGuestOtpModal(destination='cart') {
+guestOtpDestination=destination;
 document.getElementById('guest-otp-modal').classList.remove('hidden');
 document.getElementById('guest-step-1').classList.remove('hidden'); document.getElementById('guest-step-2').classList.add('hidden');
 document.getElementById('guest-send-msg').textContent = ''; document.getElementById('guest-verify-msg').textContent = '';
@@ -2568,8 +2620,8 @@ if (!res.ok || !d.success) throw new Error(d.error || 'OTP verification failed.'
 authToken = d.token || null;
 currentUser = d.user || { email };
 saveAuthToStorage(); updateAuthUI();
-msg.textContent = 'Verified. You can now continue checkout.'; msg.className='text-xs text-green-600';
-setTimeout(()=>{ closeGuestOtpModal(); switchPage('cart'); },800);
+msg.textContent = guestOtpDestination==='orders'?'Verified. Loading your orders.':'Verified. You can continue.'; msg.className='text-xs text-green-600';
+setTimeout(()=>{ const destination=guestOtpDestination; closeGuestOtpModal(); switchPage(destination); },800);
 } catch (err) {
 console.error('guest verify', err); msg.textContent = err.message || 'OTP verify failed.'; msg.className='text-xs text-red-600';
 }
@@ -2591,16 +2643,9 @@ modal.addEventListener('click', event => { if (event.target === modal) finish(fa
 });
 }
 async function handleCheckout(){
-if (!currentUser || !authToken) {
-const che = document.getElementById('checkout-email')?.value?.trim().toLowerCase();
-const phone = document.getElementById('ship-phone')?.value?.trim();
-document.getElementById('guest-email').value = che || '';
-document.getElementById('guest-phone').value = phone || '';
-openGuestOtpModal();
-return;
-}
 const buyerEmail = (document.getElementById('checkout-email')?.value || (currentUser && currentUser.email) || '').trim().toLowerCase();
 if (!buyerEmail || !/^\S+@\S+\.\S+$/.test(buyerEmail)) { alert('Please enter a valid email.'); return; }
+if(authToken&&currentUser?.email&&buyerEmail!==String(currentUser.email).toLowerCase()){alert('Use your account email for this order.');return;}
 if (cart.length === 0) { alert('Your cart is empty.'); return; }
 const name = (document.getElementById('ship-name')?.value || '').trim();
 const phone = (document.getElementById('ship-phone')?.value || '').trim();
@@ -2642,32 +2687,46 @@ orderType: cartHasPerfumeCard() ? 'perfume_card' : 'standard',
 cardMeta: cart.find(item => item.itemType === 'perfume_card')?.cardMeta || null,
 paymentMethod
 };
-const headers = { 'Content-Type':'application/json' }; if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+const headers = { 'Content-Type':'application/json' };
+if (authToken && currentUser?.email) headers['Authorization'] = `Bearer ${authToken}`;
+const postCheckoutJson = async endpoint => {
+let requestHeaders = { ...headers };
+let response = await fetch(`${BACKEND_BASE_URL}${endpoint}`, { method:'POST', headers:requestHeaders, body:JSON.stringify(payload) });
+let data = await response.json().catch(()=>({}));
+if (response.status === 401 && requestHeaders.Authorization) {
+clearAuth();
+requestHeaders = { 'Content-Type':'application/json' };
+response = await fetch(`${BACKEND_BASE_URL}${endpoint}`, { method:'POST', headers:requestHeaders, body:JSON.stringify(payload) });
+data = await response.json().catch(()=>({}));
+}
+return { response, data };
+};
 try {
 btn.disabled = true; btn.textContent = 'Processing...';
 window.eeTrackCommerceEvent?.('checkout_started',{cart:commerceCartPayload(),value:Number(calculateTotals()?.total||0)});
 if (paymentMethod === 'Cash on Delivery') {
 if (cartHasPerfumeCard()) throw new Error('COD is not available for custom perfume cards.');
 if (!isMumbaiCheckoutCity()) throw new Error('COD is available only for Mumbai delivery addresses.');
-const quoteRes = await fetch(`${BACKEND_BASE_URL}/api/orders/quote`, { method:'POST', headers, body: JSON.stringify(payload) });
-const quoteData = await quoteRes.json().catch(()=>({}));
+const { response:quoteRes, data:quoteData } = await postCheckoutJson('/api/orders/quote');
+if (quoteRes.status === 401) throw new Error('Guest checkout is not enabled on the active backend yet. Restart or update the backend, then try again.');
 if (!quoteRes.ok || !quoteData.success) throw new Error(quoteData.error || 'Could not calculate the order total.');
 Object.assign(payload, quoteData.quote);
 if (payload.total <= 0) throw new Error('Invalid total amount.');
 if (!await confirmCodOrder(quoteData.quote)) return;
-const res = await fetch(`${BACKEND_BASE_URL}/api/orders/cod`, { method:'POST', headers, body: JSON.stringify(payload) });
-const d = await res.json().catch(()=>({}));
+const { response:res, data:d } = await postCheckoutJson('/api/orders/cod');
+if (res.status === 401) throw new Error('Guest COD checkout is not enabled on the active backend yet. Restart or update the backend, then try again.');
 if (!res.ok || !d.success) throw new Error(d.error || 'Could not place COD order.');
 window.eeTrackCommerceEvent?.('purchase_completed',{cart:commerceCartPayload(),value:Number(d.quote?.total||payload.total||0),metadata:{orderId:d.orderId}});
-cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(d.deliveryEstimate); return;
+try{localStorage.setItem('ee_guest_order_email',buyerEmail)}catch{}
+cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(d.deliveryEstimate,d.orderId,buyerEmail); return;
 }
-const quoteRes = await fetch(`${BACKEND_BASE_URL}/api/orders/quote`, { method:'POST', headers, body: JSON.stringify(payload) });
-const quoteData = await quoteRes.json().catch(()=>({}));
+const { response:quoteRes, data:quoteData } = await postCheckoutJson('/api/orders/quote');
+if (quoteRes.status === 401) throw new Error('Guest checkout is not enabled on the active backend yet. Restart or update the backend, then try again.');
 if (!quoteRes.ok || !quoteData.success) throw new Error(quoteData.error || 'Could not calculate the order total.');
 Object.assign(payload, quoteData.quote);
 if (payload.total <= 0) throw new Error('Invalid total amount.');
-const res = await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`, { method:'POST', headers, body: JSON.stringify(payload) });
-const d = await res.json().catch(()=>({}));
+const { response:res, data:d } = await postCheckoutJson('/api/orders/create-razorpay-order');
+if (res.status === 401) throw new Error('Guest checkout is not enabled on the active backend yet. Restart or update the backend, then try again.');
 if (!res.ok || !d.success || !d.razorpayOrderId) throw new Error(d.error || 'Could not start online payment.');
 const pendingAttemptId=rememberPendingPayment(payload,d.quote||quoteData.quote,d.razorpayOrderId,'Payment started');
 const options = {
@@ -2685,13 +2744,15 @@ try {
 const verifyRes = await fetch(`${BACKEND_BASE_URL}/api/orders/verify-razorpay`, { method:'POST', headers, body: JSON.stringify({
 razorpay_order_id: response.razorpay_order_id,
 razorpay_payment_id: response.razorpay_payment_id,
-razorpay_signature: response.razorpay_signature
+razorpay_signature: response.razorpay_signature,
+clientReference: payload.clientReference
 })});
 const verifyData = await verifyRes.json().catch(()=>({}));
 if (!verifyRes.ok || !verifyData.success) throw new Error(verifyData.error || 'Payment verification failed.');
 removePendingPayment(pendingAttemptId);
 window.eeTrackCommerceEvent?.('purchase_completed',{cart:commerceCartPayload(),value:Number(payload.total||0),metadata:{orderId:verifyData.orderId}});
-cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(verifyData.deliveryEstimate);
+try{localStorage.setItem('ee_guest_order_email',buyerEmail)}catch{}
+cart.length = 0; updateCartCount(); renderCart(); saveCartToStorage(); renderOrders(); showDeliveryEstimateModal(verifyData.deliveryEstimate,verifyData.orderId,buyerEmail);
 } catch (err) {
 console.error('Verification error', err); alert(err.message || 'Payment captured but verification failed. Contact support.');
 }
@@ -2947,8 +3008,8 @@ function selectCheckoutAddress(index) {
 fillCheckoutFromSavedAddress(index);
 closeAddressSelectModal();
 }
-function showDeliveryEstimateModal(deliveryEstimate) {
-const msg = deliveryEstimate?.message || 'Your order has been confirmed. You will receive updates by email.';
+function showDeliveryEstimateModal(deliveryEstimate,orderId='',email='') {
+const msg = `${orderId?`Order ${orderId} confirmed. `:''}${deliveryEstimate?.message || 'Your order has been confirmed.'}${email?deliveryEstimate?.emailSent===false?` We could not confirm the email was sent to ${email}. Save this order number and contact support if it does not arrive.`:` Updates will be sent to ${email}. Verify this email when you return to track the order.`:''}`;
 document.getElementById('delivery-estimate-text').textContent = msg;
 document.getElementById('delivery-estimate-modal').classList.remove('hidden');
 document.body.style.overflow = 'hidden';
@@ -3101,7 +3162,7 @@ const res=await fetch(`${BACKEND_BASE_URL}/api/orders/create-razorpay-order`,{me
 const data=await res.json().catch(()=>({}));
 if(!res.ok||!data.success||!data.razorpayOrderId)throw new Error(data.error||'Retry failed');
 const attemptId=rememberPendingPayment(payload,data.quote||pending.quote,data.razorpayOrderId,'Retry payment started');
-const options={key:data.keyId,amount:data.amount,currency:'INR',name:'Eternal Essence',description:'Eternal Essence order',image:'https://eternalessence.in/products/ee-brand-20260819.webp',order_id:data.razorpayOrderId,prefill:{name:payload.customer?.name,email:payload.customer?.email,contact:payload.customer?.phone},theme:{color:'#FFD700'},handler:async response=>{try{const verifyRes=await fetch(`${BACKEND_BASE_URL}/api/orders/verify-razorpay`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});const verify=await verifyRes.json().catch(()=>({}));if(!verifyRes.ok||!verify.success)throw new Error(verify.error||'Payment verification failed');removePendingPayment(attemptId);renderOrders();showDeliveryEstimateModal(verify.deliveryEstimate);}catch(error){alert(error.message||'Payment verification failed.');}},modal:{ondismiss:()=>notifyPaymentInterrupted(data.razorpayOrderId,'User closed Razorpay popup',attemptId)}};
+const options={key:data.keyId,amount:data.amount,currency:'INR',name:'Eternal Essence',description:'Eternal Essence order',image:'https://eternalessence.in/products/ee-brand-20260819.webp',order_id:data.razorpayOrderId,prefill:{name:payload.customer?.name,email:payload.customer?.email,contact:payload.customer?.phone},theme:{color:'#FFD700'},handler:async response=>{try{const verifyRes=await fetch(`${BACKEND_BASE_URL}/api/orders/verify-razorpay`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:authToken?`Bearer ${authToken}`:''},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature,clientReference:payload.clientReference})});const verify=await verifyRes.json().catch(()=>({}));if(!verifyRes.ok||!verify.success)throw new Error(verify.error||'Payment verification failed');removePendingPayment(attemptId);try{localStorage.setItem('ee_guest_order_email',payload.customer?.email||'')}catch{}renderOrders();showDeliveryEstimateModal(verify.deliveryEstimate,verify.orderId,payload.customer?.email);}catch(error){alert(error.message||'Payment verification failed.');}},modal:{ondismiss:()=>notifyPaymentInterrupted(data.razorpayOrderId,'User closed Razorpay popup',attemptId)}};
 await window.eeLoadRazorpay?.();
 if(!window.Razorpay)throw new Error('Payment widget is unavailable. Please try again.');
 const rzp=new Razorpay(options);rzp.open();rzp.on('payment.failed',response=>{notifyPaymentInterrupted(data.razorpayOrderId,response.error?.description||'Payment failed',attemptId);alert('Payment failed. You can retry again from My Orders.');});
@@ -3272,9 +3333,8 @@ const gender = document.getElementById('gender-filter')?.value || '';
 if (gender) filtered = filtered.filter(p => p.gender === gender);
 const season = document.getElementById('season-filter')?.value || '';
 if (season) {
-filtered = filtered.filter(p =>
-normalize(p.season) === normalize(season)
-);
+const seasonKey = value => normalize(value).replace(/[^a-z]/g, '');
+filtered = filtered.filter(p => seasonKey(p.season) === seasonKey(season));
 }
 const time = document.getElementById('time-filter')?.value || '';
 if (time) {
@@ -3322,7 +3382,7 @@ function renderFilteredProducts(list) {
 const grid = document.getElementById('product-grid');
 grid.innerHTML = '';
 if (!list.length) {
-grid.innerHTML = `<p class="col-span-full text-center text-gray-500">No products found.</p>`;
+grid.innerHTML = `<div class="col-span-full text-center py-16"><h2 class="text-2xl brand-font mb-3">No items in this collection yet</h2><p class="text-gray-500 mb-5">Explore the fragrances currently available.</p><a class="underline text-yellow-700" href="/collections">Browse all products →</a></div>`;
 return;
 }
 list.forEach(product => {
@@ -3663,6 +3723,7 @@ return;
 const isDelivered =
 String(order.status).toUpperCase().includes('DELIVERED');
 const detailStatus = String(order.status || '').toUpperCase();
+const customerName = String(order.name || '').trim();
 const canRetryPayment = ['PAYMENT_FAILED', 'FAILED', 'PENDING_PAYMENT'].includes(detailStatus);
 const canCancelOrder = ['PAID', 'ORDER_PLACED', 'PROCESSING', 'PENDING_PAYMENT', 'PAYMENT_FAILED'].includes(detailStatus);
 const courierName = String(order.deliveryPartner || '').toLowerCase();
@@ -3683,6 +3744,7 @@ body.innerHTML = `
 <h3 class="storefront-order-title text-lg font-bold mb-2">
 Order ${escapeHtml(order.orderId || order._id || '')}
 </h3>
+${customerName ? `<p class="mb-3 text-xs text-gray-500">Placed for <strong class="text-gray-800">${escapeHtml(customerName)}</strong></p>` : ''}
 ${orderFlowHtml(order)}
 <p class="text-sm mb-3">Current status: <span class="font-bold ${isDelivered ? 'text-green-600' : 'text-gray-600'}">${displayOrderStatus(order.status)}</span></p>
 ${trackingHtml}
@@ -3698,6 +3760,11 @@ ${(order.items || []).map(item => {
 const quantity = storefrontOrderItemQuantity(item);
 const lineTotal = storefrontOrderItemLineTotal(item);
 const isCatalogProduct = item.itemType === 'product' || (!item.itemType && item.productId);
+const catalogProduct = isCatalogProduct
+? findProductByAnyId(item.productId) || allProducts.find(product => item.name && normalize(product.name) === normalize(item.name))
+: null;
+const orderImageFallback = catalogProduct ? getDefaultProductImage(catalogProduct) : getDefaultProductImage(item);
+const orderImage = resolveImage(item.image || '') || orderImageFallback;
 const encodedProductId = encodeOrderItemValue(item.productId);
 const encodedSize = encodeOrderItemValue(item.size);
 const encodedName = encodeOrderItemValue(item.name);
@@ -3708,7 +3775,7 @@ ${item.itemType === 'perfume_card' && item.cardMeta
 ? renderPerfumeCardVisual(item.cardMeta, true)
 : item.itemType === 'bundle' && item.bundleMeta
 ? renderCustomSetVisual((item.bundleMeta.items || []).map(p => ({ product: { ...p, image: p.image, images: [p.image], name: p.name, bottleImage: p.bottleImage }, qty: p.qty })), item.bundleMeta.previewSizeMl || item.bundleMeta.sizeMl || 8, true)
-: `<img src="${escapeHtml(resolveImage(item.image || ''))}" alt="${escapeHtml(item.name || 'Ordered item')}" class="w-16 h-16 object-cover rounded">`}
+: `<img ${imageWithFallback(orderImage, orderImageFallback, '/products/ee-brand-20260819.webp')} alt="${escapeHtml(item.name || 'Ordered item')}" class="w-16 h-16 object-cover rounded">`}
 <div class="flex-1">
 <p class="storefront-order-item-name font-semibold">${escapeHtml(item.name || 'Ordered item')}</p>
 <p class="text-xs text-gray-500">${escapeHtml(item.size || '')}</p>
@@ -4617,6 +4684,7 @@ if (!authToken) {
 wishlistIds = [];
 wishlistLoaded = true;
 wishlistReady = true;
+window.dispatchEvent(new Event('ee:wishlist-updated'));
 return;
 }
 try {
@@ -4656,11 +4724,13 @@ item.size = resolveWishlistSize(item, product);
 });
 wishlistLoaded = true;
 wishlistReady = true;
+window.dispatchEvent(new Event('ee:wishlist-updated'));
 } catch (err) {
 console.error('Could not fetch wishlist:', err);
 wishlistIds = [];
 wishlistLoaded = true;
 wishlistReady = true;
+window.dispatchEvent(new Event('ee:wishlist-updated'));
 }
 }
 function isWishlistItemSaved(productId, size) {
@@ -4795,6 +4865,83 @@ const price = getWishlistPricing(product, size).sellingPrice;
 window.EE?.addToCart?.(product, size, price, 1);
 setTimeout(() => window.dispatchEvent(new Event('ee:mini-cart-open')), 80);
 }
+function openQuickView(product){
+const overlay=document.createElement('div');
+overlay.className='ee-quick-overlay';
+const panel=document.createElement('div');
+panel.className='ee-quick-panel'; panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Quick view '+product.name);
+const close=document.createElement('button');close.type='button';close.className='ee-quick-close';close.setAttribute('aria-label','Close quick view');close.textContent='×';close.onclick=()=>overlay.remove();
+const photo=document.createElement('div');photo.className='ee-quick-photo';
+const img=document.createElement('img');img.src=getDefaultProductImage(product);img.alt=product.name;
+const noteOverlay=document.createElement('aside');noteOverlay.className='ee-note-overlay';noteOverlay.setAttribute('aria-label',product.name+' scent notes');
+const noteTitle=document.createElement('span');noteTitle.className='ee-note-overline';noteTitle.textContent='SCENT NOTES';noteOverlay.append(noteTitle);
+[['Top','First impression',product.top||product.notes?.top],['Heart','The character',product.mid||product.notes?.mid],['Base','The lasting trail',product.base||product.notes?.base]].forEach(([label,detail,value])=>{
+  const group=document.createElement('section');group.className='ee-note-group';
+  const heading=document.createElement('div');heading.className='ee-note-group-heading';
+  const title=document.createElement('strong');title.textContent=label;
+  const caption=document.createElement('small');caption.textContent=detail;heading.append(title,caption);
+  const list=document.createElement('ul');
+  String(value||'').split(/[,|•]/).map(note=>note.trim()).filter(Boolean).forEach(note=>{
+    const item=document.createElement('li');const icon=document.createElement('span');icon.className='ee-note-icon';
+    icon.title=note;
+    const artwork=window.eeFragranceNoteArtwork?.(note);
+    if(artwork){
+      icon.classList.add('ee-note-photo');
+      const sprite=document.createElement('span');sprite.className='ee-note-sprite';
+      sprite.style.backgroundImage=`url(${artwork.image})`;
+      sprite.style.backgroundPosition=artwork.position;
+      icon.append(sprite);
+    }else icon.textContent='✦';
+    const name=document.createElement('span');name.textContent=note;item.append(icon,name);list.append(item);
+  });
+  if(!list.childElementCount){const item=document.createElement('li');const icon=document.createElement('span');icon.className='ee-note-icon';icon.textContent='✦';const name=document.createElement('span');name.textContent='Discover the blend';item.append(icon,name);list.append(item)}
+  group.append(heading,list);noteOverlay.append(group);
+});
+photo.append(img,noteOverlay);
+const info=document.createElement('div');info.className='ee-quick-details';
+const kicker=document.createElement('small');kicker.textContent='ETERNAL ESSENCE · '+(product.type||'Fragrance');
+const title=document.createElement('h2');title.textContent=product.name;
+const description=document.createElement('p');description.className='ee-quick-description';description.textContent=product.description||product.family||'Explore this fragrance and its notes.';
+const price=document.createElement('strong');price.textContent='₹'+getProductDisplayPricing(product).sellingPrice.toLocaleString('en-IN');
+const add=document.createElement('button');add.type='button';add.textContent='Add to cart';add.onclick=()=>{quickAddProduct(product.id);overlay.remove()};
+const details=document.createElement('button');details.type='button';details.textContent='View full details →';details.onclick=()=>{overlay.remove();window.eeNavigateToProduct?.(product)};
+const reviewKey=String(product.id||product._id||product.legacyId||'').replace(/^db_/,'');
+const providedReviews=window.eeProvidedReviewsForProduct?.(product)||[];
+const suppliedRatingTotal=providedReviews.reduce((total,review)=>total+Number(review.rating||0),0);
+const suppliedSummary=providedReviews.length?{count:providedReviews.length,average:Math.round(suppliedRatingTotal/providedReviews.length*10)/10}:null;
+const remoteSummary=window.__EE_REVIEW_SUMMARIES__?.[reviewKey];
+const reviewSummary=!remoteSummary||Number(remoteSummary.count||0)<Number(suppliedSummary?.count||0)?suppliedSummary||remoteSummary:remoteSummary;
+info.append(kicker,title);
+if(reviewSummary?.count){const rating=document.createElement('div');rating.className='ee-quick-rating';const badge=document.createElement('b');badge.textContent=Number(reviewSummary.average).toFixed(1)+' ★';const count=document.createElement('span');count.textContent=`${Number(reviewSummary.count)} customer review${Number(reviewSummary.count)===1?'':'s'}`;rating.append(badge,count);info.append(rating)}
+info.append(description,price,add,details);panel.append(close,photo,info);overlay.append(panel);
+overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove()});document.body.append(overlay);close.focus();
+let reviewCard=null;
+function showTopReview(reviews){
+  const topReview=reviews.filter(review=>String(review.comment||review.review||review.text||'').trim()).sort((a,b)=>Number(b.rating||0)-Number(a.rating||0))[0];
+  if(!topReview)return;
+  if(!reviewCard){reviewCard=document.createElement('blockquote');reviewCard.className='ee-quick-top-review';info.insertBefore(reviewCard,description)}
+  reviewCard.replaceChildren();
+  const label=document.createElement('span');label.textContent='TOP CUSTOMER REVIEW · '+'★'.repeat(Math.min(5,Math.max(1,Number(topReview.rating)||5)));
+  const comment=document.createElement('p');comment.textContent='“'+String(topReview.comment||topReview.review||topReview.text).trim()+'”';
+  const source=document.createElement('small');source.textContent=topReview.verifiedPurchase===false||topReview.source==='store-provided'?'Shared by store':'Verified purchase';
+  reviewCard.append(label,comment,source);
+}
+showTopReview(providedReviews);
+Promise.resolve().then(()=>window.EE?.getReviews?.(product.id||product._id)).then(data=>{
+  if(!overlay.isConnected||!Array.isArray(data?.reviews))return;
+  const ids=new Set(data.reviews.map(review=>String(review._id)));
+  showTopReview([...data.reviews,...providedReviews.filter(review=>!ids.has(review._id))]);
+}).catch(()=>{});
+}
+function quickAddProduct(id){
+const product=findProductByAnyId(id);
+if(!product)return;
+const size=getDefaultWishlistSize(product);
+if(!size){showToast('Choose an available size on the product page.');openModal(product);return;}
+const price=getWishlistPricing(product,size).sellingPrice;
+window.EE?.addToCart?.(product,size,price,1);
+setTimeout(()=>window.dispatchEvent(new Event('ee:mini-cart-open')),80);
+}
 function openModalById(id){
 const product = findProductByAnyId(id);
 if(product){
@@ -4804,12 +4951,20 @@ if(window.eeNavigateToProduct){ window.eeNavigateToProduct(product, { size: wind
 }
 async function initStore() {
 placeProductFilters();
-await Promise.all([loadBundleRules(), loadBackendProducts()]);
-if (window.__EE_CATALOG_STATUS__ !== 'ready') return;
+// Paint the bundled catalogue now. The live API refreshes admin visibility in
+// the background, without blocking the storefront on a cold backend.
+allProducts = products.map(p => ({...p, source:'frontend'}));
+window.__EE_CATALOG_STATUS__ = 'cached';
+try {
+  const saved=JSON.parse(localStorage.getItem('ee_catalog_cache_v1')||'null');
+  if(Array.isArray(saved)){backendProducts=saved;mergeProducts();}
+} catch (_) {}
+renderCategoryTabs();
 renderProducts(allProducts);
 renderBundleBuilder();
 restoreCategoryIfAny();
 if (typeof renderBestSellers === 'function') renderBestSellers();
+Promise.allSettled([loadBundleRules(), loadBackendProducts()]);
 const sharedId = null;
 }
 window.__EE_CONFIG__ = window.__EE_CONFIG__ || {};

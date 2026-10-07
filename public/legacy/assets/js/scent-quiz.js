@@ -140,6 +140,8 @@ function openScentQuiz() {
   document.body.style.overflow = 'hidden';
   renderScentQuiz();
 }
+window.openScentQuiz = openScentQuiz;
+window.dispatchEvent(new Event('ee:quiz-ready'));
 function closeScentQuiz() {
   clearTimeout(scentQuizState.timer);
   document.getElementById('scent-quiz-modal')?.classList.add('hidden');
