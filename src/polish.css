@@ -15,6 +15,14 @@
 .ee-search-page-heading button,.ee-search-no-results,.ee-shop-add,.ee-shop-view,.ee-quick-details>button{
   border-radius:var(--ee-control-radius)!important;
 }
+.ee-custom-set-cta{display:flex;align-items:center;gap:13px;min-height:64px;box-sizing:border-box;margin-top:12px;padding:11px 15px;border:1px solid #d9c69c;border-radius:var(--ee-control-radius);background:#fbf7ed;color:#2c2418;text-decoration:none;transition:background .18s,border-color .18s,box-shadow .18s}
+.ee-custom-set-cta>svg{flex:0 0 auto;color:#a77d21}
+.ee-custom-set-cta>span:nth-child(2){display:grid;gap:4px;min-width:0}
+.ee-custom-set-cta strong{font:700 13px/1.25 'Montserrat',Arial,sans-serif;letter-spacing:.025em}
+.ee-custom-set-cta small{font:12px/1.35 'Lato',Arial,sans-serif;color:#756b59;overflow-wrap:anywhere}
+.ee-custom-set-arrow{margin-left:auto;color:#a77d21;font:24px/1 Georgia,serif}
+.ee-custom-set-cta:hover,.ee-custom-set-cta:focus-visible{background:#f5ebd5;border-color:#ad862e;box-shadow:0 4px 15px #9d792522;outline:none}
+.ee-custom-set-cta:focus-visible{outline:2px solid #ad862e;outline-offset:2px}
 .ee-collection-dropdown,.ee-collection-submenu,.ee-collection-facet-options,.ee-collection-product-list,
 .ee-collection-product-preview,.ee-search-suggestions{border-radius:var(--ee-control-radius)!important}
 .ee-legacy-root :where(#page-custom-set,#page-perfume-card,#page-contact,#page-orders,#page-account) :where(.bg-white,.bg-gray-50,.bg-gray-100){border-radius:var(--ee-surface-radius)}

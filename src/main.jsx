@@ -21,7 +21,7 @@ import './polish.css';
 window.__EE_LOCAL_CATALOG__=currentCatalog;
 window.eeMatchesProductSearch=matchesProductSearch;
 
-const LEGACY_ASSET_VERSION='20261007-4';
+const LEGACY_ASSET_VERSION='20261008-2';
 const LEGACY_SCRIPTS=[
   '/legacy/assets/js/storefront.js',
   '/legacy/assets/js/scent-quiz.js',
@@ -183,7 +183,8 @@ function productPath(product){
 function defaultProductSize(product) {
 const sizes=Array.isArray(product?.sizes)?product.sizes.filter(size=>size.isStorefrontVisible!==false):[];
 if(product?.sizes?.length&&!sizes.length)return '';
-const preferred=sizes.find(size=>String(size.unit).toLowerCase()==='ml gift'&&Number(size.value)===30)||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
+const isPerfume=String(product?.type||product?.category||'').toLowerCase()==='perfume';
+const preferred=(isPerfume&&sizes.find(size=>Number(size.value)===30&&String(size.unit||'').toLowerCase().includes('ml')))||sizes.find(size=>Number(size.priceMultiplier)===1)||sizes[0];
 if(preferred)return `${preferred.value} ${preferred.unit}`;
 const category=String(product?.type||product?.category||'').toLowerCase();
 return category.includes('perfume')?'30 ml':category.includes('attar')?'3 ml':'';
@@ -499,6 +500,7 @@ function collectionStateFromLocation(){
   else if(facet==='sweet-musky')state.search='musk';
   return {...state,kind};
 }
+window.eeCollectionStateFromLocation=collectionStateFromLocation;
 function categoryCollectionSegment(category='all'){
   const raw=String(category||'all').trim();
   const lower=raw.toLowerCase();
@@ -583,13 +585,13 @@ function App(){
     ['filter-bar','collection-section','catalog-floating-filter'].forEach(id=>document.getElementById(id)?.classList.toggle('ee-catalog-hidden',!visible));
     if(visible&&!isHot){
       const state=collectionStateFromLocation();
-      window.setCategory?.(state.kind,true);
       const gender=document.getElementById('gender-filter'),season=document.getElementById('season-filter'),time=document.getElementById('time-filter'),search=document.getElementById('search-input');
       if(gender)gender.value=state.gender||'';
       if(season)season.value=state.season||'';
       if(time)time.value=state.time||'';
       if(search)search.value=state.search||'';
-      safeLegacyApplyFilters();
+      if(window.setCategory)window.setCategory(state.kind,true);
+      else safeLegacyApplyFilters();
     }
   },[legacyReady,isCollection,isHot,path]);
 
