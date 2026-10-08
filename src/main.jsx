@@ -6,16 +6,20 @@ import ProductPage from './ProductPage';
 import JournalPage from './JournalPage';
 import OfferPopup from './OfferPopup';
 import HomeEnhancements from './HomeEnhancements';
-import StorefrontChrome,{HotSelling,InfoPage} from './StorefrontChrome';
+import StorefrontChrome,{HotSelling,InfoPage,SiteSearchPage} from './StorefrontChrome';
 import DealerPage from './DealerPage';
 import CartDrawer from './CartDrawer';
 import WhatsAppOptIn from './WhatsAppOptIn';
 import currentCatalog from "../data/current-catalog.json";
+import {matchesProductSearch} from './siteSearch.js';
 import './legacy.css';
 import './app.css';
 import './catalog.css';
+import './siteSearch.css';
+import './polish.css';
 
 window.__EE_LOCAL_CATALOG__=currentCatalog;
+window.eeMatchesProductSearch=matchesProductSearch;
 
 const LEGACY_ASSET_VERSION='20261007-4';
 const LEGACY_SCRIPTS=[
@@ -115,6 +119,18 @@ window.__EE_CONFIG__={
   BACKEND_FALLBACK_URL:fallbackBackendBase
 };
 installBackendFailover();
+// Recheck admin-backed storefront data when a sleeping API comes back or the
+// shopper returns to the tab. A single event keeps each read-only feature in
+// sync without reloading the whole page.
+let lastBackendRefresh=0;
+const requestBackendRefresh=()=>{
+  if(document.visibilityState!=='visible'||Date.now()-lastBackendRefresh<5000)return;
+  lastBackendRefresh=Date.now();
+  window.dispatchEvent(new Event('ee:backend-refresh'));
+};
+window.addEventListener('online',requestBackendRefresh);
+window.addEventListener('focus',requestBackendRefresh);
+document.addEventListener('visibilitychange',requestBackendRefresh);
 function analyticsVisitorId(){
   const key='ee_visitor_id',legacyKey='ee_analytics_visitor_v1';
   let id=localStorage.getItem(key)||sessionStorage.getItem(legacyKey);
@@ -558,6 +574,7 @@ function App(){
   const page=pageFromLocation();
   const isCollection=page==='collection' && !isProduct;
   const isHot=cleanPath==='/collections/hot-selling';
+  const isSearch=cleanPath==='/search';
   const isInfo=/^\/pages\/(?:about-us|shipping-policy|return-refund-policy|privacy-policy|terms-conditions|happy-customers|track-your-order)$/.test(cleanPath);
 
   useEffect(()=>{
@@ -587,9 +604,10 @@ function App(){
   };
   return <div className="ee-route-view">
     {!isDealer&&<StorefrontChrome/>}
-    <LegacyShell active={!isDealer} page={isProduct||isJournal||isInfo?'home':(isCollection?'home':page)} collectionOnly={isCollection&&!isHot} productOnly={isProduct||isJournal||isDealer||isInfo||isHot} onReady={handleLegacyReady}/>
-    {!isProduct&&!isJournal&&!isCollection&&!isDealer&&!isInfo&&page==='home'&&<main className="ee-new-home"><HomeEnhancements/></main>}
+    <LegacyShell active={!isDealer} page={isProduct||isJournal||isInfo||isSearch?'home':(isCollection?'home':page)} collectionOnly={isCollection&&!isHot} productOnly={isProduct||isJournal||isDealer||isInfo||isHot||isSearch} onReady={handleLegacyReady}/>
+    {!isProduct&&!isJournal&&!isCollection&&!isDealer&&!isInfo&&!isSearch&&page==='home'&&<main className="ee-new-home"><HomeEnhancements/></main>}
     {isHot&&<HotSelling/>}
+    {isSearch&&<SiteSearchPage/>}
     {isInfo&&<InfoPage slug={cleanPath.split('/').pop()}/>}
     {isProduct&&<ProductPage product={product} route={route} onBack={navigateHome}/>}
     {isJournal&&<JournalPage slug={journalSlug} onBack={navigateHome}/>}

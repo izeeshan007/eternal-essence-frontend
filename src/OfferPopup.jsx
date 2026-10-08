@@ -1,5 +1,5 @@
 
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 
 const DAY=24*60*60*1000;
 const backendBase=()=>window.EE?.getBackendBase?.()||window.__EE_CONFIG__?.BACKEND_BASE_URL||((location.hostname==='localhost'||location.hostname==='127.0.0.1')?'http://localhost:5000':'https://eternal-essence-backend.onrender.com');
@@ -12,17 +12,25 @@ function offerHeading(offer){
 
 export default function OfferPopup(){
   const [offer,setOffer]=useState(null),[open,setOpen]=useState(false),[left,setLeft]=useState(10*60);
+  const [revision,setRevision]=useState(0);
+  const retryDelay=useRef(5000);
+  useEffect(()=>{const refresh=()=>setRevision(value=>value+1);window.addEventListener('ee:backend-refresh',refresh);return()=>window.removeEventListener('ee:backend-refresh',refresh)},[]);
   useEffect(()=>{
     let active=true;
-    fetch(`${backendBase()}/api/offers/featured`).then(r=>r.json()).then(data=>{
+    let retryTimer;
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),25000);
+    fetch(`${backendBase()}/api/offers/featured`,{signal:controller.signal,cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('Featured offer unavailable'))).then(data=>{
+      if(!data.success)throw new Error('Featured offer unavailable');
+      retryDelay.current=5000;
       if(!active||!data.success||!data.offer)return;
       const key=`ee_offer_last_shown_${data.offer._id||data.offer.code}`;
       let show=false;
       try{const last=Number(localStorage.getItem(key)||0);if(Date.now()-last>=DAY){localStorage.setItem(key,String(Date.now()));show=true;}}catch{show=true}
       if(show){setOffer(data.offer);setOpen(true);}
-    }).catch(()=>{});
-    return()=>{active=false};
-  },[]);
+    }).catch(()=>{if(active){retryTimer=setTimeout(()=>setRevision(value=>value+1),retryDelay.current);retryDelay.current=Math.min(retryDelay.current*2,60000)}}).finally(()=>clearTimeout(timeout));
+    return()=>{active=false;controller.abort();clearTimeout(timeout);clearTimeout(retryTimer)};
+  },[revision]);
   useEffect(()=>{if(!open)return;const timer=setInterval(()=>setLeft(value=>value>0?value-1:0),1000);return()=>clearInterval(timer);},[open]);
   if(!open||!offer)return null;
   const mm=String(Math.floor(left/60)).padStart(2,'0'),ss=String(left%60).padStart(2,'0');

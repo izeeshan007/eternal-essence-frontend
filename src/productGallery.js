@@ -20,9 +20,15 @@ export function withNotesImage(product, availableFiles = []) {
   return images;
 }
 
-export function visibleGalleryIndices(product, sizes = []) {
-  const images = Array.isArray(product?.images) && product.images.length
+export function visibleGalleryIndices(product, sizes = [], availableFiles = []) {
+  const sources = Array.isArray(product?.images) && product.images.length
     ? product.images : [product?.image].filter(Boolean);
+  const available = new Set(availableFiles.map(file => String(file).toLowerCase()));
+  const images = sources.map(image => {
+    if (!image || !available.size || /^https?:\/\//i.test(String(image))) return image;
+    const file = String(image).split(/[?#]/)[0].split('/').pop().toLowerCase();
+    return available.has(file) || available.has(file.replace(/\.(png|jpe?g)$/i, '.webp')) ? image : null;
+  });
   const category = String(product?.type || product?.category || '').toLowerCase();
   if (!category.includes('perfume')) return images.flatMap((image, index) => image ? [index] : []);
   // When the server has hidden every regular size, the cover can remain but

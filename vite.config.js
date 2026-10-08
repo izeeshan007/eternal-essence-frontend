@@ -64,20 +64,24 @@ function restoreAdminDashboard(backendBase,backendFallback){
 function productNotesAssets() {
   const id = 'virtual:product-notes';
   const resolvedId = '\0' + id;
+  const assetsId = 'virtual:product-assets';
+  const resolvedAssetsId = '\0' + assetsId;
   const directory = path.join(frontendDir, 'public/products');
   return {
     name: 'product-notes-assets',
-    resolveId(source) { if (source === id) return resolvedId; },
+    resolveId(source) { if (source === id) return resolvedId; if (source === assetsId) return resolvedAssetsId; },
     load(source) {
-      if (source !== resolvedId) return;
-      const files = fs.readdirSync(directory).filter(file => /_notes\.(webp|png)$/i.test(file)).sort();
+      if (source !== resolvedId && source !== resolvedAssetsId) return;
+      const files = fs.readdirSync(directory).filter(file => source === resolvedId ? /_notes\.(webp|png)$/i.test(file) : /\.(webp|png|jpe?g)$/i.test(file)).sort();
       return 'export default ' + JSON.stringify(files) + ';';
     },
     configureServer(server) {
       const refresh = file => {
-        if (path.dirname(path.resolve(file)) !== directory || !/_notes\.(webp|png)$/i.test(file)) return;
-        const module = server.moduleGraph.getModuleById(resolvedId);
-        if (module) server.moduleGraph.invalidateModule(module);
+        if (path.dirname(path.resolve(file)) !== directory || !/\.(webp|png|jpe?g)$/i.test(file)) return;
+        for (const id of [resolvedId, resolvedAssetsId]) {
+          const module = server.moduleGraph.getModuleById(id);
+          if (module) server.moduleGraph.invalidateModule(module);
+        }
         server.ws.send({ type: 'full-reload' });
       };
       server.watcher.on('add', refresh).on('unlink', refresh);

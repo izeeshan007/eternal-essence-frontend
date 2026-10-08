@@ -8,13 +8,22 @@ const REVEAL_DELAY_MS=3*60*1000;
 
 export default function WhatsAppOptIn({backendBase,visitorId}){
   const shownThisVisit=useRef(false),dismissedThisVisit=useRef(false);
+  const retryDelay=useRef(5000);
+  const [revision,setRevision]=useState(0);
   const [config,setConfig]=useState(null),[popupEnabled,setPopupEnabled]=useState(false),[visible,setVisible]=useState(false),[phone,setPhone]=useState(''),[consent,setConsent]=useState(false),[status,setStatus]=useState(''),[couponCode,setCouponCode]=useState(''),[busy,setBusy]=useState(false),[accepted,setAccepted]=useState(()=>localStorage.getItem(ACCEPTED_KEY)==='1');
+  useEffect(()=>{const refresh=()=>setRevision(value=>value+1);window.addEventListener('ee:backend-refresh',refresh);return()=>window.removeEventListener('ee:backend-refresh',refresh)},[]);
   useEffect(()=>{
     let active=true;
-    fetch(`${backendBase}/api/whatsapp/config`).then(response=>response.json()).then(data=>{if(active&&data.success)setConfig(data)}).catch(()=>{});
-    fetch(`${backendBase}/api/whatsapp/popup-config`).then(response=>response.json()).then(data=>{if(active&&data.success)setPopupEnabled(data.enabled===true)}).catch(()=>{if(active)setPopupEnabled(false)});
-    return()=>{active=false};
-  },[backendBase]);
+    let retryTimer;
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),25000);
+    const get=path=>fetch(`${backendBase}${path}`,{signal:controller.signal,cache:'no-store'}).then(response=>response.ok?response.json():Promise.reject(new Error('WhatsApp settings unavailable')));
+    Promise.all([get('/api/whatsapp/config'),get('/api/whatsapp/popup-config')]).then(([settings,popup])=>{
+      if(!settings.success||!popup.success)throw new Error('WhatsApp settings unavailable');
+      if(active){retryDelay.current=5000;setConfig(settings);setPopupEnabled(popup.enabled===true)}
+    }).catch(()=>{if(active){retryTimer=setTimeout(()=>setRevision(value=>value+1),retryDelay.current);retryDelay.current=Math.min(retryDelay.current*2,60000)}}).finally(()=>clearTimeout(timeout));
+    return()=>{active=false;controller.abort();clearTimeout(timeout);clearTimeout(retryTimer)};
+  },[backendBase,revision]);
   useEffect(()=>{
     const syncAccepted=event=>{
       if(event.key===ACCEPTED_KEY&&event.newValue==='1'){

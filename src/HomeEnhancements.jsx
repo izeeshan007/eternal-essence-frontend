@@ -52,10 +52,12 @@ function HeroCarousel(){
   </section>;
 }
 
+const instagramThumbnailBase=()=>location.hostname==='localhost'||location.hostname==='127.0.0.1'?(window.EE?.getBackendBase?.()||'http://localhost:5000'):location.origin;
 function InstagramReel({id,label,poster}){
   const [active,setActive]=useState(false),[loaded,setLoaded]=useState(false),[failed,setFailed]=useState(false);
-  const url=`https://www.instagram.com/reel/${id}/`;
-  const embedUrl=`https://www.instagram.com/reel/${id}/embed/?autoplay=1&muted=1`;
+  const url=`https://www.instagram.com/p/${id}/`;
+  const embedUrl=`https://www.instagram.com/p/${id}/embed/?autoplay=1&muted=1`;
+  const thumbnailUrl=`${instagramThumbnailBase()}/api/instagram/reels/${id}/thumbnail`;
   const start=()=>{if(active)return;setFailed(false);setLoaded(false);setActive(true)};
   const stop=()=>{setActive(false);setLoaded(false)};
   useEffect(()=>{
@@ -64,14 +66,14 @@ function InstagramReel({id,label,poster}){
     return()=>clearTimeout(timer);
   },[active,loaded,failed]);
   return <article className={`ee-instagram-post${active?' playing':''}`} onMouseEnter={start} onMouseLeave={stop} onFocusCapture={start} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget))stop()}}>
-    <button className="ee-instagram-preview" type="button" onClick={start} aria-label={`Play ${label} reel here`}>
-      <img src={poster} alt={`${label} from Eternal Essence`} loading="lazy"/>
+    <button className="ee-instagram-preview" type="button" onClick={start} aria-label={`Play ${label} Instagram video here`}>
+      <img src={thumbnailUrl} alt={`${label} from Eternal Essence`} loading="lazy" onError={event=>{if(event.currentTarget.src!==new URL(poster,location.origin).href)event.currentTarget.src=poster}}/>
       <span className="ee-reel-play" aria-hidden="true">▶</span>
-      <span className="ee-reel-caption"><small>@ETERNAL_ESSENSE · REEL</small><strong>{label}</strong><em>HOVER TO PLAY · TAP TO OPEN</em></span>
+      <span className="ee-reel-caption"><small>@ETERNAL_ESSENSE · VIDEO</small><strong>{label}</strong><em>{failed?'WATCH ON INSTAGRAM':'HOVER TO PLAY · TAP TO OPEN'}</em></span>
     </button>
     {active&&!failed&&<iframe className={`ee-instagram-frame${loaded?' loaded':''}`} src={embedUrl} title={`${label} Instagram reel`} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen onLoad={()=>setLoaded(true)} onError={()=>setFailed(true)}/>}
-    {active&&failed&&<span className="ee-reel-status">Reel unavailable here · open on Instagram</span>}
-    {active&&<a className="ee-instagram-open" href={url} target="_blank" rel="noopener noreferrer">WATCH ON INSTAGRAM ↗</a>}
+    {active&&failed&&<a className="ee-reel-fallback" href={url} target="_blank" rel="noopener noreferrer">Preview unavailable here <strong>Watch on Instagram ↗</strong></a>}
+    {active&&!failed&&<a className="ee-instagram-open" href={url} target="_blank" rel="noopener noreferrer">WATCH ON INSTAGRAM ↗</a>}
   </article>;
 }
 
@@ -124,7 +126,7 @@ export default function HomeEnhancements(){
     <section className="ee-why-home"><div className="ee-home-section-heading centered"><span>WHY ETERNAL ESSENCE</span><h2>Thoughtful fragrance, made transparent.</h2><p>Everything you need to choose confidently, from the first note to the final dry-down.</p></div><div className="ee-benefit-grid"><Benefit icon="✦" title="Curated profiles" copy="Every blend is organised by notes, mood and wear occasion."/><Benefit icon="◌" title="Clear disclosure" copy="See the top, heart and base notes before you make a choice."/><Benefit icon="◇" title="Made for gifting" copy="Create custom sets and perfume cards for meaningful moments."/><Benefit icon="✓" title="Reliable service" copy="Secure checkout, India-wide shipping and quality assurance."/></div></section>
     <section className="ee-home-compare"><div className="ee-home-section-heading centered"><span>THE DIFFERENCE</span><h2>How Eternal Essence compares.</h2><p>Luxury details should be clear, not hidden.</p></div><div className="ee-compare-card"><div className="ee-compare-row head"><b>DETAIL</b><strong>ETERNAL ESSENCE</strong><em>OTHERS</em></div>{[['Ingredient quality','Luxury-grade oils','Often undisclosed'],['Oil concentration','35–45% extrait','15–20%'],['Longevity','6–10+ hours*','3–5 hours'],['Formula transparency','Full disclosure','Not always']].map(row=><div className="ee-compare-row" key={row[0]}><b>{row[0]}</b><strong>{row[1]}</strong><em>{row[2]}</em></div>)}</div></section>
     <CustomerVoices products={products}/>
-    <section className="ee-instagram-home" aria-labelledby="ee-instagram-title"><div className="ee-home-section-heading centered"><span>FROM OUR INSTAGRAM</span><h2 id="ee-instagram-title">See the fragrance story.</h2><p>Explore reels from @eternal_essense, including the gift pack you shared.</p></div><div className="ee-instagram-reels">{[['DUFcY5IjGj8','The gift pack','/products/set_bg.webp'],['Ddq3y-qsqJS','Fragrance moments','/products/aventus3.webp'],['DcDqk4VMJ4o','Dive into the collection','/products/afternoon_dive3.webp']].map(([id,label,poster])=><InstagramReel key={id} id={id} label={label} poster={poster}/>)}</div><a className="ee-instagram-follow" href="https://www.instagram.com/eternal_essense/" target="_blank" rel="noopener noreferrer">FOLLOW @ETERNAL_ESSENSE ↗</a></section>
+    <section className="ee-instagram-home" aria-labelledby="ee-instagram-title"><div className="ee-home-section-heading centered"><span>FROM OUR INSTAGRAM</span><h2 id="ee-instagram-title">See the fragrance story.</h2><p>Explore four posts from @eternal_essense.</p></div><div className="ee-instagram-reels">{[['DbsGJXSsdFA','Fragrance story 01','/products/set_bg.webp'],['DU0KYN9EqLO','Fragrance story 02','/products/aventus3.webp'],['DaIPFbtML3Y','Fragrance story 03','/products/afternoon_dive3.webp'],['DaXesoHsGTu','Fragrance story 04','/products/purple_oud.webp']].map(([id,label,poster])=><InstagramReel key={id} id={id} label={label} poster={poster}/>)}</div><a className="ee-instagram-follow" href="https://www.instagram.com/eternal_essense/" target="_blank" rel="noopener noreferrer">FOLLOW @ETERNAL_ESSENSE ↗</a></section>
     <section className="ee-home-journal"><div className="ee-home-section-heading centered"><span>THE JOURNAL</span><h2>Ideas for wearing fragrance well.</h2><p>Product-led notes, seasonal edits and practical guidance from the collection.</p></div><div className="ee-journal-grid">{journal.map(item=><article key={item.slug}><span>{item.tag}</span><h3>{item.title}</h3><p>{item.copy}</p><button onClick={()=>window.eeNavigateToJournal?.(item.slug)}>READ THE ARTICLE →</button></article>)}</div></section>
     <section className="ee-home-trust"><Benefit icon="♢" title="Free shipping" copy="Pan India delivery"/><Benefit icon="▣" title="Secure payment" copy="Safe and encrypted checkout"/><Benefit icon="◫" title="Authenticity assured" copy="Made for repeat wear"/><Benefit icon="◉" title="Online support" copy="We are here when you need us"/></section>
   </>;

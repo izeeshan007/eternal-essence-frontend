@@ -6,6 +6,40 @@ const split = value => String(value || '').split(/[,|•]/).map(note => note.tri
 // Original transparent ingredient cutouts, arranged in four-by-four atlases.
 // A note only uses a picture when it describes that ingredient (or its close variant).
 const ingredientArtwork = [
+  // Keep specific notes ahead of broad families, so a named ingredient gets its own cutout.
+  [/gardenia/, 5, 0], [/frangipani/, 5, 1], [/watermelon/, 5, 2],
+  [/red fruits?|fruity notes?|^fruity$|candied fruits?/, 5, 3], [/ambroxan/, 5, 4],
+  [/bubble gum/, 5, 5], [/rock sugar/, 5, 6], [/cashmere wood/, 5, 7],
+  [/peony/, 5, 8], [/bitter almond/, 5, 9], [/brown sugar/, 5, 10],
+  [/fresh spices?|fresh spicy/, 5, 11], [/apricot/, 5, 12],
+  [/blue lily|\blilies\b|\blily\b/, 5, 13], [/white orchid|\borchids?\b/, 5, 14],
+  [/litchi|lychee/, 5, 15],
+  [/ambrette/, 6, 0], [/artemisia/, 6, 1], [/bakhoor/, 6, 2],
+  [/basil/, 6, 3], [/bay leaf/, 6, 4], [/brandy/, 6, 5],
+  [/candied fruit/, 6, 6], [/cassia/, 6, 7], [/chamomile/, 6, 8],
+  [/clove/, 6, 9], [/coriander/, 6, 10], [/coumarin/, 6, 11],
+  [/cyclamen/, 6, 12], [/davana/, 6, 13], [/dried fruits?/, 6, 14],
+  [/fir resin/, 6, 15],
+  [/galbanum/, 7, 0], [/\bgrass\b/, 7, 1], [/hawthorn/, 7, 2],
+  [/henna|\bhina\b/, 7, 3], [/cypress/, 7, 4], [/juniper/, 7, 5],
+  [/kewda|screw pine/, 7, 6], [/licorice/, 7, 7], [/\bmelon\b/, 7, 8],
+  [/mitti|soil tincture|earthy/, 7, 9], [/myrrh/, 7, 10],
+  [/myrtle/, 7, 11], [/osmanthus/, 7, 12], [/papyrus/, 7, 13],
+  [/passionfruit/, 7, 14], [/\bplum\b/, 7, 15],
+  [/pimento/, 8, 0], [/quince/, 8, 1],
+  [/resins?|resinous|balsamic/, 8, 2], [/sea water/, 8, 3],
+  [/smok(?:e|y)/, 8, 4], [/sugar cane/, 8, 5], [/water lily/, 8, 6],
+  [/watercress/, 8, 7], [/whiskey|whisky/, 8, 8], [/yuzu/, 8, 9],
+  [/almond blossom/, 8, 10], [/cashmeran/, 8, 11], [/calone/, 8, 12],
+  [/iso e super/, 8, 13], [/hedione/, 8, 14], [/petitgrain/, 8, 15],
+  // Broad accords use a representative ingredient instead of an empty symbol.
+  [/\bcitrus(?:es| fruits?)?\b/, 2, 8],
+  [/floral accords?|floral notes?|soft florals?|white flowers?/, 5, 0],
+  [/herbal notes?|green notes?/, 3, 12],
+  [/spices?|spicy notes?|warm spices?/, 5, 11],
+  [/powdery notes?/, 4, 7], [/\bsugar\b/, 5, 6],
+  [/\bwoody\b|warm woods?/, 2, 0],
+  [/\bmoss\b/, 1, 9], [/\bvanille\b/, 1, 11],
   [/pineapple/, 1, 0], [/bergamot/, 1, 1], [/black\s?currant|cassis/, 1, 2],
   [/green apple|apple/, 1, 3], [/birch/, 1, 4], [/patchouli/, 1, 5],
   [/jasmine/, 1, 6], [/rose(?!\s*wood)|damask rose/, 1, 7],
@@ -39,9 +73,16 @@ export function noteArtworkFor(note) {
   const artwork = ingredientArtwork.find(([pattern]) => pattern.test(String(note || '').toLowerCase()));
   if (!artwork) return null;
   const [, atlas, index] = artwork;
+  const roomy = atlas === 1 && index < 4;
+  const broadAtlas = atlas === 3 || atlas === 4;
+  const xPositions = roomy || broadAtlas ? [0,32.5,67.5,100] : [0,100 / 3,200 / 3,100];
+  const yPositions = roomy || broadAtlas ? [0,32.5,67.5,100] : atlas === 1 ? [0,37.2,69.1,100] : [0,100 / 3,200 / 3,100];
   return {
     image: `/notes/ingredient-atlas-${atlas}.png`,
-    position: `${(index % 4 + .1) * 31.25}% ${(Math.floor(index / 4) + .1) * 31.25}%`
+    // Fruit needs a wider crop. Lower rows sit just below the grid line, so
+    // move their crop down to exclude the ingredient in the row above.
+    position: `${xPositions[index % 4]}% ${yPositions[Math.floor(index / 4)]}%`,
+    size: roomy ? '350% 350%' : broadAtlas ? '385% 385%' : '400% 400%'
   };
 }
 if (typeof window !== 'undefined') window.eeFragranceNoteArtwork = noteArtworkFor;
@@ -50,7 +91,7 @@ function NoteIcon({ note }) {
   const artwork = noteArtworkFor(note);
   if (!artwork) return <span className="ee-note-icon ee-note-unknown" aria-hidden="true" title={note}><Sparkles size={17} strokeWidth={1.7}/></span>;
   return <span className="ee-note-icon ee-note-photo" aria-hidden="true" title={note}>
-    <span className="ee-note-sprite" style={{backgroundImage:`url(${artwork.image})`,backgroundPosition:artwork.position}}/>
+    <span className="ee-note-sprite" style={{backgroundImage:`url(${artwork.image})`,backgroundPosition:artwork.position,backgroundSize:artwork.size}}/>
   </span>;
 }
 

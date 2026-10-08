@@ -826,16 +826,23 @@
 /* Transparent ingredient cutouts echo a perfumery note library without white tiles. */
 .ee-note-icon.ee-note-photo,
 .ee-quick-photo .ee-note-icon.ee-note-photo,
-.ee-notes-flow .ee-note-icon.ee-note-photo{width:34px;height:34px;overflow:hidden!important;border:0!important;background:transparent!important}
-.ee-quick-photo .ee-note-icon.ee-note-photo{width:31px;height:31px}
-.ee-note-sprite{display:block;width:100%;height:100%;background-repeat:no-repeat;background-size:500% 500%}
+.ee-notes-flow .ee-note-icon.ee-note-photo{width:40px;height:40px;overflow:hidden!important;border:0!important;background:transparent!important}
+.ee-quick-photo .ee-note-icon.ee-note-photo{width:36px;height:36px}
+.ee-note-sprite{display:block;width:100%;height:100%;background-repeat:no-repeat;background-size:400% 400%}
 .ee-note-unknown{color:#8f713c}
 .ee-notes-flow-content>ul{gap:4px 16px}
 .ee-quick-photo .ee-note-group ul{gap:3px}
+
+/* Let the complete fragrance profile set its height instead of scrolling inside the image. */
+.ee-main-image:has(.ee-notes-artwork){height:auto!important;min-height:540px!important;align-items:stretch}
+.ee-main-image:has(.ee-notes-artwork) .ee-notes-artwork{height:auto;min-height:540px;justify-content:flex-start}
+.ee-notes-artwork-grid.ee-notes-flow{flex:1 0 auto;min-height:max-content;overflow:visible;justify-content:space-around}
 @media(max-width:700px){
   .ee-note-icon.ee-note-photo,
   .ee-quick-photo .ee-note-icon.ee-note-photo,
-  .ee-notes-flow .ee-note-icon.ee-note-photo{width:26px;height:26px}
+  .ee-notes-flow .ee-note-icon.ee-note-photo{width:30px;height:30px}
+  .ee-main-image:has(.ee-notes-artwork){min-height:360px!important}
+  .ee-main-image:has(.ee-notes-artwork) .ee-notes-artwork{min-height:360px}
 }
 
 /* Footer: lead with the fragrance collections and keep every link purposeful. */

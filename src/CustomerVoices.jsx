@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 
 const backend=()=>window.EE?.getBackendBase?.()||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'http://localhost:5000':'');
 const productId=product=>String(product?.id||product?._id||product?.legacyId||'').replace(/^db_/,'');
@@ -11,17 +11,22 @@ export default function CustomerVoices({products=[]}){
   const [page,setPage]=useState(1);
   const [result,setResult]=useState({reviews:[],total:0,pages:0});
   const [loading,setLoading]=useState(true);
+  const [revision,setRevision]=useState(0);
+  const retryDelay=useRef(5000);
+  useEffect(()=>{const refresh=()=>setRevision(value=>value+1);window.addEventListener('ee:backend-refresh',refresh);return()=>window.removeEventListener('ee:backend-refresh',refresh)},[]);
   useEffect(()=>{
     let active=true;
     const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),25000);
+    let retryTimer;
     setLoading(true);
-    fetch(`${backend()}/api/reviews/latest?page=${page}`,{signal:controller.signal})
+    fetch(`${backend()}/api/reviews/latest?page=${page}`,{signal:controller.signal,cache:'no-store'})
       .then(response=>response.ok?response.json():Promise.reject(new Error('Reviews unavailable')))
-      .then(data=>{if(active)setResult({reviews:data.reviews||[],total:data.total||0,pages:data.pages||0})})
-      .catch(()=>{if(active)setResult({reviews:[],total:0,pages:0})})
-      .finally(()=>{if(active)setLoading(false)});
-    return()=>{active=false;controller.abort()};
-  },[page]);
+      .then(data=>{if(active){retryDelay.current=5000;setResult({reviews:data.reviews||[],total:data.total||0,pages:data.pages||0})}})
+      .catch(()=>{if(active){retryTimer=setTimeout(()=>setRevision(value=>value+1),retryDelay.current);retryDelay.current=Math.min(retryDelay.current*2,60000)}})
+      .finally(()=>{clearTimeout(timeout);if(active)setLoading(false)});
+    return()=>{active=false;controller.abort();clearTimeout(timeout);clearTimeout(retryTimer)};
+  },[page,revision]);
   const mapped=useMemo(()=>result.reviews.map(review=>({
     ...review,
     product:products.find(item=>productId(item)===String(review.productKey||review.productId||'').replace(/^db_/,''))

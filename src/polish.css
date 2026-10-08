@@ -1,0 +1,65 @@
+/* A single quiet radius and the same cream/ink/gold surfaces throughout the storefront. */
+.ee-route-view{--ee-surface-radius:10px;--ee-control-radius:6px}
+.ee-product-info,.ee-scent-journey,.sj-chart-wrap,.sj-note-summary,.sj-stats,.ee-main-image,.ee-notes-artwork,
+.ee-shop-card,.ee-featured-card,.ee-voice-card,.ee-instagram-post,.ee-quick-panel,.ee-search-result-card,
+.ee-search-page-grid>a,.ee-search-start a,.ee-journal-grid article,.ee-info-page .ee-brand-story,
+.ee-legacy-root .product-card,.ee-collection-tile,.review-card,.ee-similar-card{
+  border-radius:var(--ee-surface-radius)!important;
+  overflow:hidden;
+}
+.ee-product-info,.ee-scent-journey,.ee-quick-panel,.ee-shop-card,.ee-voice-card,.ee-search-result-card,
+.ee-search-page-grid>a,.ee-search-start a,.ee-journal-grid article,.review-card{
+  border-color:#dfd5c2;
+}
+.ee-price,.ee-qty,.ee-sizes button,.ee-add,.ee-info-cta,.ee-search-page-heading form,
+.ee-search-page-heading button,.ee-search-no-results,.ee-shop-add,.ee-shop-view,.ee-quick-details>button{
+  border-radius:var(--ee-control-radius)!important;
+}
+.ee-collection-dropdown,.ee-collection-submenu,.ee-collection-facet-options,.ee-collection-product-list,
+.ee-collection-product-preview,.ee-search-suggestions{border-radius:var(--ee-control-radius)!important}
+.ee-legacy-root :where(#page-custom-set,#page-perfume-card,#page-contact,#page-orders,#page-account) :where(.bg-white,.bg-gray-50,.bg-gray-100){border-radius:var(--ee-surface-radius)}
+.ee-legacy-root :where(#page-custom-set,#page-perfume-card,#page-contact,#page-orders,#page-account) :where(input,select,textarea,button):not(.rounded-full){border-radius:var(--ee-control-radius)}
+.ee-shop-nav nav .ee-collection-product-list>a{
+  box-sizing:border-box;
+  width:100%;
+  min-height:38px;
+  padding:8px 13px!important;
+  gap:12px;
+  line-height:1.3;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.ee-shop-nav nav .ee-collection-product-list>a small{margin-left:auto;padding-left:6px;white-space:nowrap}
+.ee-shop-nav nav .ee-collection-product-list>span{padding-left:13px;padding-right:13px}
+.ee-shop-nav nav .ee-collection-all,.ee-shop-nav nav .ee-collection-category-row>a{box-sizing:border-box;padding-left:14px;padding-right:14px}
+@media(min-width:821px){
+  .ee-nav-collection{--ee-menu-products:244px}
+  .ee-collection-product-list{width:var(--ee-menu-products)}
+  .ee-collection-product-preview{left:calc(var(--ee-menu-submenu) + var(--ee-menu-facets) + var(--ee-menu-products) - 2px)}
+}
+@media(max-width:820px){.ee-shop-nav nav .ee-collection-product-list>a{padding-left:18px!important;padding-right:18px!important}}
+/* The promotional copy remains readable while crossing the header sooner. */
+.ee-offer-track{animation-duration:22s!important}
+@media(prefers-reduced-motion:reduce){.ee-offer-track{animation:none!important}}
+
+.ee-info-page:has(.ee-brand-story){max-width:1040px;color:#252019}
+.ee-info-page:has(.ee-brand-story)>a,.ee-info-page:has(.ee-brand-story)>span{font:600 12px 'Lato',Arial,sans-serif}
+.ee-info-page:has(.ee-brand-story)>h1{font:500 clamp(38px,5vw,64px)/1.15 'Cinzel',Georgia,serif;color:#17140e}
+.ee-brand-story{margin-top:26px;padding:clamp(24px,4vw,56px);background:#fff;border:1px solid #dfd2b8;box-shadow:0 14px 40px #392a0c0c}
+.ee-brand-story .ee-story-kicker,.ee-brand-story .ee-story-chapter>span{color:#a47b2a;font:700 10px 'Montserrat',Arial,sans-serif;letter-spacing:.19em}
+.ee-brand-story .ee-story-lead{max-width:820px;margin:18px 0 40px;color:#31291c;font:500 clamp(20px,2.5vw,29px)/1.55 'Cinzel',Georgia,serif}
+.ee-brand-story .ee-story-chapter{display:grid;grid-template-columns:165px minmax(0,1fr);column-gap:30px;padding:29px 0;border-top:1px solid #dfd5c4}
+.ee-brand-story .ee-story-chapter>span{grid-row:1/4;padding-top:10px}
+.ee-brand-story h2{margin:0 0 14px;color:#1c1811;font:500 26px/1.3 'Cinzel',Georgia,serif}
+.ee-brand-story p:not(.ee-story-lead){margin:0 0 15px;color:#60584b;font:15px/1.75 'Lato',Arial,sans-serif}
+.ee-brand-story footer{padding-top:23px;border-top:1px solid #dfd5c4;color:#a47b2a;font:700 11px 'Montserrat',Arial,sans-serif;letter-spacing:.18em;text-align:center}
+.ee-brand-story footer span{padding:0 6px}
+@media(max-width:650px){.ee-brand-story .ee-story-chapter{grid-template-columns:1fr;gap:7px}.ee-brand-story .ee-story-chapter>span{grid-row:auto;padding-top:0}.ee-brand-story h2{font-size:22px}.ee-brand-story .ee-story-lead{margin-bottom:23px;font-size:18px;line-height:1.55}}
+
+/* Four supplied Instagram posts occupy the same card rhythm as other home content. */
+.ee-instagram-reels{max-width:1320px;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.ee-instagram-post{height:490px}
+.ee-reel-fallback{position:absolute;z-index:4;top:50%;left:50%;transform:translate(-50%,-50%);display:grid;gap:4px;width:max-content;max-width:calc(100% - 30px);box-sizing:border-box;padding:13px 17px;background:#100f0de8;border:1px solid #d4ae61;border-radius:var(--ee-control-radius);color:#eee3cf;text-align:center;text-decoration:none;font:11px/1.35 'Lato',Arial,sans-serif}
+.ee-reel-fallback strong{color:#f0ca79;font:700 11px 'Montserrat',Arial,sans-serif;letter-spacing:.05em}
+@media(max-width:980px){.ee-instagram-reels{grid-template-columns:repeat(2,minmax(0,1fr))}.ee-instagram-post{height:490px}}
+@media(max-width:580px){.ee-instagram-reels{grid-template-columns:1fr;max-width:390px}.ee-instagram-post{height:500px}}

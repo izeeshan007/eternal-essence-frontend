@@ -2,6 +2,7 @@
 import { storefrontSizes, variantPricing as pricing } from './productVariants.js';
 import { visibleGalleryIndices, withNotesImage, isNotesImage } from './productGallery.js';
 import notesFiles from 'virtual:product-notes';
+import productAssets from 'virtual:product-assets';
 import { NotesArtwork } from './FragranceNotes.jsx';
 import { summarizeReviews, withProvidedReviews } from './productReviews.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
@@ -360,12 +361,17 @@ export default function ProductPage({product,route,onBack}){
   const [variantNotice,setVariantNotice]=useState('');
   const [variantStock,setVariantStock]=useState({});
   const [variantPricing,setVariantPricing]=useState({});
+  const [inventoryRevision,setInventoryRevision]=useState(0);
+  const [reviewsRevision,setReviewsRevision]=useState(0);
+  const inventoryRetryDelay=useRef(5000);
+  const reviewsRetryDelay=useRef(5000);
   const [viewerCount,setViewerCount]=useState(null);
   const [cartCount,setCartCount]=useState(readCartCount);
   const [showFloatingCart,setShowFloatingCart]=useState(false);
   const pendingSelection=window.__eePendingProductSelection;
   const requestedSize=new URLSearchParams(location.search).get('size')||pendingSelection?.size||'';
   const isEditingCartItem=pendingSelection?.cartIndex!=null&&String(pendingSelection?.productId||'').replace(/^db_/,'')===String(p?.id||'').replace(/^db_/,'');
+  useEffect(()=>{const refresh=()=>{setInventoryRevision(value=>value+1);setReviewsRevision(value=>value+1)};window.addEventListener('ee:backend-refresh',refresh);return()=>window.removeEventListener('ee:backend-refresh',refresh)},[]);
   useEffect(()=>{
     const sync=()=>setCartCount(readCartCount());
     const onScroll=()=>setShowFloatingCart(window.scrollY>420);
@@ -375,7 +381,7 @@ export default function ProductPage({product,route,onBack}){
     return()=>{window.removeEventListener('ee:cart-updated',sync);window.removeEventListener('scroll',onScroll)};
   },[]);
   useEffect(()=>{setP(normalize(product));},[product]);
-  useEffect(()=>{if(!p?.id)return;let active=true;setVariantStock({});setVariantPricing({});const base=window.EE?.getBackendBase?.()||'http://localhost:5000';fetch(`${base}/api/products/inventory?productId=${encodeURIComponent(p.id)}`,{cache:'no-store'}).then(response=>response.json()).then(data=>{if(active&&data.success){const rows=data.inventory||[];setVariantStock(Object.fromEntries(rows.map(item=>[item.variantKey,Number(item.available)])));setVariantPricing(Object.fromEntries(rows.map(item=>[item.variantKey,item])));}}).catch(()=>{});return()=>{active=false};},[p?.id]);
+  useEffect(()=>{if(!p?.id)return;let active=true;let retryTimer;const controller=new AbortController();const base=window.EE?.getBackendBase?.()||'http://localhost:5000';fetch(`${base}/api/products/inventory?productId=${encodeURIComponent(p.id)}`,{cache:'no-store',signal:controller.signal}).then(response=>response.ok?response.json():Promise.reject(new Error('Inventory unavailable'))).then(data=>{if(!data.success)throw new Error('Inventory unavailable');if(active){inventoryRetryDelay.current=5000;const rows=data.inventory||[];setVariantStock(Object.fromEntries(rows.map(item=>[item.variantKey,Number(item.available)])));setVariantPricing(Object.fromEntries(rows.map(item=>[item.variantKey,item])));}}).catch(()=>{if(active){retryTimer=setTimeout(()=>setInventoryRevision(value=>value+1),inventoryRetryDelay.current);inventoryRetryDelay.current=Math.min(inventoryRetryDelay.current*2,60000)}});return()=>{active=false;controller.abort();clearTimeout(retryTimer)};},[p?.id,inventoryRevision]);
   useEffect(()=>{
     if(!p?.id)return;
     let active=true;
@@ -408,20 +414,21 @@ export default function ProductPage({product,route,onBack}){
   useEffect(()=>{
     if(!p?.id)return;
     let active=true;
+    let retryTimer;
     const productId=p.id;
     const provided=withProvidedReviews([],p);
-    setReviewRequest({productId,status:provided.length?'ready':'loading',reviews:provided});
+    setReviewRequest(current=>current.productId===productId?current:{productId,status:provided.length?'ready':'loading',reviews:provided});
     Promise.resolve().then(()=>{
       if(!window.EE?.getReviews)throw new Error('Reviews unavailable');
       return window.EE.getReviews(productId);
     }).then(data=>{
       if(data?.success===false||!Array.isArray(data?.reviews))throw new Error('Invalid review response');
-      if(active)setReviewRequest({productId,status:'ready',reviews:withProvidedReviews(data.reviews,p)});
+      if(active){reviewsRetryDelay.current=5000;setReviewRequest({productId,status:'ready',reviews:withProvidedReviews(data.reviews,p)});}
     }).catch(()=>{
-      if(active)setReviewRequest({productId,status:provided.length?'ready':'error',reviews:provided});
+      if(active){setReviewRequest(current=>current.productId===productId&&current.reviews.length?current:{productId,status:provided.length?'ready':'error',reviews:provided});retryTimer=setTimeout(()=>setReviewsRevision(value=>value+1),reviewsRetryDelay.current);reviewsRetryDelay.current=Math.min(reviewsRetryDelay.current*2,60000)}
     });
-    return()=>{active=false};
-  },[p?.id]);
+    return()=>{active=false;clearTimeout(retryTimer)};
+  },[p?.id,reviewsRevision]);
   useEffect(()=>{
     if(!p||!size)return;
     try{setWish(!!window.EE?.isWishlistSaved?.(p.id,`${size.value} ${size.unit}`));}catch{}
@@ -444,7 +451,7 @@ export default function ProductPage({product,route,onBack}){
     }
   },[p,size,variantPricing]);
   if(!p)return <div className="ee-notfound"><h1>Fragrance not found</h1><button onClick={onBack}>Back to collection</button></div>;
-  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes);
+  const sizes=getSizes(p,variantPricing),selectedSize=sizes.find(s=>sizeKey(s)===sizeKey(size))||sizes[0],selectedVariantKey=normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`),livePrice=variantPricing.shared||variantPricing[selectedVariantKey]||{},pr=pricing(Number(livePrice.basePrice)>0?livePrice.basePrice:p.price,Number(livePrice.priceMultiplier)>0?livePrice.priceMultiplier:(selectedSize?.priceMultiplier||1),selectedSize?.mrp,selectedSize?.websitePrice),gallery=p.images?.length?p.images:[p.image].filter(Boolean),galleryIndices=visibleGalleryIndices(p,sizes,productAssets);
   const selectedStock=!selectedSize?0:variantStock.shared??variantStock[normalizeSizeLabel(`${selectedSize?.value} ${selectedSize?.unit}`)]??12;
   const selectedVariantIndex=variantIndex(selectedSize);
   const safeImg=galleryIndices.includes(img)?img:(galleryIndices[0]??0);
