@@ -221,6 +221,7 @@ const products = [
     const displayImage = isAttar && catalogueImages[0] ? catalogueImages[0] : primaryImage;
     return {
         id: `frontend_${index + 1}`,
+        catalogOrder: index,
         name,
         type: effectiveCategory,
         inspiredBy,
@@ -815,6 +816,7 @@ let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
 let catalogRefreshInFlight = false;
 let catalogRetryTimer;
 let catalogRetryDelay = 5000;
+let catalogSignature = '';
 async function loadBackendProducts() {
 if (catalogRefreshInFlight) return;
 catalogRefreshInFlight = true;
@@ -838,7 +840,7 @@ const label = String(cat).trim();
 const key = label.toLowerCase().replace(/\s+/g, '');
 return ({perfume:'Perfume',attar:'Attar',solidperfume:'Solid Perfume',combo:'Combo'})[key] || label;
 }
-backendProducts = data.products.slice().sort((a,b) => Number(a.catalogOrder ?? 999999) - Number(b.catalogOrder ?? 999999)).map(p => ({
+const nextProducts = data.products.slice().sort((a,b) => Number(a.catalogOrder ?? 999999) - Number(b.catalogOrder ?? 999999)).map(p => ({
 id: 'db_' + p._id,
 catalogOrder: Number(p.catalogOrder),
 name: p.name,
@@ -862,10 +864,14 @@ source: 'backend'
 }));
 window.__EE_CATALOG_STATUS__ = 'ready';
 catalogRetryDelay = 5000;
-try { localStorage.setItem('ee_catalog_cache_v1', JSON.stringify(backendProducts)); } catch (_) {}
+const nextSignature = JSON.stringify(nextProducts);
+if (nextSignature === catalogSignature) return;
+backendProducts = nextProducts;
+catalogSignature = nextSignature;
+try { localStorage.setItem('ee_catalog_cache_v1', nextSignature); } catch (_) {}
 mergeProducts();
 window.dispatchEvent(new CustomEvent('ee:catalog-updated'));
-loadCuratedCollections();
+if (window.__EE_CURATED__) renderCuratedHero(window.__EE_CURATED__);
 } catch (err) {
 window.__EE_CATALOG_STATUS__ = 'stale';
 console.warn('Live catalogue refresh failed; keeping the immediately available collection.', err?.message || err);
@@ -924,13 +930,14 @@ source: 'backend'
 // re-add bundled products that the server intentionally omitted.
 allProducts = mergedBackendProducts;
 renderCategoryTabs();
-renderProducts(allProducts);
+applyFilters();
 renderBundleBuilder();
 buildCollectionMenus();
 }
 let curatedRefreshInFlight = false;
 let curatedRetryTimer;
 let curatedRetryDelay = 5000;
+let curatedSignature = '';
 async function loadCuratedCollections() {
 if (curatedRefreshInFlight) return;
 curatedRefreshInFlight = true;
@@ -940,10 +947,13 @@ const response = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products/curate
 if (!response.ok) throw new Error('Curated collections unavailable');
 const data = await response.json();
 if (!data.success) throw new Error(data.error || 'Curated collections unavailable');
+const nextSignature = JSON.stringify({ season: data.season, collections: data.collections });
+if (nextSignature === curatedSignature) return;
+curatedSignature = nextSignature;
 window.__EE_CURATED__ = data;
 curatedRetryDelay = 5000;
 renderCuratedHero(data);
-applyFilters();
+if (['summer','winter','oud'].includes(new URLSearchParams(location.search).get('edit'))) applyFilters();
 window.dispatchEvent(new Event('ee:curated-loaded'));
 } catch (error) {
 console.warn(error.message);
@@ -1453,7 +1463,7 @@ const el = document.getElementById("similar-products");
 el.scrollBy({ left: dir * 300, behavior: "smooth" });
 }
 function getProductKey(product) {
-return String(product.id || product._id || '').replace(/^db_/, '');
+return String(product.id || product._id || '').replace(/^(?:db_|frontend_)/, '');
 }
 function getBundleRule(sizeMl = bundleState.sizeMl, setQty = bundleState.setQty) {
 return (bundleRules || []).find(rule =>
@@ -1592,10 +1602,40 @@ return (bundleRules || [])
 .filter(rule => rule.isActive !== false && rule.freeGiftEnabled && Number(rule.minCartValue || 0) > 0 && subtotalAfterDiscount >= Number(rule.minCartValue))
 .sort((a, b) => Number(b.minCartValue || 0) - Number(a.minCartValue || 0))[0] || null;
 }
+function prefillBundleFromRoute() {
+if (!/^\/custom-set\/?$/i.test(location.pathname)) return;
+const requested = String(new URLSearchParams(location.search).get('product') || '').trim().replace(/^(?:db_|frontend_)/, '');
+if (!requested) return;
+const previousSize = bundleState.sizeMl;
+const previousQty = bundleState.setQty;
+bundleState.sizeMl = 8;
+bundleState.setQty = getBundleQtyOptions(8)[0];
+let product = getBundleEligibleProducts().find(item => getProductKey(item) === requested);
+if (!product) {
+bundleState.sizeMl = 20;
+bundleState.setQty = getBundleQtyOptions(20)[0];
+product = getBundleEligibleProducts().find(item => getProductKey(item) === requested);
+}
+if (!product) {
+bundleState.sizeMl = previousSize;
+bundleState.setQty = previousQty;
+return; // A newly added product may arrive with the live catalogue.
+}
+bundleState.selections = { [getProductKey(product)]: 1 };
+bundleState.preference = '';
+['bundle-search', 'bundle-gender-filter', 'bundle-season-filter'].forEach(id => {
+const control = document.getElementById(id);
+if (control) control.value = '';
+});
+const url = new URL(location.href);
+url.searchParams.delete('product');
+history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+}
 function renderBundleBuilder() {
 const qtyBox = document.getElementById('bundle-qty-options');
 const grid = document.getElementById('bundle-products');
 if (!qtyBox || !grid) return;
+prefillBundleFromRoute();
 document.querySelectorAll('.bundle-chip[data-size]').forEach(btn => {
 btn.classList.toggle('active', Number(btn.dataset.size) === Number(bundleState.sizeMl));
 });
@@ -1841,7 +1881,9 @@ discount
 function getProductDisplayPricing(product) {
   const sizes=product.sizes?.length?product.sizes:getSizesByCategory(product.type||product.category);
   const visible=sizes.filter(size=>size.isStorefrontVisible!==false);
-  const size=visible.find(size=>Number(size.priceMultiplier)===1)||visible[0];
+  const isPerfume=normalize(product.type||product.category)==='perfume';
+  const size=(isPerfume&&visible.find(size=>Number(size.value)===30&&String(size.unit||'').toLowerCase().includes('ml')))
+    ||visible.find(size=>Number(size.priceMultiplier)===1)||visible[0];
   return size?getPricing(product.price,size.priceMultiplier,size.mrp,size.websitePrice):getPricing(product.price,1,product.mrp);
 }
 function updatePriceDisplay(price, mrp, discount) {
@@ -3379,31 +3421,26 @@ filtered = filtered.filter(p => window.eeMatchesProductSearch?.(p, q) ??
   `${p.name || ''} ${p.inspiredBy || ''} ${p.family || ''}`.toLowerCase().includes(q.toLowerCase()));
 }
 const sort = document.getElementById('sort-filter')?.value || '';
-if (sort === 'price-asc') filtered.sort((a,b)=>a.price-b.price);
-if (sort === 'price-desc') filtered.sort((a,b)=>b.price-a.price);
-if (sort === 'name-asc') filtered.sort((a,b)=>a.name.localeCompare(b.name));
-if (!sort) {
-  const seasonKey = window.__EE_CURATED__?.season || (Number(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', month: 'numeric' }).format(new Date())) >= 3 && Number(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', month: 'numeric' }).format(new Date())) <= 10 ? 'summer' : 'winter');
+const catalogPosition = product => {
+  const order = Number(product.catalogOrder);
+  if (product.catalogOrder !== null && product.catalogOrder !== undefined && Number.isFinite(order)) return order;
+  const fallback = Number(String(product.frontendId || product.id || '').match(/^frontend_(\d+)$/)?.[1]);
+  return Number.isFinite(fallback) && fallback > 0 ? fallback - 1 : Number.MAX_SAFE_INTEGER;
+};
+const stableCatalogOrder = (a,b) => catalogPosition(a)-catalogPosition(b)
+  || String(a.name||'').localeCompare(String(b.name||''))
+  || String(a.id||a._id||'').localeCompare(String(b.id||b._id||''));
+if (sort === 'price-asc') filtered.sort((a,b)=>getProductDisplayPricing(a).sellingPrice-getProductDisplayPricing(b).sellingPrice||stableCatalogOrder(a,b));
+else if (sort === 'price-desc') filtered.sort((a,b)=>getProductDisplayPricing(b).sellingPrice-getProductDisplayPricing(a).sellingPrice||stableCatalogOrder(a,b));
+else if (sort === 'name-asc') filtered.sort((a,b)=>a.name.localeCompare(b.name)||stableCatalogOrder(a,b));
+else if (['summer','winter','oud'].includes(curatedKey)) {
   const selectedIds = window.__EE_CURATED__?.collections?.[curatedKey] || [];
-  const currentIds = window.__EE_CURATED__?.collections?.[seasonKey] || [];
   const identity = product => String(product.id || product._id).replace(/^db_/, '');
-  const seasonRank = product => {
-    const label = normalize(product.season);
-    const current = seasonKey === 'winter' ? /winter|autumn/.test(label) : /summer|spring/.test(label);
-    const other = seasonKey === 'winter' ? /summer|spring/.test(label) : /winter|autumn/.test(label);
-    return current ? 2 : other ? 0 : 1;
-  };
   filtered.sort((a,b) => {
-    if (['summer','winter','oud'].includes(curatedKey)) {
-      const ai = selectedIds.indexOf(identity(a)), bi = selectedIds.indexOf(identity(b));
-      return (ai < 0 ? Infinity : ai) - (bi < 0 ? Infinity : bi) || 0;
-    }
-    const ai = currentIds.indexOf(identity(a)), bi = currentIds.indexOf(identity(b));
-    if ((ai >= 0) !== (bi >= 0)) return ai >= 0 ? -1 : 1;
-    if (ai >= 0 && bi >= 0) return ai - bi;
-    return seasonRank(b) - seasonRank(a);
+    const ai = selectedIds.indexOf(identity(a)), bi = selectedIds.indexOf(identity(b));
+    return (ai < 0 ? Number.MAX_SAFE_INTEGER : ai) - (bi < 0 ? Number.MAX_SAFE_INTEGER : bi) || stableCatalogOrder(a,b);
   });
-}
+} else filtered.sort(stableCatalogOrder);
 renderProducts(filtered);
 }
 function renderFilteredProducts(list) {
@@ -4993,16 +5030,28 @@ if(window.eeNavigateToProduct){ window.eeNavigateToProduct(product, { size: wind
 }
 async function initStore() {
 placeProductFilters();
+// Match the route before the first paint so a direct collection link does not
+// briefly show every category while React finishes mounting the legacy shell.
+if (/^\/collections(?:\/|$)/i.test(location.pathname)) {
+  const state=window.eeCollectionStateFromLocation?.();
+  if (state) {
+    activeCategory=state.kind;
+    for (const [id,value] of [['gender-filter',state.gender],['season-filter',state.season],['time-filter',state.time],['search-input',state.search]]) {
+      const control=document.getElementById(id);
+      if (control) control.value=value||'';
+    }
+  }
+}
 // Paint the bundled catalogue now. The live API refreshes admin visibility in
 // the background, without blocking the storefront on a cold backend.
 allProducts = products.map(p => ({...p, source:'frontend'}));
 window.__EE_CATALOG_STATUS__ = 'cached';
+let hasCachedCatalog = false;
 try {
   const saved=JSON.parse(localStorage.getItem('ee_catalog_cache_v1')||'null');
-  if(Array.isArray(saved)){backendProducts=saved;mergeProducts();}
+  if(Array.isArray(saved)){hasCachedCatalog=true;backendProducts=saved;catalogSignature=JSON.stringify(saved);mergeProducts();}
 } catch (_) {}
-renderCategoryTabs();
-renderProducts(allProducts);
+if (!hasCachedCatalog) { renderCategoryTabs(); applyFilters(); }
 renderBundleBuilder();
 restoreCategoryIfAny();
 if (typeof renderBestSellers === 'function') renderBestSellers();
