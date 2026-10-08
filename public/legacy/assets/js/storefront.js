@@ -812,7 +812,13 @@ const DEFAULT_BUNDLE_RULES = [
 { sizeMl: 20, setQty: 4, label: '4 x 20 ml Gift Set', discountType: 'percentage', discountValue: 20, freeGiftEnabled: false, isActive: true }
 ];
 let bundleState = { sizeMl: 8, setQty: 4, selections: {}, preference: '' };
+let catalogRefreshInFlight = false;
+let catalogRetryTimer;
+let catalogRetryDelay = 5000;
 async function loadBackendProducts() {
+if (catalogRefreshInFlight) return;
+catalogRefreshInFlight = true;
+clearTimeout(catalogRetryTimer);
 try {
 // Render's free instance can need around a minute to wake. Product visibility
 // must come from the live catalogue; the bundled list cannot know admin hides.
@@ -855,6 +861,7 @@ images: (p.images || []).map(resolveMergeImage),
 source: 'backend'
 }));
 window.__EE_CATALOG_STATUS__ = 'ready';
+catalogRetryDelay = 5000;
 try { localStorage.setItem('ee_catalog_cache_v1', JSON.stringify(backendProducts)); } catch (_) {}
 mergeProducts();
 window.dispatchEvent(new CustomEvent('ee:catalog-updated'));
@@ -862,6 +869,10 @@ loadCuratedCollections();
 } catch (err) {
 window.__EE_CATALOG_STATUS__ = 'stale';
 console.warn('Live catalogue refresh failed; keeping the immediately available collection.', err?.message || err);
+catalogRetryTimer = setTimeout(loadBackendProducts, catalogRetryDelay);
+catalogRetryDelay = Math.min(catalogRetryDelay * 2, 60000);
+} finally {
+catalogRefreshInFlight = false;
 }
 }
 function mergeProducts() {
@@ -917,17 +928,28 @@ renderProducts(allProducts);
 renderBundleBuilder();
 buildCollectionMenus();
 }
+let curatedRefreshInFlight = false;
+let curatedRetryTimer;
+let curatedRetryDelay = 5000;
 async function loadCuratedCollections() {
+if (curatedRefreshInFlight) return;
+curatedRefreshInFlight = true;
+clearTimeout(curatedRetryTimer);
 try {
-const response = await fetch(`${BACKEND_BASE_URL}/api/products/curated`);
+const response = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products/curated`, { cache: 'no-store' }, 20000);
 if (!response.ok) throw new Error('Curated collections unavailable');
 const data = await response.json();
 if (!data.success) throw new Error(data.error || 'Curated collections unavailable');
 window.__EE_CURATED__ = data;
+curatedRetryDelay = 5000;
 renderCuratedHero(data);
 applyFilters();
 window.dispatchEvent(new Event('ee:curated-loaded'));
-} catch (error) { console.warn(error.message); }
+} catch (error) {
+console.warn(error.message);
+curatedRetryTimer = setTimeout(loadCuratedCollections, curatedRetryDelay);
+curatedRetryDelay = Math.min(curatedRetryDelay * 2, 60000);
+} finally { curatedRefreshInFlight = false; }
 }
 function renderCuratedHero(data) {
 const slider = document.getElementById('hero-slider');
@@ -1260,6 +1282,15 @@ ${product.season ? `<span class="badge season ${seasonClass}">${product.season}<
 </div>
 </div>
 `;
+// The bundled customer reviews are already present in the JS bundle. Give
+// each card a rating before appending it; the API can update it afterward.
+const suppliedReviews = window.eeProvidedReviewsForProduct?.(product) || [];
+const suppliedCount = suppliedReviews.length;
+const suppliedAverage = suppliedCount ? suppliedReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / suppliedCount : 0;
+const remoteReview = window.__EE_REVIEW_SUMMARIES__?.[reviewKey];
+const initialReview = Number(remoteReview?.count || 0) >= suppliedCount ? remoteReview : suppliedCount ? { count: suppliedCount, average: suppliedAverage } : null;
+const reviewNode = card.querySelector('.ee-card-review');
+reviewNode.innerHTML = initialReview?.count ? `<strong>${Number(initialReview.average).toFixed(1)} ★</strong> ${Number(initialReview.count)} review${Number(initialReview.count) === 1 ? '' : 's'}` : 'No reviews yet';
 card.querySelector('.ee-card-view').onclick = event => {event.stopPropagation(); openQuickView(product);};
 card.querySelector('.ee-card-add').onclick = event => {event.stopPropagation(); quickAddProduct(product.id);};
 card.querySelector('.ee-card-review').onclick = event => {
@@ -3342,13 +3373,10 @@ filtered = filtered.filter(p =>
 normalize(p.time) === normalize(time)
 );
 }
-const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+const q = (document.getElementById('search-input')?.value || '').trim();
 if (q) {
-filtered = filtered.filter(p =>
-p.name.toLowerCase().includes(q) ||
-(p.inspiredBy || '').toLowerCase().includes(q) ||
-(p.family || '').toLowerCase().includes(q)
-);
+filtered = filtered.filter(p => window.eeMatchesProductSearch?.(p, q) ??
+  `${p.name || ''} ${p.inspiredBy || ''} ${p.family || ''}`.toLowerCase().includes(q.toLowerCase()));
 }
 const sort = document.getElementById('sort-filter')?.value || '';
 if (sort === 'price-asc') filtered.sort((a,b)=>a.price-b.price);
@@ -3574,15 +3602,28 @@ const hash = location.hash.substring(1);
 const [page, query] = hash.split("?");
 return { page: page || "home", query: query || "" };
 }
+let bundleRulesRefreshInFlight = false;
+let bundleRulesRetryTimer;
+let bundleRulesRetryDelay = 5000;
 async function loadBundleRules() {
+if (bundleRulesRefreshInFlight) return;
+bundleRulesRefreshInFlight = true;
+clearTimeout(bundleRulesRetryTimer);
 try {
-const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products/bundle-rules`);
+const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/products/bundle-rules`, { cache: 'no-store' }, 20000);
+if (!res.ok) throw new Error('Bundle rules unavailable');
 const data = await res.json().catch(() => ({}));
+if (!data.success || !Array.isArray(data.rules)) throw new Error('Bundle rules unavailable');
 bundleRules = data.success && Array.isArray(data.rules) && data.rules.length
 ? data.rules
 : DEFAULT_BUNDLE_RULES;
+bundleRulesRetryDelay = 5000;
+renderBundleBuilder();
 } catch (err) {
-bundleRules = DEFAULT_BUNDLE_RULES;
+bundleRulesRetryTimer = setTimeout(loadBundleRules, bundleRulesRetryDelay);
+bundleRulesRetryDelay = Math.min(bundleRulesRetryDelay * 2, 60000);
+} finally {
+bundleRulesRefreshInFlight = false;
 }
 }
 function getProductIdFromURL() {
@@ -4890,6 +4931,7 @@ const noteTitle=document.createElement('span');noteTitle.className='ee-note-over
       const sprite=document.createElement('span');sprite.className='ee-note-sprite';
       sprite.style.backgroundImage=`url(${artwork.image})`;
       sprite.style.backgroundPosition=artwork.position;
+      sprite.style.backgroundSize=artwork.size;
       icon.append(sprite);
     }else icon.textContent='✦';
     const name=document.createElement('span');name.textContent=note;item.append(icon,name);list.append(item);
@@ -4964,7 +5006,10 @@ renderProducts(allProducts);
 renderBundleBuilder();
 restoreCategoryIfAny();
 if (typeof renderBestSellers === 'function') renderBestSellers();
-Promise.allSettled([loadBundleRules(), loadBackendProducts()]);
+Promise.allSettled([loadBundleRules(), loadBackendProducts(), loadCuratedCollections()]);
+window.addEventListener('ee:backend-refresh', loadBackendProducts);
+window.addEventListener('ee:backend-refresh', loadCuratedCollections);
+window.addEventListener('ee:backend-refresh', loadBundleRules);
 const sharedId = null;
 }
 window.__EE_CONFIG__ = window.__EE_CONFIG__ || {};
